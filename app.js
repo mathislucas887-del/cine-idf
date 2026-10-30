@@ -336,7 +336,7 @@ window.openInstall = () => {
   const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   modal(`<div class="mbody prose"><h2>📲 Installer Ciné IDF</h2>
    ${DEFERRED ? `<p><button class="primary" onclick="doInstall()">Installer maintenant</button></p>` : ""}
-   <h3 style="color:var(--gold2)">Android</h3><ol><li><a class="primary" style="display:inline-block;padding:8px 14px;border-radius:10px;color:#141414" href="/download/cine-idf.apk" download>Télécharger l’APK (Android 7+)</a></li>
+   <h3 style="color:var(--gold2)">Android</h3><ol><li><a style="display:inline-block;padding:10px 16px;border-radius:10px;color:#141414;background:linear-gradient(135deg,#f1d784,#c9a227);font-weight:700;text-decoration:none" href="/download/cine-idf.apk" download>Télécharger l’APK (Android 7+)</a></li>
    <li>Ouvrez le fichier téléchargé ; si Android le demande, autorisez « Installer des applis inconnues » pour votre navigateur.</li><li>Touchez « Installer » puis ouvrez Ciné IDF.</li></ol>
    <p class="sub">Ou, sans APK : dans Chrome, menu ⋮ → « Installer l’application ».</p>
    <h3 style="color:var(--gold2)">iPhone / iPad</h3><ol><li>Ouvrez ce site dans <b>Safari</b>.</li><li>Touchez le bouton Partager <b>⬆︎</b>.</li><li>Choisissez « <b>Sur l’écran d’accueil</b> » puis « Ajouter ».</li></ol>
