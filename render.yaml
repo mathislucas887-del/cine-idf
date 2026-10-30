@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: cine-idf
+    runtime: python
+    plan: free
+    buildCommand: "echo ok"
+    startCommand: "python3 server.py"
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
