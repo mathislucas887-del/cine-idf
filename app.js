@@ -4,7 +4,10 @@ let LIVE = false;
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const norm = s => String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
-const api1 = p => fetch("/pathe/" + p).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+let DIRECT = false;
+const j = r => { if (!r.ok) throw new Error(r.status); return r.json(); };
+const direct = p => fetch("https://www.pathe.fr/api/" + p + (p.includes("?") ? "&" : "?") + "language=fr").then(j);
+const api1 = p => DIRECT ? direct(p) : fetch("/pathe/" + p).then(j).catch(e => direct(p).then(x => { DIRECT = true; return x; }));
 const api = p => api1(p).catch(() => new Promise(r => setTimeout(r, 800)).then(() => api1(p)));
 let FAILS = 0;
 
@@ -120,7 +123,7 @@ async function loadShows() {
   $("#pmenu").classList.add("hidden");
   const ids = [...SEL]; const date = DATE;
   if (!ids.length) { $("#shows").innerHTML = `<div class="empty">Choisissez au moins un cinéma.</div>`; return; }
-  if (!LIVE) { $("#shows").innerHTML = `<div class="empty">Séances en direct indisponibles : lancez <code>python3 server.py</code> puis ouvrez http://localhost:8765. En attendant, utilisez les liens « Page Pathé » des fiches cinéma.</div>`; return; }
+  if (!LIVE) { $("#shows").innerHTML = `<div class="empty">Les horaires en direct ne sont pas disponibles depuis ce serveur. Ouvrez les séances sur pathe.fr :</div>` + ids.map(id => { const c = CINES.find(x => x.id === id); return `<div class="film"><div><h3>${esc(c.name)}</h3><div class="meta">${esc(c.fullAddress)}</div><a class="t" href="${esc(c.website)}" target="_blank" rel="noopener"><b>Séances sur pathe.fr →</b></a></div></div>`; }).join(""); return; }
   $("#shows").innerHTML = ""; const films = {}; let done = 0; FAILS = 0;
   for (const id of ids) {
     const c = CINES.find(x => x.id === id);
@@ -182,7 +185,7 @@ async function live() {
       if (p.backdrop) c.photo = {url: p.backdrop, credit: "Pathé", source: c.website};
     });
   } catch (e) {
-    $("#banner").innerHTML = "Mode hors-ligne : carte et annuaire disponibles, mais pas les séances en direct. Lancez <code>python3 server.py</code> et ouvrez <b>http://localhost:8765</b>.";
+    $("#banner").innerHTML = "Pathé ne répond pas à ce serveur : la carte et l'annuaire fonctionnent, et chaque cinéma Pathé propose un lien direct vers ses séances sur pathe.fr.";
     $("#banner").classList.remove("hidden");
   }
   renderMap(); renderGrid(); fillCineSelect();
