@@ -187,6 +187,62 @@ function renderShows() {
 $("#sload").onclick = loadShows;
 $("#sfilm").oninput = $("#sver").onchange = renderShows;
 
+// ---------- Films ----------
+let FDATE = ymd(days[0]), FILMS = [];
+$("#fdates").innerHTML = $("#sdates").innerHTML;
+$("#fdates").onclick = e => { const b = e.target.closest("button"); if (!b) return; FDATE = b.dataset.d; document.querySelectorAll("#fdates button").forEach(x => x.classList.toggle("on", x === b)); loadFilms(); };
+const EV = {Live: "En direct", Premier: "Avant-première", Preview: "Avant-première", Opera: "Opéra", Concert: "Concert", Ballet: "Ballet", Marathon: "Marathon"};
+function classify(f, date) {
+  const Y = +date.slice(0, 4), D = new Date(date);
+  const rel = (f.releases || []).filter(r => r.name === "Released" && r.date).map(r => r.date).sort()[0];
+  const evs = new Set(f.times.flatMap(t => t.events || []));
+  const prem = f.isPremiere || f.times.some(t => t.preview) || evs.has("Premier") || evs.has("Preview") || (rel && rel > date && (!f.year || f.year >= Y - 1));
+  const retro = !!f.year && f.year <= Y - 3;
+  const fresh = !retro && rel && (D - new Date(rel)) / 864e5 <= 14 && rel <= date;
+  const special = [...evs].filter(e => e !== "Premier" && e !== "Preview").map(e => EV[e] || "Séance spéciale");
+  return {rel, prem, retro, fresh, special};
+}
+async function loadFilms() {
+  const date = FDATE; $("#fprogress").textContent = "Chargement des films à l’affiche…";
+  let d; try { d = await fetch("/allocine-all/" + date).then(j); } catch (e) { $("#fprogress").textContent = "⚠️ Impossible de charger les films. Réessayez."; return; }
+  if (date !== FDATE) return;
+  const by = {};
+  Object.entries(d.cinemas).forEach(([cid, films]) => (films || []).forEach(f => {
+    const c = CINES.find(x => x.id === cid); const k = f.id || norm(f.title);
+    const F = by[k] ||= {...f, times: [], by: []};
+    F.times.push(...f.times); F.by.push({c, times: f.times});
+    F.isPremiere ||= f.isPremiere;
+  }));
+  FILMS = Object.values(by).map(f => ({...f, cl: classify(f, date), n: f.times.length})).sort((a, b) => b.n - a.n);
+  $("#fprogress").textContent = `${FILMS.length} films à l’affiche ce jour-là · source Allociné · mis à jour à ${new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}`;
+  renderFilms();
+}
+function posterHTML(f, i) {
+  const t = [f.cl.prem && `<span class="tag g">Avant-première</span>`, ...f.cl.special.slice(0,1).map(s => `<span class="tag g">${esc(s)}</span>`), f.cl.fresh && `<span class="tag">Nouveauté</span>`, f.cl.retro && `<span class="tag">Rétro ${f.year}</span>`].filter(Boolean).join("");
+  return `<div class="poster" onclick="openFilm(${i})"><div class="im" style="${f.poster?`background-image:url('${esc(f.poster)}')`:""}"></div><div class="tags">${t}</div><h4>${esc(f.title)}</h4><small>${f.by.length} cinéma${f.by.length>1?"s":""} · ${f.n} séance${f.n>1?"s":""}</small></div>`;
+}
+function renderFilms() {
+  const q = norm($("#ffilm").value); const L = FILMS.map((f, i) => [f, i]).filter(([f]) => !q || norm(f.title + " " + (f.originalTitle||"")).includes(q));
+  const sec = (sel, arr) => $(sel).innerHTML = arr.map(([f, i]) => posterHTML(f, i)).join("") || `<div class="empty">Aucun film dans cette catégorie pour ce jour.</div>`;
+  sec("#f-new", L.filter(([f]) => f.cl.prem || f.cl.special.length || f.cl.fresh).sort(([a],[b]) => (b.cl.prem + !!b.cl.special.length) - (a.cl.prem + !!a.cl.special.length)));
+  sec("#f-retro", L.filter(([f]) => f.cl.retro));
+  sec("#f-all", L);
+}
+$("#ffilm").oninput = renderFilms;
+window.openFilm = i => {
+  const f = FILMS[i]; const now = new Date();
+  const lines = f.by.sort((a,b)=>a.c.name.localeCompare(b.c.name)).map(({c, times}) => `<div class="cine-line"><b>${esc(c.name)}</b>${times.slice().sort((a,b)=>a.time.localeCompare(b.time)).map(t => {
+    const past = new Date(t.time) < now; const ev = (t.events||[]).length ? " ★" : "";
+    return `<a class="t${past?" past":""}" href="${esc(t.url || c.website)}" target="_blank" rel="noopener"><b>${t.time.slice(11,16)}</b><small>${esc((t.version||"").toUpperCase())}${ev}</small></a>`; }).join("")}</div>`).join("");
+  const meta = [f.year && (f.cl.retro ? "Film de " + f.year : f.year), (f.genres||[]).join(", "), f.runtime, f.directors && "de " + f.directors].filter(Boolean).map(esc).join(" · ");
+  const lab = [f.cl.prem && "Avant-première", ...f.cl.special, f.cl.fresh && "Nouveauté (sortie le " + new Date(f.cl.rel).toLocaleDateString("fr-FR") + ")", f.cl.retro && "Séance rétro"].filter(Boolean);
+  $("#mcontent").innerHTML = `<div class="mbody fd">${f.poster?`<img class="poster-l" src="${esc(f.poster)}" alt="">`:""}<h2>${esc(f.title)}</h2>
+    <div class="tags" style="position:static;margin-bottom:8px">${lab.map(l=>`<span class="tag g">${esc(l)}</span>`).join("")}</div><p class="hint">${meta}</p><p class="syn">${esc(f.synopsis||"")}</p>
+    <h3 style="clear:both;color:var(--gold2)">Séances – ${new Date(FDATE).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}</h3>${lines}<p class="hint">Touchez un horaire pour réserver sur pathe.fr. ★ = séance spéciale.</p></div>`;
+  $("#modal").classList.remove("hidden");
+};
+loadFilms();
+
 // ---------- Données Pathé en direct (photos, GPS, slugs) ----------
 async function live() {
   try {

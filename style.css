@@ -116,3 +116,14 @@ input:focus,select:focus{outline:none;border-color:var(--gold)}
 #plist label:hover{background:#1c170b}input[type=checkbox]{accent-color:#c9a227}
 .banner{background:#1c170b;color:var(--gold2)}
 @media(max-width:700px){nav{background:rgba(5,5,5,.97);border-top-color:#c9a22755}}
+
+/* ---- Films ---- */
+#v-films{padding-bottom:20px}#fdates{padding-top:14px}
+.fsec{margin:6px 0 18px}.fsec h2{margin:10px 18px 2px;font-size:20px;background:linear-gradient(90deg,var(--gold2),var(--gold));-webkit-background-clip:text;color:transparent}.fsec .hint{margin:0 18px 10px;font-size:13px}
+.rail{display:flex;gap:12px;overflow-x:auto;padding:4px 18px 10px;scroll-snap-type:x mandatory}.rail::-webkit-scrollbar{height:6px}.rail::-webkit-scrollbar-thumb{background:#c9a22755;border-radius:3px}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px;padding:4px 18px}
+.poster{flex:0 0 140px;scroll-snap-align:start;cursor:pointer;position:relative}.poster .im{aspect-ratio:2/3;border-radius:10px;background:#16130b center/cover;border:1px solid #c9a22733;box-shadow:0 8px 20px #000a;transition:.2s}
+.poster:hover .im{border-color:var(--gold);transform:translateY(-3px)}.poster h4{margin:7px 0 2px;font-size:14px;color:#f8f1dc;line-height:1.25}.poster small{color:#a8996c;font-size:12px}
+.tags{position:absolute;top:6px;left:6px;right:6px;display:flex;flex-wrap:wrap;gap:4px}.tag{font-size:10px;font-weight:700;padding:3px 7px;border-radius:20px;background:#050505d9;color:var(--gold2);border:1px solid var(--gold);text-transform:uppercase;letter-spacing:.3px}.tag.g{background:linear-gradient(135deg,var(--gold2),var(--gold));color:#141414}
+.fd .poster-l{float:left;width:110px;margin:0 14px 8px 0;border-radius:8px}.fd .syn{color:#cfc4a2;font-size:14px;line-height:1.45}.fd .cine-line{clear:both}
+@media(max-width:700px){.rail{padding:4px 10px 10px}.fgrid{padding:4px 10px;grid-template-columns:repeat(3,1fr);gap:10px}.poster{flex-basis:120px}.fsec h2{margin:10px 10px 2px;font-size:18px}.fsec .hint{margin:0 10px 8px}.fgrid .poster h4{font-size:12px}}
