@@ -308,7 +308,7 @@ $("#infos").innerHTML = `<h1>✨ CinéPass & infos</h1>
 <h2>Le CinéPass Pathé</h2><p>Le <b>CinéPass</b> est l’abonnement cinéma de Pathé : des séances en illimité dans les cinémas Pathé (et Gaumont), et dans un réseau de <b>cinémas partenaires</b> indépendants. Plusieurs formules existent (solo, duo, jeunes…), avec ou sans accès aux salles premium (IMAX, 4DX, Dolby Cinema…) selon l’offre.</p>
 <p>Les formules, prix et conditions évoluent : consultez la page officielle <a href="https://www.pathe.fr/cinepass" target="_blank" rel="noopener">pathe.fr/cinepass</a>.</p>
 <h2>Cinémas partenaires CinéPass en Île-de-France</h2><div class="cards">${CINES.filter(c => c.type === "partner").sort((a,b)=>a.name.localeCompare(b.name)).map(c => `<button class="box" style="text-align:left;color:inherit;cursor:pointer" onclick="openCine('${c.id}')"><b>${esc(c.name)}</b><br><span class="sub">${esc(c.zip)} ${esc(c.city)}</span></button>`).join("")}</div>
-<h2>À propos</h2><p>Ciné IDF regroupe les séances de ${CINES.length} cinémas d’Île-de-France : ${CINES.filter(c=>c.type==="pathe").length} Pathé/Gaumont, ${CINES.filter(c=>c.type==="partner").length} partenaires CinéPass et ${CINES.filter(c=>c.type==="other").length} autres salles.</p>
+<h2>📲 Télécharger l’application</h2><p>Android : <a href="/download/cine-idf.apk" download>APK Ciné IDF</a> · iPhone : Safari → Partager → « Sur l’écran d’accueil ». <a href="#" onclick="openInstall();return false">Mode d’emploi</a></p><h2>À propos</h2><p>Ciné IDF regroupe les séances de ${CINES.length} cinémas d’Île-de-France : ${CINES.filter(c=>c.type==="pathe").length} Pathé/Gaumont, ${CINES.filter(c=>c.type==="partner").length} partenaires CinéPass et ${CINES.filter(c=>c.type==="other").length} autres salles.</p>
 <h2>Sources & mentions légales</h2><p>Horaires, affiches, notes et synopsis : <b>Allociné</b> (méthode de la bibliothèque open source <a href="https://github.com/lefevre-dev/AllocineAPI" target="_blank" rel="noopener">AllocineAPI</a>). Cartographie © OpenStreetMap. Photos : Pathé et Wikimedia Commons (crédits sur chaque fiche).</p>
 <p><b>Site non officiel, non affilié à Pathé, Gaumont ni Allociné.</b> Les réservations se font sur le site de chaque cinéma ; vérifiez toujours l’horaire avant de vous déplacer. Les comptes ne stockent qu’une adresse e-mail, un mot de passe chiffré, vos favoris et vos billets enregistrés.</p>
 <h2>Contact</h2><p>Une erreur, une suggestion ? Ouvrez un ticket sur <a href="https://github.com/mathislucas887-del/cine-idf/issues" target="_blank" rel="noopener">GitHub</a>.</p>
@@ -325,3 +325,25 @@ renderDates(); updAcct(); renderMap(); renderGrid(); loadData();
 if (TOKEN) post("/api/me").then(onAuth).catch(e => { if (/Session/.test(e.message)) logoutLocal(); });
 if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 if (location.hash === "#billets") go("billets");
+
+// ---------- Installation de l'application ----------
+let DEFERRED = null;
+addEventListener("beforeinstallprompt", e => { e.preventDefault(); DEFERRED = e; });
+addEventListener("appinstalled", () => toast("Ciné IDF est installée ✅"));
+const STANDALONE = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+if (STANDALONE || /CineIDFApp/.test(navigator.userAgent)) $("#install").style.display = "none";
+window.openInstall = () => {
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  modal(`<div class="mbody prose"><h2>📲 Installer Ciné IDF</h2>
+   ${DEFERRED ? `<p><button class="primary" onclick="doInstall()">Installer maintenant</button></p>` : ""}
+   <h3 style="color:var(--gold2)">Android</h3><ol><li><a class="primary" style="display:inline-block;padding:8px 14px;border-radius:10px;color:#141414" href="/download/cine-idf.apk" download>Télécharger l’APK (Android 7+)</a></li>
+   <li>Ouvrez le fichier téléchargé ; si Android le demande, autorisez « Installer des applis inconnues » pour votre navigateur.</li><li>Touchez « Installer » puis ouvrez Ciné IDF.</li></ol>
+   <p class="sub">Ou, sans APK : dans Chrome, menu ⋮ → « Installer l’application ».</p>
+   <h3 style="color:var(--gold2)">iPhone / iPad</h3><ol><li>Ouvrez ce site dans <b>Safari</b>.</li><li>Touchez le bouton Partager <b>⬆︎</b>.</li><li>Choisissez « <b>Sur l’écran d’accueil</b> » puis « Ajouter ».</li></ol>
+   ${ios ? `<p class="sub">Vous êtes sur iOS : suivez les 3 étapes ci-dessus.</p>` : ""}
+   <p class="sub">L’app fonctionne aussi hors ligne pour vos favoris, vos billets et les dernières séances consultées.</p></div>`);
+};
+window.doInstall = async () => { if (!DEFERRED) return; DEFERRED.prompt(); await DEFERRED.userChoice; DEFERRED = null; closeModal(); };
+$("#install").onclick = openInstall;
+if (location.hash === "#installer") openInstall();
+if (location.hash === "#carte") go("map");

@@ -1,0 +1,1 @@
+{"name":"cine-idf-mobile","version":"1.0.0","private":true,"scripts":{"ios":"cap add ios && cap sync ios && cap open ios"},"dependencies":{"@capacitor/core":"^6.1.2","@capacitor/ios":"^6.1.2","@capacitor/android":"^6.1.2"},"devDependencies":{"@capacitor/cli":"^6.1.2"}}

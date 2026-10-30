@@ -1,0 +1,1 @@
+<resources><style name="T" parent="android:Theme.Material.NoActionBar"><item name="android:windowBackground">#050505</item><item name="android:statusBarColor">#050505</item><item name="android:navigationBarColor">#050505</item><item name="android:colorAccent">#C9A227</item></style></resources>

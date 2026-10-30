@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="fr.cineidf.app" android:versionCode="1" android:versionName="1.0">
+  <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="34"/>
+  <uses-permission android:name="android.permission.INTERNET"/>
+  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+  <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+  <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+  <application android:label="Ciné IDF" android:icon="@mipmap/ic_launcher" android:theme="@style/T" android:usesCleartextTraffic="false">
+    <activity android:name=".Main" android:exported="true" android:configChanges="orientation|screenSize|keyboardHidden|uiMode">
+      <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
+      <intent-filter android:autoVerify="false"><action android:name="android.intent.action.VIEW"/><category android:name="android.intent.category.DEFAULT"/><category android:name="android.intent.category.BROWSABLE"/><data android:scheme="https" android:host="cine-idf.onrender.com"/></intent-filter>
+    </activity>
+  </application>
+</manifest>

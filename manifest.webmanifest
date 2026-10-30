@@ -1,1 +1,91 @@
-{"name":"Ciné IDF – séances Île-de-France","short_name":"Ciné IDF","start_url":"/","display":"standalone","background_color":"#050505","theme_color":"#050505","lang":"fr","icons":[{"src":"icon.svg","sizes":"any","type":"image/svg+xml"},{"src":"icon-192.png","sizes":"192x192","type":"image/png"},{"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]}
+{
+ "id": "/",
+ "name": "Ciné IDF – séances Île-de-France",
+ "short_name": "Ciné IDF",
+ "description": "Séances de 362 cinémas d’Île-de-France : Pathé, partenaires CinéPass et salles indépendantes.",
+ "start_url": "/?source=app",
+ "scope": "/",
+ "display": "standalone",
+ "display_override": [
+  "standalone",
+  "minimal-ui"
+ ],
+ "orientation": "portrait",
+ "background_color": "#050505",
+ "theme_color": "#050505",
+ "lang": "fr",
+ "dir": "ltr",
+ "categories": [
+  "entertainment",
+  "lifestyle"
+ ],
+ "icons": [
+  {
+   "src": "icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "icon-maskable-192.png",
+   "sizes": "192x192",
+   "type": "image/png",
+   "purpose": "maskable"
+  },
+  {
+   "src": "icon-maskable-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  },
+  {
+   "src": "icon.svg",
+   "sizes": "any",
+   "type": "image/svg+xml"
+  }
+ ],
+ "screenshots": [
+  {
+   "src": "screenshots/live_mob_home.png",
+   "sizes": "390x844",
+   "type": "image/png",
+   "form_factor": "narrow",
+   "label": "Séances du jour"
+  },
+  {
+   "src": "screenshots/live_desk_home.png",
+   "sizes": "1440x900",
+   "type": "image/png",
+   "form_factor": "wide",
+   "label": "Séances"
+  }
+ ],
+ "shortcuts": [
+  {
+   "name": "Mes billets",
+   "url": "/#billets",
+   "icons": [
+    {
+     "src": "icon-192.png",
+     "sizes": "192x192"
+    }
+   ]
+  },
+  {
+   "name": "Carte des cinémas",
+   "url": "/#carte",
+   "icons": [
+    {
+     "src": "icon-192.png",
+     "sizes": "192x192"
+    }
+   ]
+  }
+ ]
+}

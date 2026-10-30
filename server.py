@@ -10,7 +10,7 @@ CACHE, TTL, LOCK = {}, 1200, threading.Lock()
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36"
 
 class H(http.server.SimpleHTTPRequestHandler):
-    extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map, ".webmanifest": "application/manifest+json", ".js": "application/javascript; charset=utf-8", ".json": "application/json", ".svg": "image/svg+xml", ".xml": "application/xml"}
+    extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map, ".webmanifest": "application/manifest+json", ".js": "application/javascript; charset=utf-8", ".json": "application/json", ".svg": "image/svg+xml", ".xml": "application/xml", ".apk": "application/vnd.android.package-archive", ".zip": "application/zip"}
     def end_headers(s):
         p = s.path.split("?")[0]
         if p.endswith((".js", ".css", ".html", "/")) or p.endswith("sw.js"): s.send_header("Cache-Control", "no-cache")

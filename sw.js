@@ -1,4 +1,4 @@
-const V = "cine-idf-v3", STATIC = ["/", "/index.html", "/style.css", "/app.js", "/data/cinemas.js", "/manifest.webmanifest", "/icon.svg"];
+const V = "cine-idf-v4", STATIC = ["/", "/index.html", "/style.css", "/app.js", "/data/cinemas.js", "/manifest.webmanifest", "/icon.svg", "/apple-touch-icon.png", "/icon-192.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(V).then(c => c.addAll(STATIC)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(k => Promise.all(k.filter(x => x !== V).map(x => caches.delete(x)))).then(() => self.clients.claim())); });
 self.addEventListener("fetch", e => {
