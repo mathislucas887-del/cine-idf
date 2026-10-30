@@ -15,6 +15,7 @@ let FAILS = 0;
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
   document.querySelectorAll("nav button").forEach(x => x.classList.toggle("on", x === b));
   document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id === "v-" + b.dataset.v));
+  if (b.dataset.v === "seances" && !lastResult.length) loadShows();
   if (b.dataset.v === "map") setTimeout(() => map.invalidateSize(), 50);
 });
 
@@ -92,11 +93,11 @@ let SEL = new Set(), DATE = null;
 const days = [...Array(8)].map((_, i) => { const d = new Date(); d.setHours(12); d.setDate(d.getDate() + i); return d; });
 DATE = ymd(days[0]);
 $("#sdates").innerHTML = days.map((d, i) => `<button data-d="${ymd(d)}" class="${i?"":"on"}">${i===0?"Aujourd'hui":i===1?"Demain":d.toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"})}</button>`).join("");
-$("#sdates").onclick = e => { const b = e.target.closest("button"); if (!b) return; DATE = b.dataset.d; document.querySelectorAll("#sdates button").forEach(x => x.classList.toggle("on", x === b)); if (SEL.size) loadShows(); };
+$("#sdates").onclick = e => { const b = e.target.closest("button"); if (!b) return; DATE = b.dataset.d; document.querySelectorAll("#sdates button").forEach(x => x.classList.toggle("on", x === b)); loadShows(); };
 const patheList = () => CINES.filter(c => c.type === "pathe" && (c.patheSlug || c.allocineId)).sort((a,b)=>a.name.localeCompare(b.name));
 function syncPicker() {
   document.querySelectorAll("#plist input").forEach(i => i.checked = SEL.has(i.value));
-  $("#pbtn").textContent = SEL.size ? `${SEL.size} cinéma${SEL.size>1?"s":""} sélectionné${SEL.size>1?"s":""} ▾` : "Choisir des cinémas ▾";
+  $("#pbtn").textContent = SEL.size ? `${SEL.size} cinéma${SEL.size>1?"s":""} sélectionné${SEL.size>1?"s":""} ▾` : "Tous les cinémas Pathé ▾";
   $("#chips").innerHTML = [...SEL].map(id => `<span class="chip" data-id="${id}">${esc(CINES.find(c=>c.id===id).name)} ✕</span>`).join("");
 }
 $("#pbtn").onclick = e => { e.stopPropagation(); $("#pmenu").classList.toggle("hidden"); $("#psearch").focus(); };
@@ -121,8 +122,7 @@ async function pool(items, n, fn) {
 let lastResult = [];
 async function loadShows() {
   $("#pmenu").classList.add("hidden");
-  const ids = [...SEL]; const date = DATE;
-  if (!ids.length) { $("#shows").innerHTML = `<div class="empty">Choisissez au moins un cinéma.</div>`; return; }
+  const date = DATE; const ids = SEL.size ? [...SEL] : patheList().map(c => c.id);
   return loadAllo(ids, date); // horaires via Allociné (pathe.fr bloque les serveurs)
   $("#shows").innerHTML = ""; const films = {}; let done = 0; FAILS = 0;
   for (const id of ids) {
@@ -146,10 +146,13 @@ async function loadShows() {
 const rt = r => { const m = String(r||"").match(/(\d+)h\s*(\d+)?/); return m ? +m[1]*60 + +(m[2]||0) : 0; };
 async function loadAllo(ids, date) {
   $("#shows").innerHTML = ""; const films = {}; let done = 0; FAILS = 0;
+  $("#progress").textContent = "Chargement des séances…";
+  let ALL = null;
+  if (!SEL.size) { try { ALL = (await fetch("/allocine-all/" + date).then(j)).cinemas; } catch (e) { FAILS++; } }
   await pool(ids, 4, async id => {
     const c = CINES.find(x => x.id === id);
     if (!c.allocineId) { FAILS++; return; }
-    let d; try { d = await fetch(`/allocine/${c.allocineId}/${date}`).then(j); } catch (e) { FAILS++; return; }
+    let d; if (ALL) d = {films: ALL[id] || []}; else try { d = await fetch(`/allocine/${c.allocineId}/${date}`).then(j); } catch (e) { FAILS++; return; }
     $("#progress").textContent = `Chargement… (${++done}/${ids.length})`;
     (d.films || []).forEach(f => {
       const k = norm(f.title);
