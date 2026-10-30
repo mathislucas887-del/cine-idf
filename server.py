@@ -2,13 +2,20 @@
 """Ciné IDF – serveur local : sert l'appli + relais (proxy) vers l'API publique de pathe.fr.
 Usage : python3 server.py   puis ouvrir http://localhost:8765
 """
-import json, re, http.server, socketserver, urllib.request, urllib.error, time, os, sys, threading
+import json, re, urllib.parse, http.server, socketserver, urllib.request, urllib.error, time, os, sys, threading
 PORT = int(os.environ.get("PORT", sys.argv[1] if len(sys.argv) > 1 else 8765))
+START = time.time()
 ROOT = os.path.dirname(os.path.abspath(__file__))
-CACHE, TTL, LOCK = {}, 600, threading.Lock()
+CACHE, TTL, LOCK = {}, 1200, threading.Lock()
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36"
 
 class H(http.server.SimpleHTTPRequestHandler):
+    extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map, ".webmanifest": "application/manifest+json", ".js": "application/javascript; charset=utf-8", ".json": "application/json", ".svg": "image/svg+xml", ".xml": "application/xml"}
+    def end_headers(s):
+        p = s.path.split("?")[0]
+        if p.endswith((".js", ".css", ".html", "/")) or p.endswith("sw.js"): s.send_header("Cache-Control", "no-cache")
+        elif p.endswith((".png", ".svg")): s.send_header("Cache-Control", "public, max-age=86400")
+        super().end_headers()
     def __init__(s, *a, **k): super().__init__(*a, directory=ROOT, **k)
     def log_message(s, *a): pass
     def send_json(s, code, body):
@@ -16,7 +23,9 @@ class H(http.server.SimpleHTTPRequestHandler):
         s.send_header("Content-Length", str(len(body))); s.end_headers(); s.wfile.write(body)
     def do_GET(s):
         if s.path.startswith("/allocine-all/"): return s.allo_all()
+        if s.path == "/health": return s.send_json(200, json.dumps({"ok": True, "uptime_s": int(time.time() - START), "cache": len(CACHE)}).encode())
         if s.path.startswith("/allocine/"): return s.allocine()
+        if any(x in s.path for x in ("users.json", ".git", "server.py", ".tmp")): return s.send_json(404, b'{"error":"not found"}')
         if not s.path.startswith("/pathe/"): return super().do_GET()
         path = s.path[len("/pathe/"):]
         url = "https://www.pathe.fr/api/" + path + ("&" if "?" in path else "?") + "language=fr"
@@ -48,7 +57,10 @@ class H(http.server.SimpleHTTPRequestHandler):
         def one(c):
             try: return c["id"], json.loads(allo_fetch(c["allocineId"], d))["films"]
             except Exception: return c["id"], None
-        with ThreadPoolExecutor(8) as ex: res = dict(ex.map(one, ALLO_CINES))
+        q = urllib.parse.parse_qs(urllib.parse.urlparse(s.path).query)
+        ids = set((q.get("ids") or [""])[0].split(",")) - {""}
+        sel = [c for c in ALLO_CINES if c["id"] in ids][:80] if ids else [c for c in ALLO_CINES if c.get("type") in ("pathe", "partner")]
+        with ThreadPoolExecutor(12) as ex: res = dict(ex.map(one, sel))
         s.send_json(200, json.dumps({"date": d, "cinemas": res}, ensure_ascii=False).encode())
 
 def allo_fetch(cid, date):
@@ -72,11 +84,15 @@ def allo_fetch(cid, date):
                             seen.add(st["internalId"])
                             url_b = None
                             for t in ((st.get("data") or {}).get("ticketing") or []):
-                                if t.get("provider") == "default" and t.get("urls"): url_b = t["urls"][0]
+                                if t.get("urls") and (t.get("provider") == "default" or not url_b): url_b = t["urls"][0]
                             v = st.get("diffusionVersion") or ""
-                            times.append({"preview": bool(st.get("isPreview")), "events": [x.split(".")[-1] for x in st.get("tags") or [] if ".Event." in x],
-                                          "time": st["startsAt"], "version": {"ORIGINAL": "vo", "LOCAL": "vf", "DUBBED": "vf"}.get(v, v.lower()),
-                                          "url": url_b, "tags": [x.split(".")[-1] for x in st.get("tags") or [] if x.startswith("Format.")]})
+                            tg = st.get("tags") or []
+                            fm = [{"E_4DX": "4DX", "SCREEN_X": "ScreenX", "IMAX": "IMAX", "DOLBY_CINEMA": "Dolby Cinema", "DOLBY": "Dolby", "ONYX": "Onyx"}.get(x, None) for x in (st.get("experience") or [])]
+                            fm = [x for x in fm if x] + [x.split(".")[-1].replace("Imax", "IMAX") for x in tg if x.startswith("Format.Projection.") and x.split(".")[-1] in ("3D", "Imax")]
+                            times.append({"preview": bool(st.get("isPreview")), "events": [x.split(".")[-1] for x in tg if ".Event." in x],
+                                          "fmt": sorted(set(fm)), "acc": any("Accessibility" in x for x in tg),
+                                          "time": st["startsAt"], "version": {"ORIGINAL": "vo", "LOCAL": "vf", "DUBBED": "vf"}.get(st.get("diffusionVersion") or "", (st.get("diffusionVersion") or "").lower()),
+                                          "url": url_b})
                     dirs = ", ".join(" ".join(filter(None, [(c.get("person") or {}).get("firstName"), (c.get("person") or {}).get("lastName")]))
                                      for c in (m.get("credits") or []) if (c.get("position") or {}).get("name") == "DIRECTOR")
                     films.append({"id": m.get("internalId"), "title": m.get("title"), "originalTitle": m.get("originalTitle"),
@@ -84,6 +100,9 @@ def allo_fetch(cid, date):
                                   "genres": [g.get("translate") for g in m.get("genres") or []], "directors": dirs, "times": times,
                                   "releases": [{"name": r.get("name"), "date": (r.get("releaseDate") or {}).get("date")} for r in m.get("releases") or []],
                                   "year": (m.get("data") or {}).get("productionYear"), "isPremiere": bool((m.get("customFlags") or {}).get("isPremiere")), "weeklyOuting": bool((m.get("customFlags") or {}).get("weeklyOuting")),
+                                  "rating": ((m.get("stats") or {}).get("userRating") or {}).get("score"), "press": ((m.get("stats") or {}).get("pressReview") or {}).get("score"),
+                                  "cast": [" ".join(filter(None, [((e.get("node") or {}).get("actor") or {}).get("firstName"), ((e.get("node") or {}).get("actor") or {}).get("lastName")])) for e in ((m.get("cast") or {}).get("edges") or [])[:4] if (e.get("node") or {}).get("actor")],
+                                  "age": next((r["certificate"]["label"] for r in m.get("releases") or [] if r.get("certificate") and r["certificate"].get("label") and r["certificate"].get("code") != "U"), ""),
                                   "synopsis": re.sub(r"<[^>]+>", "", m.get("synopsis") or "")[:400]})
             body = json.dumps({"source": "allocine", "films": films}, ensure_ascii=False).encode()
             with LOCK: CACHE[key] = (now, body)
@@ -120,15 +139,17 @@ def api_post(h, path):
             elif not u or not hmac.compare_digest(u["hash"], pw_hash(pw, u["salt"])):
                 return out(401, {"error": "E-mail ou mot de passe incorrect."})
             tok = secrets.token_urlsafe(32); d["tokens"][tok] = email; db_save(d)
-            return out(200, {"token": tok, "email": email, "favs": u["favs"]})
+            return out(200, {"token": tok, "email": email, "favs": u["favs"], "tickets": u.get("tickets", [])})
         email = d["tokens"].get((h.headers.get("Authorization") or "").replace("Bearer ", ""))
         if not email or email not in d["users"]: return out(401, {"error": "Session expirée, reconnectez-vous."})
         if path == "/api/logout":
             d["tokens"] = {k: v for k, v in d["tokens"].items() if k != (h.headers.get("Authorization") or "").replace("Bearer ", "")}; db_save(d); return out(200, {"ok": True})
+        u = d["users"][email]
         if path == "/api/favs":
-            favs = [str(x)[:80] for x in body.get("favs", [])][:100]
-            d["users"][email]["favs"] = favs; db_save(d); return out(200, {"favs": favs})
-        if path == "/api/me": return out(200, {"email": email, "favs": d["users"][email]["favs"]})
+            if "favs" in body: u["favs"] = [str(x)[:80] for x in body.get("favs") or []][:200]
+            if "tickets" in body: u["tickets"] = [{k: str(t.get(k, ""))[:600] for k in ("id", "title", "poster", "cinema", "time", "url", "version")} for t in (body.get("tickets") or [])[:200] if isinstance(t, dict)]
+            db_save(d); return out(200, {"favs": u["favs"], "tickets": u.get("tickets", [])})
+        if path == "/api/me": return out(200, {"email": email, "favs": u["favs"], "tickets": u.get("tickets", [])})
     return out(404, {"error": "inconnu"})
 H.do_POST = lambda h: api_post(h, h.path.split("?")[0]) if h.path.startswith("/api/") else h.send_json(404, b'{}')
 
@@ -142,4 +163,16 @@ if __name__ == "__main__":
     print(f"Ciné IDF → sur cet ordinateur : http://localhost:{PORT}")
     print(f"           sur votre téléphone (même Wi-Fi) : http://{ip}:{PORT}")
     print("Ctrl+C pour arrêter")
+    def warm():
+        import datetime
+        from concurrent.futures import ThreadPoolExecutor
+        def one(c, dd):
+            try: allo_fetch(c["allocineId"], dd)
+            except Exception: pass
+        while True:
+            for k in range(2):
+                dd = (datetime.date.today() + datetime.timedelta(days=k)).isoformat()
+                with ThreadPoolExecutor(6) as ex: list(ex.map(lambda c: one(c, dd), [c for c in ALLO_CINES if c.get("type") in ("pathe", "partner")]))
+            time.sleep(900)
+    threading.Thread(target=warm, daemon=True).start()
     TS((HOST, PORT), H).serve_forever()
