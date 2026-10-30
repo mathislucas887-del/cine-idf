@@ -1,3 +1,6 @@
 screenshots/
 *.zip
 __pycache__/
+
+users.json
+users.json.tmp

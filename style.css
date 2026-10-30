@@ -127,3 +127,13 @@ input:focus,select:focus{outline:none;border-color:var(--gold)}
 .tags{position:absolute;top:6px;left:6px;right:6px;display:flex;flex-wrap:wrap;gap:4px}.tag{font-size:10px;font-weight:700;padding:3px 7px;border-radius:20px;background:#050505d9;color:var(--gold2);border:1px solid var(--gold);text-transform:uppercase;letter-spacing:.3px}.tag.g{background:linear-gradient(135deg,var(--gold2),var(--gold));color:#141414}
 .fd .poster-l{float:left;width:110px;margin:0 14px 8px 0;border-radius:8px}.fd .syn{color:#cfc4a2;font-size:14px;line-height:1.45}.fd .cine-line{clear:both}
 @media(max-width:700px){.rail{padding:4px 10px 10px}.fgrid{padding:4px 10px;grid-template-columns:repeat(3,1fr);gap:10px}.poster{flex-basis:120px}.fsec h2{margin:10px 10px 2px;font-size:18px}.fsec .hint{margin:0 10px 8px}.fgrid .poster h4{font-size:12px}}
+
+/* ---- Compte & favoris ---- */
+header{position:relative}.acct{background:#0b0a07;border:1px solid var(--gold);color:var(--gold2);border-radius:20px;padding:7px 14px;cursor:pointer;font-size:13px;margin-left:auto;margin-right:10px;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis}
+.ghost{background:#0b0a07;border:1px solid var(--gold);color:var(--gold2);border-radius:10px;padding:10px 14px;cursor:pointer}
+.favbtn{background:#0b0a07;border:1px solid var(--gold);color:var(--gold2);border-radius:20px;padding:8px 14px;cursor:pointer;font-size:14px;margin:6px 0}.favbtn.on{background:linear-gradient(135deg,var(--gold2),var(--gold));color:#141414;font-weight:700}
+.auth{padding:22px}.auth h2{color:var(--gold2);margin:0 0 6px}.auth input{width:100%;box-sizing:border-box;margin:6px 0;padding:12px;border-radius:10px;border:1px solid #c9a22755;background:#0b0a07;color:#f8f1dc;font-size:16px}
+.auth .row{display:flex;gap:8px;margin-top:10px}.auth .row button{flex:1;padding:12px}.auth .err{color:#ff8a7a;min-height:18px;font-size:14px}.auth .tabs{display:flex;gap:6px;margin:10px 0}.auth .tabs button{flex:1}
+.favlist .chip{display:inline-block;margin:3px}
+.card .star{position:absolute;top:8px;right:8px;font-size:18px;text-shadow:0 1px 4px #000}.card{position:relative}
+@media(max-width:700px){.acct{position:absolute;right:0;top:10px;padding:6px 10px;font-size:12px;max-width:140px}}

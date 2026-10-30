@@ -91,6 +91,47 @@ def allo_fetch(cid, date):
 
 ALLO_CINES = [c for c in json.load(open(os.path.join(ROOT, "data", "cinemas.json"), encoding="utf-8")) if c.get("allocineId")]
 
+# ---------- Comptes & favoris (stockage JSON) ----------
+import hashlib, secrets, hmac
+DB_PATH = os.environ.get("DB_PATH", os.path.join(ROOT, "users.json")); DBL = threading.Lock()
+def db_load():
+    try: return json.load(open(DB_PATH, encoding="utf-8"))
+    except Exception: return {"users": {}, "tokens": {}}
+def db_save(d):
+    tmp = DB_PATH + ".tmp"; json.dump(d, open(tmp, "w", encoding="utf-8")); os.replace(tmp, DB_PATH)
+def pw_hash(pw, salt): return hashlib.pbkdf2_hmac("sha256", pw.encode(), bytes.fromhex(salt), 200000).hex()
+
+def api_post(h, path):
+    n = int(h.headers.get("Content-Length") or 0)
+    if n > 20000: return h.send_json(413, b'{"error":"trop gros"}')
+    try: body = json.loads(h.rfile.read(n) or b"{}")
+    except Exception: return h.send_json(400, b'{"error":"JSON invalide"}')
+    out = lambda code, o: h.send_json(code, json.dumps(o, ensure_ascii=False).encode())
+    with DBL:
+        d = db_load()
+        if path in ("/api/signup", "/api/login"):
+            email = str(body.get("email", "")).strip().lower(); pw = str(body.get("password", ""))
+            if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email) or len(email) > 120: return out(400, {"error": "Adresse e-mail invalide."})
+            if len(pw) < 6: return out(400, {"error": "Mot de passe : 6 caractères minimum."})
+            u = d["users"].get(email)
+            if path == "/api/signup":
+                if u: return out(409, {"error": "Un compte existe déjà avec cet e-mail."})
+                salt = secrets.token_hex(16); u = d["users"][email] = {"salt": salt, "hash": pw_hash(pw, salt), "favs": [], "created": int(time.time())}
+            elif not u or not hmac.compare_digest(u["hash"], pw_hash(pw, u["salt"])):
+                return out(401, {"error": "E-mail ou mot de passe incorrect."})
+            tok = secrets.token_urlsafe(32); d["tokens"][tok] = email; db_save(d)
+            return out(200, {"token": tok, "email": email, "favs": u["favs"]})
+        email = d["tokens"].get((h.headers.get("Authorization") or "").replace("Bearer ", ""))
+        if not email or email not in d["users"]: return out(401, {"error": "Session expirée, reconnectez-vous."})
+        if path == "/api/logout":
+            d["tokens"] = {k: v for k, v in d["tokens"].items() if k != (h.headers.get("Authorization") or "").replace("Bearer ", "")}; db_save(d); return out(200, {"ok": True})
+        if path == "/api/favs":
+            favs = [str(x)[:80] for x in body.get("favs", [])][:100]
+            d["users"][email]["favs"] = favs; db_save(d); return out(200, {"favs": favs})
+        if path == "/api/me": return out(200, {"email": email, "favs": d["users"][email]["favs"]})
+    return out(404, {"error": "inconnu"})
+H.do_POST = lambda h: api_post(h, h.path.split("?")[0]) if h.path.startswith("/api/") else h.send_json(404, b'{}')
+
 class TS(socketserver.ThreadingMixIn, http.server.HTTPServer): daemon_threads = True
 if __name__ == "__main__":
     import socket

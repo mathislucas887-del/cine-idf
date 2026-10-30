@@ -3,7 +3,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="style.css"></head><body>
 <header><div class="brand">🎬 Ciné IDF <small>Pathé & partenaires CinéPass</small></div>
-<nav id="nav"><button data-v="films" class="on"><span class="ic">🎬</span>Films</button><button data-v="map"><span class="ic">🗺️</span>Carte</button><button data-v="list"><span class="ic">🎦</span>Cinémas</button><button data-v="seances"><span class="ic">🎟️</span>Séances</button></nav></header>
+<button id="acct" class="acct" onclick="openAcct()">👤 Connexion</button><nav id="nav"><button data-v="films" class="on"><span class="ic">🎬</span>Films</button><button data-v="map"><span class="ic">🗺️</span>Carte</button><button data-v="list"><span class="ic">🎦</span>Cinémas</button><button data-v="seances"><span class="ic">🎟️</span>Séances</button></nav></header>
 <div id="banner" class="banner hidden"></div>
 <main>
 <section id="v-films" class="view on"><div id="fdates" class="dates"></div><div class="filters"><input id="ffilm" placeholder="Rechercher un film…"></div><div id="fprogress" class="hint"></div>
@@ -11,11 +11,11 @@
 <div class="fsec"><h2>🎞️ Séances rétro</h2><p class="hint">Films sortis il y a plusieurs années et de nouveau à l’affiche.</p><div id="f-retro" class="rail"></div></div>
 <div class="fsec"><h2>🍿 Tous les films à l’affiche</h2><p class="hint">L’ensemble des films diffusés dans les 25 cinémas Pathé d’Île-de-France.</p><div id="f-all" class="fgrid"></div></div>
 </section>
-<section id="v-map" class="view"><div class="filters mapbar"><input id="q" placeholder="Rechercher un cinéma, une ville…"><select id="ftype"><option value="">Tous</option><option value="pathe">Pathé</option><option value="partner">Partenaires CinéPass</option></select><span id="count"></span></div><div id="map"></div></section>
-<section id="v-list" class="view"><div class="filters"><input id="q2" placeholder="Rechercher…"><select id="ftype2"><option value="">Tous</option><option value="pathe">Pathé</option><option value="partner">Partenaires CinéPass</option></select></div><div id="grid" class="grid"></div></section>
+<section id="v-map" class="view"><div class="filters mapbar"><input id="q" placeholder="Rechercher un cinéma, une ville…"><select id="ftype"><option value="">Tous</option><option value="pathe">Pathé</option><option value="partner">Partenaires CinéPass</option><option value="fav">⭐ Mes favoris</option></select><span id="count"></span></div><div id="map"></div></section>
+<section id="v-list" class="view"><div class="filters"><input id="q2" placeholder="Rechercher…"><select id="ftype2"><option value="">Tous</option><option value="pathe">Pathé</option><option value="partner">Partenaires CinéPass</option><option value="fav">⭐ Mes favoris</option></select></div><div id="grid" class="grid"></div></section>
 <section id="v-seances" class="view"><div class="filters">
 <div class="picker" id="picker"><button id="pbtn" type="button">Tous les cinémas Pathé ▾</button><div id="pmenu" class="pmenu hidden"><input id="psearch" placeholder="Rechercher un cinéma Pathé…"><div id="plist"></div></div></div><input id="sfilm" placeholder="Filtrer par film…"><select id="sver"><option value="">VF + VO</option><option value="vf">VF</option><option value="vo">VO / VOST</option></select>
-<button id="sload" class="primary">Afficher les séances</button></div><div id="chips" class="chips"></div><div id="sdates" class="dates"></div>
+<button id="sfav" type="button" class="ghost">⭐ Mes favoris</button><button id="sload" class="primary">Afficher les séances</button></div><div id="chips" class="chips"></div><div id="sdates" class="dates"></div>
 <p class="hint">Sans sélection : toutes les séances des 25 cinémas Pathé d’Île-de-France (source Allociné) – touchez un horaire pour réserver sur pathe.fr.</p>
 <div id="progress"></div><div id="shows"></div></section>
 </main>

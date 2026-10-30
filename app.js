@@ -10,6 +10,48 @@ const direct = p => fetch("https://www.pathe.fr/api/" + p + (p.includes("?") ? "
 const api1 = p => DIRECT ? direct(p) : fetch("/pathe/" + p).then(j).catch(e => direct(p).then(x => { DIRECT = true; return x; }));
 const api = p => api1(p).catch(() => new Promise(r => setTimeout(r, 800)).then(() => api1(p)));
 let FAILS = 0;
+// ---------- Compte & favoris ----------
+let TOKEN = localStorage.getItem("cineToken") || "", EMAIL = localStorage.getItem("cineEmail") || "", FAVS = new Set();
+const post = (p, b) => fetch(p, {method: "POST", headers: {"Content-Type": "application/json", ...(TOKEN ? {Authorization: "Bearer " + TOKEN} : {})}, body: JSON.stringify(b || {})}).then(async r => { const x = await r.json().catch(() => ({})); if (!r.ok) throw new Error(x.error || "Erreur " + r.status); return x; });
+function setAuth(x) {
+  if (x) { TOKEN = x.token || TOKEN; EMAIL = x.email; FAVS = new Set(x.favs || []); localStorage.setItem("cineToken", TOKEN); localStorage.setItem("cineEmail", EMAIL); }
+  else { TOKEN = EMAIL = ""; FAVS = new Set(); localStorage.removeItem("cineToken"); localStorage.removeItem("cineEmail"); }
+  $("#acct").textContent = EMAIL ? "👤 " + EMAIL.split("@")[0] + " · ⭐" + FAVS.size : "👤 Connexion";
+  try { renderMap(); renderGrid(); } catch (e) {}
+}
+window.openAcct = (msg) => {
+  if (EMAIL) {
+    const L = [...FAVS].map(id => CINES.find(c => c.id === id)).filter(Boolean);
+    $("#mcontent").innerHTML = `<div class="auth"><h2>Mon compte</h2><p class="hint">${esc(EMAIL)}</p><h3 style="color:var(--gold2)">⭐ Mes cinémas favoris (${L.length})</h3>
+      <div class="favlist">${L.map(c => `<span class="chip" onclick="openCine('${c.id}')">${esc(c.name)}</span>`).join("") || `<p class="hint">Aucun favori : ouvrez la fiche d’un cinéma et touchez « Ajouter aux favoris ».</p>`}</div>
+      <div class="row"><button class="primary" onclick="favSeances()">Séances de mes favoris</button><button class="ghost" onclick="logout()">Se déconnecter</button></div></div>`;
+  } else {
+    $("#mcontent").innerHTML = `<div class="auth"><h2>Mon compte Ciné IDF</h2><p class="hint">${esc(msg || "Créez un compte pour enregistrer vos cinémas favoris et les retrouver sur tous vos appareils.")}</p>
+      <div class="tabs"><button id="tsu" class="primary" onclick="authMode('signup')">Créer un compte</button><button id="tli" class="ghost" onclick="authMode('login')">Se connecter</button></div>
+      <form onsubmit="doAuth(event)"><input id="aemail" type="email" autocomplete="email" placeholder="Adresse e-mail" required><input id="apw" type="password" autocomplete="new-password" placeholder="Mot de passe (6 caractères min.)" required minlength="6">
+      <div class="err" id="aerr"></div><button class="primary" style="width:100%;padding:13px" id="asub">Créer mon compte</button></form></div>`;
+    window.AMODE = "signup";
+  }
+  $("#modal").classList.remove("hidden");
+};
+window.authMode = m => { AMODE = m; $("#tsu").className = m === "signup" ? "primary" : "ghost"; $("#tli").className = m === "login" ? "primary" : "ghost"; $("#asub").textContent = m === "signup" ? "Créer mon compte" : "Se connecter"; $("#apw").autocomplete = m === "signup" ? "new-password" : "current-password"; };
+window.doAuth = async e => { e.preventDefault(); $("#aerr").textContent = "";
+  try { const x = await post("/api/" + AMODE, {email: $("#aemail").value, password: $("#apw").value}); setAuth(x); if (PENDING_FAV) { const id = PENDING_FAV; PENDING_FAV = null; return toggleFav(id); } openAcct(); }
+  catch (err) { $("#aerr").textContent = err.message; } };
+window.logout = async () => { try { await post("/api/logout"); } catch (e) {} setAuth(null); closeModal(); };
+let PENDING_FAV = null;
+window.toggleFav = async id => {
+  if (!EMAIL) { PENDING_FAV = id; return openAcct("Connectez-vous ou créez un compte pour ajouter ce cinéma à vos favoris."); }
+  FAVS.has(id) ? FAVS.delete(id) : FAVS.add(id);
+  try { const x = await post("/api/favs", {favs: [...FAVS]}); FAVS = new Set(x.favs); } catch (e) { if (/Session/.test(e.message)) { setAuth(null); return openAcct(e.message); } }
+  setAuth({email: EMAIL, favs: [...FAVS]}); openCine(id);
+};
+window.favSeances = () => {
+  const ids = [...FAVS].filter(id => CINES.find(c => c.id === id && c.type === "pathe" && c.allocineId));
+  if (!ids.length) { if (!EMAIL) return openAcct("Connectez-vous pour retrouver les séances de vos cinémas favoris."); alert("Aucun cinéma Pathé dans vos favoris pour l’instant."); return; }
+  closeModal(); document.querySelector('nav button[data-v="seances"]').click(); SEL = new Set(ids); syncPicker(); loadShows();
+};
+const favStar = id => FAVS.has(id) ? "⭐ " : "";
 
 // ---------- Vue ----------
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
@@ -36,7 +78,7 @@ function credit(c) {
 }
 function filtered(q, t) {
   q = norm(q);
-  return CINES.filter(c => (!t || c.type === t) && (!q || norm(c.name + " " + c.city + " " + c.zip + " " + c.address).includes(q)));
+  return CINES.filter(c => (!t || c.type === t || (t === "fav" && FAVS.has(c.id))) && (!q || norm(c.name + " " + c.city + " " + c.zip + " " + c.address).includes(q)));
 }
 function renderMap() {
   layer.clearLayers();
@@ -45,7 +87,7 @@ function renderMap() {
   list.forEach(c => {
     if (c.lat == null) return;
     const m = L.marker([c.lat, c.lng], {icon: icon(c.type), title: c.name});
-    m.bindPopup(`<div class="pop">${c.photo?photoHTML(c):'<div class="noimg"></div>'}<div class="pb"><h4>${esc(c.name)}</h4><div class="addr">${esc(c.fullAddress)}</div>${credit(c)}
+    m.bindPopup(`<div class="pop">${c.photo?photoHTML(c):'<div class="noimg"></div>'}<div class="pb"><h4>${favStar(c.id)}${esc(c.name)}</h4><div class="addr">${esc(c.fullAddress)}</div>${credit(c)}
       <div class="acts"><a href="#" onclick="openCine('${c.id}');return false">Fiche</a>${c.type==="pathe"&&c.patheSlug?`<a class="gold" href="#" onclick="cineShows('${c.id}');return false">Séances</a>`:`<a href="${allocine(c)}" target="_blank" rel="noopener">Séances</a>`}</div></div></div>`, {maxWidth: 280, minWidth: 250, autoPanPaddingTopLeft: [10, innerWidth < 700 ? 150 : 90], autoPanPaddingBottomRight: [10, 40]});
     m.on("click", () => innerWidth >= 700 && map.flyTo([c.lat, c.lng], Math.max(map.getZoom(), 13), {duration: .6}));
     layer.addLayer(m);
@@ -58,7 +100,7 @@ function renderGrid() {
   const list = filtered($("#q2").value, $("#ftype2").value);
   $("#grid").innerHTML = list.map(c => `<div class="card" onclick="openCine('${c.id}')">
     <div class="ph ${c.photo?"":"none"}" style="${c.photo?`background-image:url('${esc(c.photo.url)}')`:""}">${c.photo?"":"Photo indisponible"}
-    <span class="badge b-${c.type}">${c.type==="pathe"?"Pathé":"Partenaire CinéPass"}</span></div>
+    <span class="badge b-${c.type}">${c.type==="pathe"?"Pathé":"Partenaire CinéPass"}</span>${FAVS.has(c.id)?'<span class="star">⭐</span>':""}</div>
     <div class="b"><h3>${esc(c.name)}</h3><p>${esc(c.zip)} ${esc(c.city)}</p></div></div>`).join("") || `<div class="empty">Aucun résultat.</div>`;
 }
 $("#q2").oninput = $("#ftype2").onchange = renderGrid;
@@ -74,7 +116,7 @@ window.openCine = id => {
     `<a href="${gmaps(c)}" target="_blank" rel="noopener">Itinéraire</a>`].filter(Boolean).join(" · ");
   $("#mcontent").innerHTML = `<div class="mhead" style="${c.photo?`background-image:url('${esc(c.photo.url)}')`:""}"></div>
    <div class="mbody"><span class="badge b-${c.type}" style="position:static">${c.type==="pathe"?"Pathé":"Partenaire CinéPass"}</span>
-   <h2>${esc(c.name)}</h2><p>${esc(c.fullAddress)}</p>${credit(c)}<p>${links}</p>
+   <h2>${esc(c.name)}</h2><button class="favbtn ${FAVS.has(c.id)?"on":""}" onclick="toggleFav('${c.id}')">${FAVS.has(c.id)?"⭐ Dans mes favoris":"☆ Ajouter aux favoris"}</button><p>${esc(c.fullAddress)}</p>${credit(c)}<p>${links}</p>
    <div id="mshows">${c.type==="pathe" ? (c.patheSlug ? `<button class="primary" onclick="cineShows('${c.id}')">Voir les séances du jour</button>` : `<p class="hint">Séances : voir le site de Pathé.</p>`)
      : `<p class="hint">Les séances des cinémas partenaires ne sont pas publiées par l'API Pathé : utilisez le lien Allociné ou le site du cinéma.</p>`}</div></div>`;
   $("#modal").classList.remove("hidden");
@@ -144,7 +186,9 @@ async function loadShows() {
   renderShows();
 }
 const rt = r => { const m = String(r||"").match(/(\d+)h\s*(\d+)?/); return m ? +m[1]*60 + +(m[2]||0) : 0; };
+let REQ = 0;
 async function loadAllo(ids, date) {
+  const my = ++REQ;
   $("#shows").innerHTML = ""; const films = {}; let done = 0; FAILS = 0;
   $("#progress").textContent = "Chargement des séances…";
   let ALL = null;
@@ -163,6 +207,7 @@ async function loadAllo(ids, date) {
       if (times.length) (films[k] ||= {info, by: []}).by.push({c, times});
     });
   });
+  if (my !== REQ) return;
   $("#progress").textContent = `Source : Allociné (horaires Pathé) – mis à jour à ${new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}`;
   lastResult = Object.values(films).sort((a, b) => b.info.next24ShowtimesCount - a.info.next24ShowtimesCount);
   renderShows();
@@ -188,6 +233,7 @@ function renderShows() {
   $("#shows").innerHTML = (FAILS ? `<div class="empty">⚠️ La source des horaires n'a pas répondu pour ${FAILS} requête(s). Touchez « Afficher les séances » pour réessayer.</div>` : "") + (html || (FAILS ? "" : `<div class="empty">Aucune séance trouvée pour ces critères.</div>`));
 }
 $("#sload").onclick = loadShows;
+$("#sfav").onclick = favSeances;
 $("#sfilm").oninput = $("#sver").onchange = renderShows;
 
 // ---------- Films ----------
@@ -245,6 +291,8 @@ window.openFilm = i => {
   $("#modal").classList.remove("hidden");
 };
 loadFilms();
+setAuth(EMAIL ? {email: EMAIL, favs: []} : null);
+if (TOKEN) post("/api/me").then(setAuth).catch(() => setAuth(null));
 
 // ---------- Données Pathé en direct (photos, GPS, slugs) ----------
 async function live() {
