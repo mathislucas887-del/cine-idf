@@ -93,7 +93,7 @@ const days = [...Array(8)].map((_, i) => { const d = new Date(); d.setHours(12);
 DATE = ymd(days[0]);
 $("#sdates").innerHTML = days.map((d, i) => `<button data-d="${ymd(d)}" class="${i?"":"on"}">${i===0?"Aujourd'hui":i===1?"Demain":d.toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"})}</button>`).join("");
 $("#sdates").onclick = e => { const b = e.target.closest("button"); if (!b) return; DATE = b.dataset.d; document.querySelectorAll("#sdates button").forEach(x => x.classList.toggle("on", x === b)); if (SEL.size) loadShows(); };
-const patheList = () => CINES.filter(c => c.type === "pathe" && c.patheSlug).sort((a,b)=>a.name.localeCompare(b.name));
+const patheList = () => CINES.filter(c => c.type === "pathe" && (c.patheSlug || c.allocineId)).sort((a,b)=>a.name.localeCompare(b.name));
 function syncPicker() {
   document.querySelectorAll("#plist input").forEach(i => i.checked = SEL.has(i.value));
   $("#pbtn").textContent = SEL.size ? `${SEL.size} cinéma${SEL.size>1?"s":""} sélectionné${SEL.size>1?"s":""} ▾` : "Choisir des cinémas ▾";
@@ -123,7 +123,7 @@ async function loadShows() {
   $("#pmenu").classList.add("hidden");
   const ids = [...SEL]; const date = DATE;
   if (!ids.length) { $("#shows").innerHTML = `<div class="empty">Choisissez au moins un cinéma.</div>`; return; }
-  if (!LIVE) { $("#shows").innerHTML = `<div class="empty">Les horaires en direct ne sont pas disponibles depuis ce serveur. Ouvrez les séances sur pathe.fr :</div>` + ids.map(id => { const c = CINES.find(x => x.id === id); return `<div class="film"><div><h3>${esc(c.name)}</h3><div class="meta">${esc(c.fullAddress)}</div><a class="t" href="${esc(c.website)}" target="_blank" rel="noopener"><b>Séances sur pathe.fr →</b></a></div></div>`; }).join(""); return; }
+  return loadAllo(ids, date); // horaires via Allociné (pathe.fr bloque les serveurs)
   $("#shows").innerHTML = ""; const films = {}; let done = 0; FAILS = 0;
   for (const id of ids) {
     const c = CINES.find(x => x.id === id);
@@ -143,6 +143,27 @@ async function loadShows() {
   lastResult = Object.values(films).sort((a, b) => (b.info.next24ShowtimesCount||0) - (a.info.next24ShowtimesCount||0));
   renderShows();
 }
+const rt = r => { const m = String(r||"").match(/(\d+)h\s*(\d+)?/); return m ? +m[1]*60 + +(m[2]||0) : 0; };
+async function loadAllo(ids, date) {
+  $("#shows").innerHTML = ""; const films = {}; let done = 0; FAILS = 0;
+  await pool(ids, 4, async id => {
+    const c = CINES.find(x => x.id === id);
+    if (!c.allocineId) { FAILS++; return; }
+    let d; try { d = await fetch(`/allocine/${c.allocineId}/${date}`).then(j); } catch (e) { FAILS++; return; }
+    $("#progress").textContent = `Chargement… (${++done}/${ids.length})`;
+    (d.films || []).forEach(f => {
+      const k = norm(f.title);
+      const info = films[k]?.info || {title: f.title, originalTitle: f.originalTitle, posterPath: f.poster ? {md: f.poster} : null, genres: f.genres, duration: rt(f.runtime), directors: f.directors, next24ShowtimesCount: 0};
+      info.next24ShowtimesCount += f.times.length;
+      const times = f.times.map(t => { const dur = info.duration; const st = new Date(t.time); const en = dur ? new Date(st.getTime() + (dur + 15) * 60000) : null;
+        return {time: t.time.replace("T", " "), version: t.version, refCmd: t.url, endTime: en ? "0000-00-00 " + en.toTimeString().slice(0,5) : "", auditoriumName: (t.tags||[]).join(" ")}; });
+      if (times.length) (films[k] ||= {info, by: []}).by.push({c, times});
+    });
+  });
+  $("#progress").textContent = `Source : Allociné (horaires Pathé) – mis à jour à ${new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}`;
+  lastResult = Object.values(films).sort((a, b) => b.info.next24ShowtimesCount - a.info.next24ShowtimesCount);
+  renderShows();
+}
 function renderShows() {
   const q = norm($("#sfilm").value), ver = $("#sver").value;
   const html = lastResult.filter(f => !q || norm(f.info.title + " " + (f.info.originalTitle||"")).includes(q)).map(f => {
@@ -153,7 +174,7 @@ function renderShows() {
         const h = s.time.slice(11, 16), v = (s.version||"").toUpperCase();
         const href = s.refCmd || c.website;
         const past = new Date(s.time.replace(" ", "T")) < new Date() || (s.status && s.status !== "available");
-        return `<a class="t${past?" past":""}" href="${esc(href)}" target="_blank" rel="noopener" title="Salle ${esc(s.auditoriumName||"")} – réserver sur pathe.fr"><b>${h}</b><small>${esc(v)}</small><span class="end">fin ${esc((s.endTime||"").slice(11,16))}</span></a>`;
+        return `<a class="t${past?" past":""}" href="${esc(href)}" target="_blank" rel="noopener" title="${esc(s.auditoriumName||"")} – réserver sur pathe.fr"><b>${h}</b><small>${esc(v)}</small>${s.endTime?`<span class="end">fin ~${esc(s.endTime.slice(11,16))}</span>`:""}</a>`;
       }).join("")}</div>`;
     }).join("");
     if (!lines) return "";
@@ -161,7 +182,7 @@ function renderShows() {
     return `<div class="film">${i.posterPath ? `<img src="${esc(i.posterPath.md)}" alt="" loading="lazy">` : `<img alt="">`}
       <div><h3>${esc(i.title)}</h3><div class="meta">${[(i.genres||[]).join(", "), i.duration && `${Math.floor(i.duration/60)}h${String(i.duration%60).padStart(2,"0")}`, i.directors && "de " + i.directors].filter(Boolean).map(esc).join(" · ")}</div>${lines}</div></div>`;
   }).join("");
-  $("#shows").innerHTML = (FAILS ? `<div class="empty">⚠️ pathe.fr n'a pas répondu pour ${FAILS} requête(s). Touchez « Afficher les séances » pour réessayer.</div>` : "") + (html || (FAILS ? "" : `<div class="empty">Aucune séance trouvée pour ces critères.</div>`));
+  $("#shows").innerHTML = (FAILS ? `<div class="empty">⚠️ La source des horaires n'a pas répondu pour ${FAILS} requête(s). Touchez « Afficher les séances » pour réessayer.</div>` : "") + (html || (FAILS ? "" : `<div class="empty">Aucune séance trouvée pour ces critères.</div>`));
 }
 $("#sload").onclick = loadShows;
 $("#sfilm").oninput = $("#sver").onchange = renderShows;
@@ -185,7 +206,7 @@ async function live() {
       if (p.backdrop) c.photo = {url: p.backdrop, credit: "Pathé", source: c.website};
     });
   } catch (e) {
-    $("#banner").innerHTML = "Pathé ne répond pas à ce serveur : la carte et l'annuaire fonctionnent, et chaque cinéma Pathé propose un lien direct vers ses séances sur pathe.fr.";
+    return renderMap(), renderGrid(), fillCineSelect();
     $("#banner").classList.remove("hidden");
   }
   renderMap(); renderGrid(); fillCineSelect();

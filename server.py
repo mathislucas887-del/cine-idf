@@ -2,7 +2,7 @@
 """Ciné IDF – serveur local : sert l'appli + relais (proxy) vers l'API publique de pathe.fr.
 Usage : python3 server.py   puis ouvrir http://localhost:8765
 """
-import http.server, socketserver, urllib.request, urllib.error, time, os, sys, threading
+import json, re, http.server, socketserver, urllib.request, urllib.error, time, os, sys, threading
 PORT = int(os.environ.get("PORT", sys.argv[1] if len(sys.argv) > 1 else 8765))
 ROOT = os.path.dirname(os.path.abspath(__file__))
 CACHE, TTL, LOCK = {}, 600, threading.Lock()
@@ -11,7 +11,11 @@ UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like 
 class H(http.server.SimpleHTTPRequestHandler):
     def __init__(s, *a, **k): super().__init__(*a, directory=ROOT, **k)
     def log_message(s, *a): pass
+    def send_json(s, code, body):
+        s.send_response(code); s.send_header("Content-Type", "application/json; charset=utf-8")
+        s.send_header("Content-Length", str(len(body))); s.end_headers(); s.wfile.write(body)
     def do_GET(s):
+        if s.path.startswith("/allocine/"): return s.allocine()
         if not s.path.startswith("/pathe/"): return super().do_GET()
         path = s.path[len("/pathe/"):]
         url = "https://www.pathe.fr/api/" + path + ("&" if "?" in path else "?") + "language=fr"
@@ -27,6 +31,45 @@ class H(http.server.SimpleHTTPRequestHandler):
             except Exception as e: code, body = 502, ('{"error":"%s"}' % str(e).replace('"', "'")).encode()
         s.send_response(code); s.send_header("Content-Type", "application/json; charset=utf-8")
         s.send_header("Content-Length", str(len(body))); s.end_headers(); s.wfile.write(body)
+
+    def allocine(s):
+        # /allocine/<idCinema>/<YYYY-MM-DD>  (méthode de github.com/lefevre-dev/AllocineAPI)
+        parts = s.path.split("?")[0].strip("/").split("/")
+        if len(parts) != 3 or not re.fullmatch(r"[A-Z0-9]{5}", parts[1]) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", parts[2]):
+            return s.send_json(400, b'{"error":"bad request"}')
+        key = "allo:" + parts[1] + parts[2]; now = time.time()
+        with LOCK: hit = CACHE.get(key)
+        if hit and now - hit[0] < TTL: return s.send_json(200, hit[1])
+        try:
+            films, page, total = [], 0, 1
+            while page < total and page < 10:
+                url = "https://www.allocine.fr/_/showtimes/theater-%s/d-%s/p-%d/" % (parts[1], parts[2], page + 1)
+                d = json.loads(urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json"}), timeout=20).read())
+                page = int(d["pagination"]["page"]); total = int(d["pagination"]["totalPages"])
+                for el in d.get("results", []):
+                    m = el.get("movie")
+                    if not m: continue
+                    seen, times = set(), []
+                    for k, lst in (el.get("showtimes") or {}).items():
+                        for st in lst or []:
+                            if st["internalId"] in seen: continue
+                            seen.add(st["internalId"])
+                            url_b = None
+                            for t in ((st.get("data") or {}).get("ticketing") or []):
+                                if t.get("provider") == "default" and t.get("urls"): url_b = t["urls"][0]
+                            v = st.get("diffusionVersion") or ""
+                            times.append({"time": st["startsAt"], "version": {"ORIGINAL": "vo", "LOCAL": "vf", "DUBBED": "vf"}.get(v, v.lower()),
+                                          "url": url_b, "tags": [x.split(".")[-1] for x in st.get("tags") or [] if x.startswith("Format.")]})
+                    dirs = ", ".join(" ".join(filter(None, [(c.get("person") or {}).get("firstName"), (c.get("person") or {}).get("lastName")]))
+                                     for c in (m.get("credits") or []) if (c.get("position") or {}).get("name") == "DIRECTOR")
+                    films.append({"id": m.get("internalId"), "title": m.get("title"), "originalTitle": m.get("originalTitle"),
+                                  "poster": (m.get("poster") or {}).get("url"), "runtime": m.get("runtime"),
+                                  "genres": [g.get("translate") for g in m.get("genres") or []], "directors": dirs, "times": times})
+            body = json.dumps({"source": "allocine", "films": films}, ensure_ascii=False).encode()
+            with LOCK: CACHE[key] = (now, body)
+            s.send_json(200, body)
+        except Exception as e:
+            s.send_json(502, json.dumps({"error": str(e)}).encode())
 
 class TS(socketserver.ThreadingMixIn, http.server.HTTPServer): daemon_threads = True
 if __name__ == "__main__":
