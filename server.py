@@ -205,7 +205,7 @@ def api_post(h, path):
 def film_extra(fid):
     fid = re.sub(r"\D", "", fid)[:12]; key = "extra:" + fid
     with LOCK: hit = CACHE.get(key)
-    if hit and time.time() - hit[0] < 86400: return hit[1]
+    if hit and time.time() - hit[0] < (86400 if b'"photos": []' not in hit[1] else 600): return hit[1]
     get = lambda u: urllib.request.urlopen(urllib.request.Request(u, headers={"User-Agent": UA}), timeout=15).read().decode("utf-8", "replace")
     out = {"trailer": None, "photos": []}
     try:
