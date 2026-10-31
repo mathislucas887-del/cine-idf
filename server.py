@@ -32,7 +32,7 @@ class H(http.server.SimpleHTTPRequestHandler):
         if s.path == "/sitemap.xml":
             b = sitemap(); s.send_response(200); s.send_header("Content-Type", "application/xml"); s.send_header("Content-Length", str(len(b))); s.end_headers(); return s.wfile.write(b)
         if s.path.startswith("/letterboxd/"):
-            try: r = letterboxd(s.path.split("/")[2].split("?")[0]); return s.send_json(404 if "error" in r else 200, json.dumps(r, ensure_ascii=False).encode())
+            try: r = letterboxd(s.path.split("/")[2].split("?")[0]); return s.send_json((503 if r.get("retry") else 404) if "error" in r else 200, json.dumps(r, ensure_ascii=False).encode())
             except Exception as e:
                 import traceback; traceback.print_exc(); return s.send_json(502, json.dumps({"error": "Letterboxd ne répond pas, réessayez."}).encode())
         if any(x in s.path for x in ("users.json", ".git", "server.py", ".tmp")): return s.send_json(404, b'{"error":"not found"}')
@@ -280,14 +280,25 @@ def lb_rss(user):
     except Exception: return None
     return [{"n": html.unescape(a), "y": int(b) if b else None, "s": ""} for a, b in re.findall(r"<letterboxd:filmTitle>(.*?)</letterboxd:filmTitle>\s*<letterboxd:filmYear>(\d*)</letterboxd:filmYear>", t)]
 def letterboxd(user):
-    user = re.sub(r"[^A-Za-z0-9_-]", "", user)[:40]
-    c = LBC.get(user.lower())
+    user = urllib.parse.unquote(user).strip().lstrip("@")
+    user = re.sub(r"^.*letterboxd\.com/", "", user).split("/")[0]
+    if "@" in user: return {"error": "Saisissez votre nom d’utilisateur Letterboxd (visible dans l’adresse letterboxd.com/NOM), pas votre e-mail."}
+    user = re.sub(r"[^A-Za-z0-9_-]", "", user)[:40].lower()
+    if not user: return {"error": "Nom d’utilisateur Letterboxd manquant."}
+    c = LBC.get(user)
     if c and time.time() - c[0] < 3 * 3600: return c[1]
-    rss = lb_rss(user); films = lb_list(user, "films/by/date", 4)
-    if films is None and not rss: return {"error": "Profil Letterboxd introuvable ou privé."}
-    seen = (films or []) + [x for x in (rss or []) if not any(x["n"] == f["n"] for f in (films or []))]
-    res = {"user": user, "seen": seen, "watch": lb_list(user, "watchlist", 10) or [], "at": int(time.time()), "partial": films is None or not films}
-    LBC[user.lower()] = (time.time(), res); return res
+    try: t = lb_page(f"https://letterboxd.com/{user}/rss/")
+    except Exception: t = ""
+    if t is None: return {"error": f"Profil Letterboxd « {user} » introuvable. Vérifiez le nom d’utilisateur (letterboxd.com/{user})."}
+    rss = [{"n": html.unescape(a), "y": int(b) if b else None, "s": ""} for a, b in re.findall(r"<letterboxd:filmTitle>(.*?)</letterboxd:filmTitle>\s*<letterboxd:filmYear>(\d*)</letterboxd:filmYear>", t or "")]
+    films = lb_list(user, "films/by/date", 4)
+    watch = lb_list(user, "watchlist", 10) or []
+    if not t and not films and not watch:
+        return {"error": "Letterboxd bloque temporairement notre serveur. Réessayez dans quelques minutes, ou importez votre export CSV ci-dessous.", "retry": True}
+    seen = (films or []) + [x for x in rss if not any(x["n"] == f["n"] for f in (films or []))]
+    res = {"user": user, "seen": seen, "watch": watch, "at": int(time.time()), "partial": not films}
+    if seen or watch: LBC[user] = (time.time(), res)
+    return res
 H.do_POST = lambda h: api_post(h, h.path.split("?")[0]) if h.path.startswith("/api/") else h.send_json(404, b'{}')
 
 class TS(socketserver.ThreadingMixIn, http.server.HTTPServer): daemon_threads = True

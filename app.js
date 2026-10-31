@@ -36,7 +36,7 @@ async function loadLB(force) {
   try { const x = await fetch("/letterboxd/" + encodeURIComponent(LB.user)).then(async r => { const y = await r.json(); if (!r.ok) throw new Error(y.error || "Erreur"); return y; });
     const keepCsv = (LB.csvSeen || []), keepCsvW = (LB.csvWatch || []);
     LB = {...LB, seen: [...x.seen, ...keepCsv], watch: [...x.watch, ...keepCsvW], at: x.at, partial: x.partial, err: ""}; }
-  catch (e) { LB.err = e.message; }
+  catch (e) { LB.err = e.message; toast(e.message); }
   LS.set("lb", LB); LBIDX = null; lbCache.clear(); if (FILMS.length) renderAll();
   const st = $("#lbstat"); if (st) st.innerHTML = lbStatus();
 }
@@ -45,7 +45,9 @@ window.lbBlock = () => `<div class="lbbox"><h3>🟢 Letterboxd</h3><p class="sub
   <form onsubmit="lbLink(event)" class="row"><input id="lbuser" placeholder="Nom d’utilisateur Letterboxd" value="${esc(LB.user)}" autocapitalize="off" aria-label="Nom d’utilisateur Letterboxd"><button class="primary">${LB.user ? "Mettre à jour" : "Relier"}</button>${LB.user ? `<button type="button" class="ghost" onclick="lbUnlink()">Délier</button>` : ""}</form>
   <p class="sub" id="lbstat">${lbStatus()}</p>
   <label class="sub">Ou importez votre export Letterboxd (Réglages → Data → Export : watched.csv, watchlist.csv, diary.csv) : <input type="file" accept=".csv" multiple onchange="lbCsv(this.files)"></label></div>`;
-window.lbLink = async e => { e.preventDefault(); const u = $("#lbuser").value.trim().replace(/^.*letterboxd\.com\//, "").replace(/\/.*$/, ""); if (!u) return;
+window.lbLink = async e => { e.preventDefault(); const raw = $("#lbuser").value.trim(); if (!raw) return;
+  if (/^[^@\s]+@[^@\s]+\.[a-z]+$/i.test(raw)) { $("#lbstat").innerHTML = "⚠️ Entrez votre <b>nom d’utilisateur</b> Letterboxd (celui de l’adresse letterboxd.com/<i>nom</i>), pas votre e-mail."; return; }
+  const u = raw.replace(/^.*letterboxd\.com\//i, "").replace(/^@/, "").replace(/\/.*$/, "").toLowerCase(); if (!u) return;
   LB = {...LB, user: u, at: 0}; $("#lbstat").textContent = "Chargement de votre profil Letterboxd…"; LS.set("lb", LB); sync(); await loadLB(true); };
 window.lbUnlink = () => { LB = {user: "", seen: [], watch: [], at: 0}; LS.set("lb", LB); LBIDX = null; lbCache.clear(); sync(); renderAll(); openAcct(); };
 window.lbCsv = async files => {
