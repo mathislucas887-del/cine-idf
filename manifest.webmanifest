@@ -68,21 +68,32 @@
  ],
  "shortcuts": [
   {
-   "name": "Mes billets",
-   "url": "/#billets",
+   "name": "Ce soir près de moi",
+   "short_name": "Ce soir",
+   "url": "/?soir=1",
    "icons": [
     {
-     "src": "icon-192.png",
+     "src": "/icon-192.png",
      "sizes": "192x192"
     }
    ]
   },
   {
-   "name": "Carte des cinémas",
-   "url": "/#carte",
+   "name": "Mes billets",
+   "url": "/#billets",
    "icons": [
     {
-     "src": "icon-192.png",
+     "src": "/icon-192.png",
+     "sizes": "192x192"
+    }
+   ]
+  },
+  {
+   "name": "Agenda avant-premières",
+   "url": "/?agenda=1",
+   "icons": [
+    {
+     "src": "/icon-192.png",
      "sizes": "192x192"
     }
    ]

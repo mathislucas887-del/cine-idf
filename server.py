@@ -24,7 +24,8 @@ class H(http.server.SimpleHTTPRequestHandler):
         s.send_header("Content-Length", str(len(body))); s.end_headers(); s.wfile.write(body)
     def do_GET(s):
         if s.path.startswith("/allocine-all/"): return s.allo_all()
-        if s.path == "/health": return s.send_json(200, json.dumps({"ok": True, "uptime_s": int(time.time() - START), "cache": len(CACHE)}).encode())
+        if s.path in ("/health", "/status.json"): return s.send_json(200, json.dumps(status()).encode())
+        if s.path.startswith("/agenda"): return s.send_json(200, json.dumps(AGENDA, ensure_ascii=False).encode())
         if s.path.startswith("/allocine/"): return s.allocine()
         if s.path.startswith("/film-extra/"): return s.send_json(200, film_extra(s.path.split("/")[2]))
         if s.path.startswith("/film/"):
@@ -92,13 +93,47 @@ def allo_fetch(cid, date):
             if hit: return hit[1]
             raise
 REFRESHING = set()
+ASEM = threading.BoundedSemaphore(4); STAT = {"ok_at": 0, "err_at": 0, "err": "", "backoff_until": 0, "n_ok": 0, "n_err": 0}; REPORTS = []; AGENDA = {"at": 0, "films": []}
+def allo_get(url):
+    if time.time() < STAT["backoff_until"]: raise RuntimeError("Allociné ralentit : file d’attente, réessai sous peu")
+    with ASEM:
+        try:
+            d = json.loads(urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json"}), timeout=20).read())
+            STAT["ok_at"] = int(time.time()); STAT["n_ok"] += 1; return d
+        except urllib.error.HTTPError as e:
+            STAT["err_at"] = int(time.time()); STAT["err"] = str(e); STAT["n_err"] += 1
+            if e.code == 429: STAT["backoff_until"] = time.time() + 60
+            raise
+def status():
+    return {"ok": True, "state": "réveillé", "uptime_s": int(time.time() - START), "cache": len(CACHE), "allocine_last_ok": STAT["ok_at"], "allocine_last_error": STAT["err_at"], "allocine_error": STAT["err"],
+            "allocine_ok": STAT["n_ok"], "allocine_errors": STAT["n_err"], "throttled": time.time() < STAT["backoff_until"], "agenda_at": AGENDA["at"], "reports": len(REPORTS), "now": int(time.time())}
+def build_agenda():
+    import datetime
+    big = [c for c in ALLO_CINES if c.get("type") == "pathe" and c.get("allocineId")][:12]
+    while True:
+        out = {}
+        for k in range(0, 28):
+            dd = (datetime.date.today() + datetime.timedelta(days=k)).isoformat()
+            for c in big:
+                try: films = json.loads(allo_fetch(c["allocineId"], dd))["films"]
+                except Exception: time.sleep(2); continue
+                for f in films:
+                    ts = [t for t in f["times"] if t.get("preview") or t.get("events")] or ([] if not f.get("isPremiere") else f["times"])
+                    if not ts and k < 7: continue
+                    if not ts and k >= 7: ts = f["times"]
+                    if not ts: continue
+                    e = out.setdefault(str(f["id"]), {"id": f["id"], "title": f["title"], "poster": f.get("poster"), "genres": f.get("genres"), "year": f.get("year"), "dates": {}})
+                    for t in ts[:6]: e["dates"].setdefault(dd, []).append({"c": c["id"], "time": t["time"], "ev": t.get("events") or [], "url": t.get("url")})
+                time.sleep(0.4)
+        AGENDA.update({"at": int(time.time()), "films": sorted(out.values(), key=lambda e: min(e["dates"]))})
+        time.sleep(6 * 3600)
 def allo_live(cid, date, key):
         parts = [None, cid, date]; now = time.time()
         if True:
             films, page, total = [], 0, 1
             while page < total and page < 10:
                 url = "https://www.allocine.fr/_/showtimes/theater-%s/d-%s/p-%d/" % (parts[1], parts[2], page + 1)
-                d = json.loads(urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json"}), timeout=20).read())
+                d = allo_get(url)
                 page = int(d["pagination"]["page"]); total = int(d["pagination"]["totalPages"])
                 for el in d.get("results", []):
                     m = el.get("movie")
@@ -146,15 +181,16 @@ def db_save(d):
     tmp = DB_PATH + ".tmp"; json.dump(d, open(tmp, "w", encoding="utf-8")); os.replace(tmp, DB_PATH)
 def pw_hash(pw, salt): return hashlib.pbkdf2_hmac("sha256", pw.encode(), bytes.fromhex(salt), 200000).hex()
 
-PROFILE_KEYS = ("favs", "tickets", "lb", "lists", "alerts")
+PROFILE_KEYS = ("favs", "tickets", "lb", "lists", "alerts", "extra")
 def clean_profile(u, body):
     if "favs" in body: u["favs"] = [str(x)[:80] for x in body.get("favs") or []][:300]
-    if "tickets" in body: u["tickets"] = [{k: str(t.get(k, ""))[:600] for k in ("id", "title", "poster", "cinema", "time", "url", "version")} for t in (body.get("tickets") or [])[:200] if isinstance(t, dict)]
+    if "tickets" in body: u["tickets"] = [{k: str(t.get(k, ""))[:600] for k in ("id", "title", "poster", "cinema", "cid", "time", "url", "version", "seat", "room", "fid")} for t in (body.get("tickets") or [])[:200] if isinstance(t, dict)]
     if "lb" in body: u["lb"] = re.sub(r"[^A-Za-z0-9_-]", "", str(body.get("lb") or ""))[:40]
     if "lists" in body and isinstance(body["lists"], dict):
         u["lists"] = {k: [{f: str(x.get(f, ""))[:400] for f in ("id", "title", "poster", "year", "at")} for x in (body["lists"].get(k) or [])[:500] if isinstance(x, dict)] for k in ("towatch", "seen", "rewatch")}
+    if "extra" in body and isinstance(body["extra"], dict) and len(json.dumps(body["extra"])) < 30000: u["extra"] = body["extra"]
     if "alerts" in body and isinstance(body["alerts"], dict): u["alerts"] = {k: bool(v) for k, v in list(body["alerts"].items())[:10]}
-def prof(email, u): return {"email": email, **{k: u.get(k, [] if k in ("favs", "tickets") else ({} if k in ("lists", "alerts") else "")) for k in PROFILE_KEYS}, "restore": {"salt": u["salt"], "hash": u["hash"]}}
+def prof(email, u): return {"email": email, **{k: u.get(k, [] if k in ("favs", "tickets") else ({} if k in ("lists", "alerts", "extra") else "")) for k in PROFILE_KEYS}, "restore": {"salt": u["salt"], "hash": u["hash"]}}
 
 def api_post(h, path):
     n = int(h.headers.get("Content-Length") or 0)
@@ -162,6 +198,10 @@ def api_post(h, path):
     try: body = json.loads(h.rfile.read(n) or b"{}")
     except Exception: return h.send_json(400, b'{"error":"JSON invalide"}')
     out = lambda code, o: h.send_json(code, json.dumps(o, ensure_ascii=False).encode())
+    if path == "/api/report":
+        r = {k: str(body.get(k, ""))[:300] for k in ("film", "cinema", "time", "reason", "url")}; r["at"] = int(time.time())
+        REPORTS.append(r); del REPORTS[:-200]; print("SIGNALEMENT", json.dumps(r, ensure_ascii=False), flush=True)
+        return out(200, {"ok": True})
     tok_in = (h.headers.get("Authorization") or "").replace("Bearer ", "")
     with DBL:
         d = db_load()
@@ -246,7 +286,7 @@ def film_page(fid):
     page = page.replace("</head>", f'<script type="application/ld+json">{json.dumps(ld, ensure_ascii=False).replace("</", "<\\/")}</script>\n</head>', 1)
     return page.encode()
 def sitemap():
-    urls = ["https://cine-idf.onrender.com/"] + [f"https://cine-idf.onrender.com/film/{i}" for i in list(films_in_cache())[:500]]
+    urls = ["https://cine-idf.onrender.com/"] + ["https://cine-idf.onrender.com/" + p for p in ("comment-ca-marche.html", "confidentialite.html", "statut.html")] + [f"https://cine-idf.onrender.com/film/{i}" for i in list(films_in_cache())[:500]]
     return ('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + "".join(f"<url><loc>{u}</loc><changefreq>daily</changefreq></url>" for u in urls) + "</urlset>").encode()
 
 # ---------- Letterboxd (pages publiques : vus + watchlist) ----------
@@ -290,13 +330,30 @@ def letterboxd(user):
     try: t = lb_page(f"https://letterboxd.com/{user}/rss/")
     except Exception: t = ""
     if t is None: return {"error": f"Profil Letterboxd « {user} » introuvable. Vérifiez le nom d’utilisateur (letterboxd.com/{user})."}
-    rss = [{"n": html.unescape(a), "y": int(b) if b else None, "s": ""} for a, b in re.findall(r"<letterboxd:filmTitle>(.*?)</letterboxd:filmTitle>\s*<letterboxd:filmYear>(\d*)</letterboxd:filmYear>", t or "")]
+    rss = []
+    for it in re.findall(r"<item>(.*?)</item>", t or "", re.S):
+        a = re.search(r"<letterboxd:filmTitle>(.*?)</letterboxd:filmTitle>", it)
+        if not a: continue
+        b = re.search(r"<letterboxd:filmYear>(\d*)</letterboxd:filmYear>", it); r = re.search(r"<letterboxd:memberRating>([\d.]+)</letterboxd:memberRating>", it)
+        sl = re.search(r"letterboxd\.com/[^/]+/film/([^/<]+)/", it); w = re.search(r"<letterboxd:watchedDate>([\d-]+)</letterboxd:watchedDate>", it)
+        rss.append({"n": html.unescape(a.group(1)), "y": int(b.group(1)) if b and b.group(1) else None, "s": sl.group(1) if sl else "", "r": float(r.group(1)) if r else None, "d": w.group(1) if w else ""})
     films = lb_list(user, "films/by/date", 4)
     watch = lb_list(user, "watchlist", 10) or []
     if not t and not films and not watch:
         return {"error": "Letterboxd bloque temporairement notre serveur. Réessayez dans quelques minutes, ou importez votre export CSV ci-dessous.", "retry": True}
     seen = (films or []) + [x for x in rss if not any(x["n"] == f["n"] for f in (films or []))]
-    res = {"user": user, "seen": seen, "watch": watch, "at": int(time.time()), "partial": not films}
+    liked = []
+    for x in sorted([x for x in rss if (x.get("r") or 0) >= 4 and x["s"]], key=lambda x: -x["r"])[:6]:
+        try:
+            pg = lb_page(f"https://letterboxd.com/film/{x['s']}/") or ""; time.sleep(0.4)
+            dr = re.search(r'name="twitter:data1" content="([^"]+)"', pg)
+            liked.append({**x, "dir": html.unescape(dr.group(1)) if dr else "", "genres": sorted(set(re.findall(r'href="/films/genre/([a-z-]+)/"', pg)))[:5],
+                          "cast": [html.unescape(c) for c in re.findall(r'href="/actor/[^"]+"[^>]*>([^<]+)</a>', pg)[:8]]})
+        except Exception: break
+    for x in rss:  # notes Letterboxd sur les films vus
+        for f in seen:
+            if f["n"] == x["n"] and x.get("r"): f["r"] = x["r"]
+    res = {"user": user, "seen": seen, "watch": watch, "liked": liked, "at": int(time.time()), "partial": not films}
     if seen or watch: LBC[user] = (time.time(), res)
     return res
 H.do_POST = lambda h: api_post(h, h.path.split("?")[0]) if h.path.startswith("/api/") else h.send_json(404, b'{}')
@@ -323,4 +380,12 @@ if __name__ == "__main__":
                 with ThreadPoolExecutor(6) as ex: list(ex.map(lambda c: one(c, dd), [c for c in ALLO_CINES if c.get("type") in ("pathe", "partner")]))
             time.sleep(900)
     threading.Thread(target=warm, daemon=True).start()
+    threading.Thread(target=build_agenda, daemon=True).start()
+    def keepalive():  # évite la mise en veille Render (plan gratuit : 750 h/mois suffisent pour 1 service)
+        u = os.environ.get("RENDER_EXTERNAL_URL")
+        while u:
+            time.sleep(600)
+            try: urllib.request.urlopen(u + "/health", timeout=30).read()
+            except Exception: pass
+    threading.Thread(target=keepalive, daemon=True).start()
     TS((HOST, PORT), H).serve_forever()

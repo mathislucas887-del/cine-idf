@@ -15,14 +15,16 @@ const km = (a, b) => { const R = 6371, d1 = (b.lat-a.lat)*Math.PI/180, d2 = (b.l
 
 // ---------- Letterboxd, listes, alertes ----------
 let LB = LS.get("lb", {user: "", seen: [], watch: [], at: 0}), LISTS = {towatch: [], seen: [], rewatch: [], ...LS.get("lists", {})}, ALERTS = LS.get("alerts", {ap: true, watch: true, fav: true});
-let LBIDX = null;
+let LBIDX = null, EXTRA = LS.get("extra", {});
 function lbIndex() {
-  if (LBIDX) return LBIDX; const mk = arr => { const m = new Map(); (arr || []).forEach(x => { const k = norm(x.n).replace(/^(the|le|la|les|l) /, ""); if (!m.has(k)) m.set(k, []); m.get(k).push(x.y); }); return m; };
+  if (LBIDX) return LBIDX; const mk = arr => { const m = new Map(); (arr || []).forEach(x => { const k = lbKey(x.n); if (!m.has(k)) m.set(k, []); m.get(k).push(x.y); }); return m; };
   return LBIDX = {seen: mk(LB.seen), watch: mk(LB.watch)};
 }
+const lbKey = t => norm(String(t).replace(/&/g, " and ").replace(/\bet\b/g, "and")).replace(/^(the|le|la|les|l|a|an|un|une) /, "").replace(/ (part|partie|chapitre|chapter) /g, " ").replace(/\b(ii|2)\b/g, "2").replace(/\b(iii|3)\b/g, "3").replace(/ /g, "");
 function lbHas(map, f) {
-  for (const t of [f.title, f.originalTitle]) { if (!t) continue; const ys = map.get(norm(t).replace(/^(the|le|la|les|l) /, ""));
-    if (ys && ys.some(y => !y || !f.year || Math.abs(y - f.year) <= 1)) return true; }
+  for (const t of [f.title, f.originalTitle]) { if (!t) continue;
+    for (const k of [lbKey(t), lbKey(String(t).split(/ ?[:–-] /)[0])]) { const ys = map.get(k);
+      if (ys && ys.some(y => !y || !f.year || Math.abs(y - f.year) <= 1)) return true; } }
   return false;
 }
 const lbCache = new Map();
@@ -35,7 +37,7 @@ async function loadLB(force) {
   if (!force && Date.now() / 1000 - (LB.at || 0) < 6 * 3600 && LB.seen.length + LB.watch.length) return;
   try { const x = await fetch("/letterboxd/" + encodeURIComponent(LB.user)).then(async r => { const y = await r.json(); if (!r.ok) throw new Error(y.error || "Erreur"); return y; });
     const keepCsv = (LB.csvSeen || []), keepCsvW = (LB.csvWatch || []);
-    LB = {...LB, seen: [...x.seen, ...keepCsv], watch: [...x.watch, ...keepCsvW], at: x.at, partial: x.partial, err: ""}; }
+    LB = {...LB, seen: [...x.seen, ...keepCsv], watch: [...x.watch, ...keepCsvW], at: x.at, partial: x.partial, liked: x.liked || [], err: ""}; }
   catch (e) { LB.err = e.message; toast(e.message); }
   LS.set("lb", LB); LBIDX = null; lbCache.clear(); if (FILMS.length) renderAll();
   const st = $("#lbstat"); if (st) st.innerHTML = lbStatus();
@@ -124,7 +126,7 @@ const post = (p, b) => fetch(p, {method: "POST", headers: {"Content-Type": "appl
   .then(async r => { const x = await r.json().catch(() => ({})); if (!r.ok) throw new Error(x.error || "Erreur " + r.status); return x; });
 function saveLocal() { LS.set("favs", [...FAVS]); LS.set("tickets", TICKETS); updAcct(); }
 function updAcct() { $("#acct").textContent = EMAIL ? "👤 " + EMAIL.split("@")[0] + " · ⭐" + FAVS.size : "👤 Connexion"; }
-const profileData = () => ({favs: [...FAVS], tickets: TICKETS, lb: LB.user || "", lists: LISTS, alerts: ALERTS});
+const profileData = () => ({favs: [...FAVS], tickets: TICKETS, lb: LB.user || "", lists: LISTS, alerts: ALERTS, extra: EXTRA});
 async function restore() { // session persistante : reconstitue le compte si le serveur l'a perdu (redéploiement)
   try { const x = await post("/api/restore", {email: EMAIL, restore: LS.get("cineRestore", null), data: profileData()}); applyProfile(x, true); return true; } catch (e) { return false; } }
 async function sync() { saveLocal(); if (!TOKEN) return; try { applyProfile(await post("/api/favs", profileData()), false); }
@@ -133,7 +135,7 @@ function applyProfile(x, merge) {
   if (x.restore) LS.set("cineRestore", x.restore);
   if (merge) { (x.favs || []).forEach(f => FAVS.add(f)); const seen = new Set(TICKETS.map(t => t.id)); (x.tickets || []).forEach(t => seen.has(t.id) || TICKETS.push(t));
     for (const k of ["towatch", "seen", "rewatch"]) { const ids = new Set(LISTS[k].map(i => i.id)); ((x.lists || {})[k] || []).forEach(i => ids.has(i.id) || LISTS[k].push(i)); }
-    if (x.lb && !LB.user) { LB.user = x.lb; LS.set("lb", LB); loadLB(); } Object.assign(ALERTS, x.alerts || {}); }
+    if (x.lb && !LB.user) { LB.user = x.lb; LS.set("lb", LB); loadLB(); } Object.assign(ALERTS, x.alerts || {}); EXTRA = {...(x.extra || {}), ...EXTRA}; LS.set("extra", EXTRA); }
   else { FAVS = new Set(x.favs || []); TICKETS = x.tickets || TICKETS; if (x.lists && Object.keys(x.lists).length) LISTS = {towatch: [], seen: [], rewatch: [], ...x.lists}; }
   LS.set("lists", LISTS); LS.set("alerts", ALERTS); saveLocal(); }
 function onAuth(x) {
@@ -259,10 +261,15 @@ function timeOk(t, f) {
   if (TONIGHT && new Date(t.time) < new Date()) return false;
   return true;
 }
+function lev(a, b) { if (Math.abs(a.length - b.length) > 2) return 9; let p = Array.from({length: b.length + 1}, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) { const c = [i]; for (let j = 1; j <= b.length; j++) c[j] = Math.min(p[j] + 1, c[j - 1] + 1, p[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); p = c; } return p[b.length]; }
+function fuzzy(q, hay) { const H = norm(hay), words = H.split(" ");
+  return q.split(" ").every(w => H.includes(w) || (w.length >= 4 && words.some(x => x.length >= 3 && (lev(w, x.slice(0, w.length + 1)) <= (w.length > 6 ? 2 : 1) || lev(w, x) <= (w.length > 6 ? 2 : 1))))); }
+window.fuzzy = fuzzy;
 function view() {
   const q = norm($("#sfilm").value), age = $("#sage").value, sc = $("#scope").value;
   const g = $("#sgenre").value, du = +$("#sdur").value, ra = +$("#srate").value, lb = $("#slb").value;
-  return FILMS.filter(f => (!q || q.split(" ").every(w => norm([f.title, f.originalTitle, (f.cast||[]).join(" "), f.directors, (f.genres||[]).join(" ")].join(" ")).includes(w))) && (!age || !f.age)
+  return FILMS.filter(f => (!q || fuzzy(q, [f.title, f.originalTitle, (f.cast||[]).join(" "), f.directors, (f.genres||[]).join(" ")].join(" "))) && (!age || !f.age)
       && (!g || (f.genres||[]).includes(g)) && (!du || (du === 999 ? f.dur > 135 : f.dur && f.dur <= du)) && (!ra || (+f.rating || 0) >= ra)
       && (!lb || (lb === "unseen" ? !lbState(f).seen : lbState(f).watch)))
     .map(f => { const by = f.by.filter(b => sc === "pathe" ? b.c.type === "pathe" : sc === "partner" ? b.c.type === "partner" : true).map(b => ({c: b.c, times: b.times.filter(t => timeOk(t, f))})).filter(b => b.times.length);
@@ -304,7 +311,8 @@ const TB = {};
 function timeBtn(f, c, t, now) {
   const k = Math.random().toString(36).slice(2, 9); TB[k] = {f, c, t};
   const past = new Date(t.time) < now; const fx = (t.fmt || []).concat((t.events||[]).length ? ["★"] : []);
-  return `<button class="t${past ? " past" : ""}" onclick="openTime('${k}')" aria-label="${t.time.slice(11,16)} ${t.version} ${esc(c.name)}"><b>${t.time.slice(11,16)}</b><small class="pill${t.version === "vo" ? " vo" : ""}">${t.version === "vo" ? "VOST" : esc((t.version||"").toUpperCase())}${t.acc ? " ♿" : ""}</small>${fx.length ? `<span class="fx">${esc(fx.join(" "))}</span>` : ""}</button>`;
+  const cpOn = EXTRA.cp && EXTRA.cp.on && c.cinepass, prem = (t.fmt || []).some(x => /IMAX|4DX|ScreenX|Dolby|3D|Onyx/.test(x)), here = TICKETS.some(x => x.fid == f.id && x.cid === c.id && x.time < new Date().toISOString());
+  return `<button class="t${past ? " past" : ""}${cpOn ? (prem ? " cpx" : " cp") : ""}" title="${cpOn ? (prem ? "CinéPass + supplément format" : "Inclus dans votre CinéPass") : ""}${here ? " · déjà vu ici" : ""}" onclick="openTime('${k}')" aria-label="${t.time.slice(11,16)} ${t.version} ${esc(c.name)}"><b>${t.time.slice(11,16)}</b><small class="pill${t.version === "vo" ? " vo" : ""}">${t.version === "vo" ? "VOST" : esc((t.version||"").toUpperCase())}${t.acc ? " ♿" : ""}</small>${here ? `<span class="fx">👁 déjà vu ici</span>` : ""}${fx.length ? `<span class="fx">${esc(fx.join(" "))}</span>` : ""}</button>`;
 }
 function fresh() {
   const m = FETCHED ? Math.round((Date.now() - FETCHED) / 60000) : null;
@@ -321,7 +329,7 @@ window.openTime = k => { const {f, c, t} = TB[k]; const when = new Date(t.time);
    <a class="primary" style="display:block;padding:12px;border-radius:10px;color:#141414" href="${esc(t.url || c.website || "#")}" target="_blank" rel="noopener">🎟️ Réserver / choisir ma place</a>
    <button class="ghost" onclick="addTicket('${k}')">＋ Ajouter à mes billets</button><a class="ghost" href="${gcal(f, c, t)}" target="_blank" rel="noopener">📅 Google Agenda</a><button class="ghost" onclick="ics('${k}')">🍎 Apple / Outlook (.ics)</button><button class="ghost" onclick="closeSheet()">Fermer</button></div>`;
   $("#sheet").classList.remove("hidden"); };
-window.addTicket = k => { const {f, c, t} = TB[k]; const id = f.id + "|" + c.id + "|" + t.time; if (!TICKETS.some(x => x.id === id)) TICKETS.push({id, title: f.title, poster: f.poster || "", cinema: c.name, time: t.time, url: t.url || c.website || "", version: (t.version||"").toUpperCase()}); sync(); closeSheet(); toast("Ajouté à « Mes billets »"); };
+window.addTicket = k => { const {f, c, t} = TB[k]; const id = f.id + "|" + c.id + "|" + t.time; if (!TICKETS.some(x => x.id === id)) TICKETS.push({id, fid: String(f.id), cid: c.id, title: f.title, poster: f.poster || "", cinema: c.name, time: t.time, url: t.url || c.website || "", version: (t.version||"").toUpperCase()}); sync(); closeSheet(); toast("Ajouté à « Mes billets »"); };
 window.ics = k => { const {f, c, t} = TB[k]; const s = new Date(t.time), e = new Date(s.getTime() + ((f.dur || 120) + 15) * 60000);
   const z = d => d.toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
   const txt = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Cine IDF//FR","BEGIN:VEVENT","UID:" + Date.now() + "@cine-idf","DTSTAMP:" + z(new Date()),"DTSTART:" + z(s),"DTEND:" + z(e),"SUMMARY:" + f.title + " (" + (t.version||"").toUpperCase() + ")","LOCATION:" + c.name + ", " + (c.fullAddress || c.address || ""),"URL:" + (t.url || ""),"END:VEVENT","END:VCALENDAR"].join("\r\n");
