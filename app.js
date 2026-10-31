@@ -13,6 +13,92 @@ const TYPE = {pathe: "Pathé", partner: "Partenaire CinéPass", other: "Cinéma"
 const rt = r => { const m = String(r||"").match(/(\d+)h\s*(\d+)?/); return m ? +m[1]*60 + +(m[2]||0) : 0; };
 const km = (a, b) => { const R = 6371, d1 = (b.lat-a.lat)*Math.PI/180, d2 = (b.lng-a.lng)*Math.PI/180; const x = Math.sin(d1/2)**2 + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(d2/2)**2; return 2*R*Math.asin(Math.sqrt(x)); };
 
+// ---------- Letterboxd, listes, alertes ----------
+let LB = LS.get("lb", {user: "", seen: [], watch: [], at: 0}), LISTS = {towatch: [], seen: [], rewatch: [], ...LS.get("lists", {})}, ALERTS = LS.get("alerts", {ap: true, watch: true, fav: true});
+let LBIDX = null;
+function lbIndex() {
+  if (LBIDX) return LBIDX; const mk = arr => { const m = new Map(); (arr || []).forEach(x => { const k = norm(x.n).replace(/^(the|le|la|les|l) /, ""); if (!m.has(k)) m.set(k, []); m.get(k).push(x.y); }); return m; };
+  return LBIDX = {seen: mk(LB.seen), watch: mk(LB.watch)};
+}
+function lbHas(map, f) {
+  for (const t of [f.title, f.originalTitle]) { if (!t) continue; const ys = map.get(norm(t).replace(/^(the|le|la|les|l) /, ""));
+    if (ys && ys.some(y => !y || !f.year || Math.abs(y - f.year) <= 1)) return true; }
+  return false;
+}
+const lbCache = new Map();
+function lbState(f) {
+  const key = f.id + "|" + (LB.at || 0) + "|" + LISTS.seen.length; if (lbCache.has(key)) return lbCache.get(key);
+  const I = lbIndex(); const r = {seen: lbHas(I.seen, f) || inList("seen", f), watch: lbHas(I.watch, f)}; lbCache.set(key, r); return r;
+}
+async function loadLB(force) {
+  if (!LB.user) return;
+  if (!force && Date.now() / 1000 - (LB.at || 0) < 6 * 3600 && LB.seen.length + LB.watch.length) return;
+  try { const x = await fetch("/letterboxd/" + encodeURIComponent(LB.user)).then(async r => { const y = await r.json(); if (!r.ok) throw new Error(y.error || "Erreur"); return y; });
+    const keepCsv = (LB.csvSeen || []), keepCsvW = (LB.csvWatch || []);
+    LB = {...LB, seen: [...x.seen, ...keepCsv], watch: [...x.watch, ...keepCsvW], at: x.at, partial: x.partial, err: ""}; }
+  catch (e) { LB.err = e.message; }
+  LS.set("lb", LB); LBIDX = null; lbCache.clear(); if (FILMS.length) renderAll();
+  const st = $("#lbstat"); if (st) st.innerHTML = lbStatus();
+}
+const lbStatus = () => LB.user ? `${LB.err ? "⚠️ " + esc(LB.err) + " · " : ""}<b>${LB.seen.length}</b> films vus · <b>${LB.watch.length}</b> en watchlist${LB.partial ? " (journal récent uniquement : importez votre export CSV pour tout l’historique)" : ""}` : "Non relié";
+window.lbBlock = () => `<div class="lbbox"><h3>🟢 Letterboxd</h3><p class="sub">Reliez votre profil public : les films déjà vus apparaissent grisés, ceux de votre watchlist avec un badge vert.</p>
+  <form onsubmit="lbLink(event)" class="row"><input id="lbuser" placeholder="Nom d’utilisateur Letterboxd" value="${esc(LB.user)}" autocapitalize="off" aria-label="Nom d’utilisateur Letterboxd"><button class="primary">${LB.user ? "Mettre à jour" : "Relier"}</button>${LB.user ? `<button type="button" class="ghost" onclick="lbUnlink()">Délier</button>` : ""}</form>
+  <p class="sub" id="lbstat">${lbStatus()}</p>
+  <label class="sub">Ou importez votre export Letterboxd (Réglages → Data → Export : watched.csv, watchlist.csv, diary.csv) : <input type="file" accept=".csv" multiple onchange="lbCsv(this.files)"></label></div>`;
+window.lbLink = async e => { e.preventDefault(); const u = $("#lbuser").value.trim().replace(/^.*letterboxd\.com\//, "").replace(/\/.*$/, ""); if (!u) return;
+  LB = {...LB, user: u, at: 0}; $("#lbstat").textContent = "Chargement de votre profil Letterboxd…"; LS.set("lb", LB); sync(); await loadLB(true); };
+window.lbUnlink = () => { LB = {user: "", seen: [], watch: [], at: 0}; LS.set("lb", LB); LBIDX = null; lbCache.clear(); sync(); renderAll(); openAcct(); };
+window.lbCsv = async files => {
+  for (const file of files) { const txt = await file.text(); const rows = txt.split(/\r?\n/).map(l => l.match(/("([^"]|"")*"|[^,]*)(,|$)/g)?.map(x => x.replace(/,$/, "").replace(/^"|"$/g, "").replace(/""/g, '"')) || []);
+    const h = rows.shift() || []; const ni = h.indexOf("Name"), yi = h.indexOf("Year"); if (ni < 0) continue;
+    const items = rows.filter(r => r[ni]).map(r => ({n: r[ni], y: +r[yi] || null, s: ""}));
+    if (/watchlist/i.test(file.name)) { LB.csvWatch = items; LB.watch = [...LB.watch, ...items]; } else { LB.csvSeen = [...(LB.csvSeen || []), ...items]; LB.seen = [...LB.seen, ...items]; } }
+  LB.at = LB.at || Math.floor(Date.now() / 1000); LS.set("lb", LB); LBIDX = null; lbCache.clear(); renderAll(); const st = $("#lbstat"); if (st) st.innerHTML = lbStatus(); toast("Export Letterboxd importé");
+};
+window.alertBlock = () => `<div class="lbbox"><h3>🔔 Alertes</h3><p class="sub">Affichées à l’ouverture de l’app (et en notification si vous l’autorisez).</p>
+  ${[["ap", "Avant-premières et séances spéciales dans mes cinémas favoris"], ["watch", "Films de ma watchlist Letterboxd / « À voir » à l’affiche"], ["fav", "Nouveautés près de moi"]].map(([k, l]) => `<label class="sub" style="display:block"><input type="checkbox" ${ALERTS[k] ? "checked" : ""} onchange="ALERTS['${k}']=this.checked;LS.set('alerts',ALERTS);sync()"> ${l}</label>`).join("")}
+  <button class="ghost" onclick="askNotif()">Activer les notifications</button></div>`;
+window.askNotif = async () => { if (!("Notification" in window)) return toast("Notifications non disponibles sur ce navigateur"); const p = await Notification.requestPermission(); toast(p === "granted" ? "Notifications activées" : "Notifications refusées"); };
+const listItem = f => ({id: String(f.id), title: f.title, poster: f.poster || "", year: String(f.year || ""), at: new Date().toISOString().slice(0, 10)});
+const inList = (k, f) => LISTS[k].some(x => x.id === String(f.id));
+const myList = f => inList("rewatch", f) ? "🔁 À revoir" : inList("towatch", f) ? "📌 À voir" : "";
+window.toggleList = (k, id) => { const f = FILMS.find(x => String(x.id) === String(id)); if (!f) return;
+  LISTS[k] = inList(k, f) ? LISTS[k].filter(x => x.id !== String(f.id)) : [...LISTS[k], listItem(f)]; LS.set("lists", LISTS); lbCache.clear(); sync(); openFilm(id); renderAll(); };
+function renderLists() {
+  const names = {towatch: "📌 À voir", seen: "✓ Vu (historique)", rewatch: "🔁 À revoir"};
+  $("#lists").innerHTML = Object.entries(names).map(([k, n]) => `<h3 style="color:var(--gold2)">${n} (${LISTS[k].length}) ${LISTS[k].length ? `<button class="ghost" style="padding:3px 10px;font-size:12px" onclick="shareList('${k}')">Partager</button>` : ""}</h3>
+    <div class="rail" style="padding-left:0">${LISTS[k].slice().reverse().map(x => `<div class="poster${k === "seen" ? " seen" : ""}" style="cursor:default"><div class="im">${x.poster ? `<img src="${esc(x.poster)}" alt="Affiche de ${esc(x.title)}" loading="lazy">` : ""}</div><h3>${esc(x.title)}</h3><small>${esc(x.year)} · ajouté le ${esc(x.at)}</small> <button class="ghost" style="padding:2px 8px;font-size:11px" aria-label="Retirer ${esc(x.title)}" onclick="LISTS['${k}']=LISTS['${k}'].filter(y=>y.id!=='${esc(x.id)}');LS.set('lists',LISTS);sync();renderLists()">✕</button></div>`).join("") || `<p class="sub">Vide.</p>`}</div>`).join("");
+}
+window.shareList = async k => { const txt = `Ma liste Ciné IDF « ${{towatch: "À voir", seen: "Vu", rewatch: "À revoir"}[k]} » :\n` + LISTS[k].map(x => `• ${x.title}${x.year ? " (" + x.year + ")" : ""}`).join("\n") + "\nhttps://cine-idf.onrender.com";
+  try { if (navigator.share) await navigator.share({text: txt}); else { await navigator.clipboard.writeText(txt); toast("Liste copiée"); } } catch (e) {} };
+function recommend(V) {
+  const watch = V.filter(f => lbState(f).watch || inList("towatch", f) || inList("rewatch", f));
+  const liked = [...LISTS.seen, ...LISTS.towatch].map(x => FILMS.find(f => String(f.id) === x.id)).filter(Boolean);
+  const gs = {}; liked.concat(watch).forEach(f => (f.genres || []).forEach(g => gs[g] = (gs[g] || 0) + 1));
+  const more = Object.keys(gs).length ? V.filter(f => !watch.includes(f) && !lbState(f).seen).map(f => [f, (f.genres || []).reduce((a, g) => a + (gs[g] || 0), 0) + (+f.rating || 0)]).filter(x => x[1] > 3).sort((a, b) => b[1] - a[1]).slice(0, 12).map(x => x[0]) : [];
+  return [...watch, ...more];
+}
+const gcal = (f, c, t) => { const s = new Date(t.time), e = new Date(s.getTime() + ((f.dur || 120) + 15) * 60000), z = d => d.toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
+  return "https://calendar.google.com/calendar/render?action=TEMPLATE&text=" + encodeURIComponent(f.title + " (" + (t.version || "").toUpperCase() + ")") + "&dates=" + z(s) + "/" + z(e) + "&location=" + encodeURIComponent(c.name + ", " + (c.fullAddress || c.address || "")) + "&details=" + encodeURIComponent("Réserver : " + (t.url || c.website || "")); };
+async function filmExtras(f) {
+  try { const x = await fetch("/film-extra/" + f.id).then(j); if (!document.querySelector("#trailer")) return;
+    if (x.trailer) $("#trailer").innerHTML = `<div class="trailer"><iframe src="${esc(x.trailer)}" title="Bande-annonce de ${esc(f.title)}" allowfullscreen loading="lazy"></iframe></div>`;
+    if ((x.photos || []).length) $("#photos").innerHTML = `<h3 style="color:var(--gold2)">Photos</h3><div class="rail photos" style="padding-left:0">${x.photos.map(p => `<img src="${esc(p)}" alt="Photo du film ${esc(f.title)}" loading="lazy">`).join("")}</div>`;
+  } catch (e) {}
+}
+function checkAlerts() {
+  const out = [], seenKey = LS.get("alertSeen", {}), today = ymd(new Date());
+  if (ALERTS.ap) FILMS.filter(f => f.cl.ap || f.cl.special.length).forEach(f => f.by.filter(b => FAVS.has(b.c.id)).forEach(b => out.push(`✨ ${f.title} — ${f.cl.ap ? "avant-première" : f.cl.special[0]} à ${b.c.name}`)));
+  if (ALERTS.watch) FILMS.filter(f => lbState(f).watch || inList("towatch", f)).forEach(f => out.push(`💚 ${f.title} (votre liste) est à l’affiche dans ${f.by.length} cinéma(s)`));
+  if (ALERTS.fav && GEO) FILMS.filter(f => f.cl.fresh && f.by.some(b => (dist(b.c) ?? 99) < 5)).slice(0, 3).forEach(f => out.push(`🆕 ${f.title} : nouveauté à moins de 5 km`));
+  const uniq = [...new Set(out)].slice(0, 6);
+  $("#alerts").innerHTML = uniq.length ? `<details class="alertbox"><summary>🔔 ${uniq.length} alerte(s) pour vous</summary><ul>${uniq.map(a => `<li>${esc(a)}</li>`).join("")}</ul></details>` : "";
+  const fresh = uniq.filter(a => !seenKey[a]); if (fresh.length && "Notification" in window && Notification.permission === "granted") { try { new Notification("Ciné IDF", {body: fresh.slice(0, 3).join("\n"), icon: "icon-192.png"}); } catch (e) {} }
+  fresh.forEach(a => seenKey[a] = today); LS.set("alertSeen", seenKey);
+}
+
+window.shareFilm = async id => { const f = FILMS.find(x => String(x.id) === String(id)); const url = location.origin + "/film/" + id;
+  try { if (navigator.share) await navigator.share({title: f?.title, url}); else { await navigator.clipboard.writeText(url); toast("Lien copié"); } } catch (e) {} };
 // ---------- Thème ----------
 if (LS.get("theme", "dark") === "light") document.body.classList.add("light");
 const setThemeBtn = () => { $("#theme").textContent = document.body.classList.contains("light") ? "🌙" : "☀️"; };
@@ -24,7 +110,7 @@ function go(v) {
   $$("nav button").forEach(x => { const on = x.dataset.v === v; x.classList.toggle("on", on); on ? x.setAttribute("aria-current", "page") : x.removeAttribute("aria-current"); });
   $$(".view").forEach(s => s.classList.toggle("on", s.id === "v-" + v));
   if (v === "map") setTimeout(() => map.invalidateSize(), 60);
-  if (v === "billets") renderTickets();
+  if (v === "billets") { renderTickets(); renderLists(); }
   scrollTo(0, 0);
 }
 $$("nav button").forEach(b => b.onclick = () => go(b.dataset.v));
@@ -36,11 +122,21 @@ const post = (p, b) => fetch(p, {method: "POST", headers: {"Content-Type": "appl
   .then(async r => { const x = await r.json().catch(() => ({})); if (!r.ok) throw new Error(x.error || "Erreur " + r.status); return x; });
 function saveLocal() { LS.set("favs", [...FAVS]); LS.set("tickets", TICKETS); updAcct(); }
 function updAcct() { $("#acct").textContent = EMAIL ? "👤 " + EMAIL.split("@")[0] + " · ⭐" + FAVS.size : "👤 Connexion"; }
-async function sync() { saveLocal(); if (!TOKEN) return; try { const x = await post("/api/favs", {favs: [...FAVS], tickets: TICKETS}); FAVS = new Set(x.favs); TICKETS = x.tickets || TICKETS; saveLocal(); } catch (e) { if (/Session/.test(e.message)) logoutLocal(); } }
+const profileData = () => ({favs: [...FAVS], tickets: TICKETS, lb: LB.user || "", lists: LISTS, alerts: ALERTS});
+async function restore() { // session persistante : reconstitue le compte si le serveur l'a perdu (redéploiement)
+  try { const x = await post("/api/restore", {email: EMAIL, restore: LS.get("cineRestore", null), data: profileData()}); applyProfile(x, true); return true; } catch (e) { return false; } }
+async function sync() { saveLocal(); if (!TOKEN) return; try { applyProfile(await post("/api/favs", profileData()), false); }
+  catch (e) { if (/Session/.test(e.message) && await restore()) { try { await post("/api/favs", profileData()); } catch (_) {} } } }
+function applyProfile(x, merge) {
+  if (x.restore) LS.set("cineRestore", x.restore);
+  if (merge) { (x.favs || []).forEach(f => FAVS.add(f)); const seen = new Set(TICKETS.map(t => t.id)); (x.tickets || []).forEach(t => seen.has(t.id) || TICKETS.push(t));
+    for (const k of ["towatch", "seen", "rewatch"]) { const ids = new Set(LISTS[k].map(i => i.id)); ((x.lists || {})[k] || []).forEach(i => ids.has(i.id) || LISTS[k].push(i)); }
+    if (x.lb && !LB.user) { LB.user = x.lb; LS.set("lb", LB); loadLB(); } Object.assign(ALERTS, x.alerts || {}); }
+  else { FAVS = new Set(x.favs || []); TICKETS = x.tickets || TICKETS; if (x.lists && Object.keys(x.lists).length) LISTS = {towatch: [], seen: [], rewatch: [], ...x.lists}; }
+  LS.set("lists", LISTS); LS.set("alerts", ALERTS); saveLocal(); }
 function onAuth(x) {
   TOKEN = x.token || TOKEN; EMAIL = x.email; LS.set("cineToken", TOKEN); LS.set("cineEmail", EMAIL);
-  (x.favs || []).forEach(f => FAVS.add(f)); const seen = new Set(TICKETS.map(t => t.id)); (x.tickets || []).forEach(t => seen.has(t.id) || TICKETS.push(t));
-  sync(); refreshCines();
+  applyProfile(x, true); sync(); refreshCines(); renderAll && FILMS.length && renderAll();
 }
 function logoutLocal() { TOKEN = EMAIL = ""; LS.set("cineToken", ""); LS.set("cineEmail", ""); updAcct(); }
 let AMODE = "signup", PENDING = null;
@@ -49,12 +145,13 @@ window.openAcct = msg => {
     const L = [...FAVS].map(byId).filter(Boolean);
     modal(`<div class="auth"><h2>Mon compte</h2><p class="sub">${esc(EMAIL)} · favoris et billets synchronisés sur tous vos appareils.</p><h3>⭐ Mes cinémas favoris (${L.length})</h3>
       <div>${L.map(c => `<button class="chip" onclick="openCine('${c.id}')">${esc(c.name)}</button>`).join("") || `<p class="sub">Aucun favori : ouvrez la fiche d’un cinéma et touchez « Ajouter aux favoris ».</p>`}</div>
-      <div class="row"><button class="primary" onclick="favSeances()">Séances de mes favoris</button><button class="ghost" onclick="logout()">Se déconnecter</button></div></div>`);
+      ${lbBlock()}${alertBlock()}
+      <div class="row"><button class="primary" onclick="favSeances()">Séances de mes favoris</button><button class="ghost" onclick="logout()">Se déconnecter</button></div><p class="sub">Vous restez connecté sur cet appareil jusqu’à « Se déconnecter ».</p></div>`);
   } else {
     modal(`<div class="auth"><h2>Mon compte Ciné IDF</h2><p class="sub">${esc(msg || "Créez un compte pour synchroniser vos cinémas favoris et vos billets sur tous vos appareils. Sans compte, ils restent enregistrés sur cet appareil.")}</p>
       <div class="tabs" role="tablist"><button id="tsu" class="primary" onclick="authMode('signup')">Créer un compte</button><button id="tli" class="ghost" onclick="authMode('login')">Se connecter</button></div>
       <form onsubmit="doAuth(event)"><label class="sub" for="aemail">E-mail</label><input id="aemail" type="email" autocomplete="email" required><label class="sub" for="apw">Mot de passe (6 caractères min.)</label><input id="apw" type="password" autocomplete="new-password" required minlength="6">
-      <div class="err" id="aerr" role="alert"></div><button class="primary" style="width:100%" id="asub">Créer mon compte</button></form></div>`);
+      <div class="err" id="aerr" role="alert"></div><button class="primary" style="width:100%" id="asub">Créer mon compte</button></form>${lbBlock()}</div>`);
     AMODE = "signup";
   }
 };
@@ -63,7 +160,7 @@ window.authMode = m => { AMODE = m; $("#tsu").className = m === "signup" ? "prim
 window.doAuth = async e => { e.preventDefault(); $("#aerr").textContent = "";
   try { onAuth(await post("/api/" + AMODE, {email: $("#aemail").value, password: $("#apw").value})); if (PENDING) { const f = PENDING; PENDING = null; return f(); } openAcct(); }
   catch (err) { $("#aerr").textContent = err.message; } };
-window.logout = async () => { try { await post("/api/logout"); } catch (e) {} logoutLocal(); closeModal(); };
+window.logout = async () => { try { await post("/api/logout"); } catch (e) {} logoutLocal(); LS.set("cineRestore", null); closeModal(); };
 window.toggleFav = id => { FAVS.has(id) ? FAVS.delete(id) : FAVS.add(id); sync(); refreshCines(); openCine(id); };
 window.favSeances = () => { closeModal(); go("seances"); $("#scope").value = "fav"; loadData(); };
 
@@ -77,20 +174,26 @@ addEventListener("keydown", e => { if (e.key === "Escape") { if (!$("#sheet").cl
 
 // ---------- Jours ----------
 const DAYS = [...Array(14)].map((_, i) => { const d = new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate() + i); return d; });
-let SELDATES = [ymd(DAYS[0])], APONLY = false;
+let SELDATES = [ymd(DAYS[0])], APONLY = false, TONIGHT = false, GRID = LS.get("grid", false);
 const fmtDay = d => new Date(d + "T12:00").toLocaleDateString("fr-FR", {weekday: "long", day: "numeric", month: "long"});
 function renderDates() {
   $("#dates").innerHTML = DAYS.map((d, i) => { const k = ymd(d); return `<button role="tab" aria-selected="${SELDATES.includes(k)}" data-d="${k}" class="${SELDATES.length === 1 && SELDATES[0] === k ? "on" : ""}">${i === 0 ? "Auj." : i === 1 ? "Demain" : d.toLocaleDateString("fr-FR",{weekday:"short"})}<b>${d.getDate()}</b>${d.toLocaleDateString("fr-FR",{month:"short"})}</button>`; }).join("");
-  const t = SELDATES.length > 1 ? `Ce week-end · <em>${fmtDay(SELDATES[0])} & ${fmtDay(SELDATES[1])}</em>` : (SELDATES[0] === ymd(DAYS[0]) ? `Aujourd’hui · <em>${fmtDay(SELDATES[0])}</em>` : `<em>${fmtDay(SELDATES[0])}</em>`);
+  const t = SELDATES.length > 2 || (SELDATES.length === 2 && new Date(SELDATES[0]+"T12:00").getDay() !== 6) ? `Du <em>${fmtDay(SELDATES[0])}</em> au <em>${fmtDay(SELDATES[SELDATES.length-1])}</em>` : SELDATES.length > 1 ? `Ce week-end · <em>${fmtDay(SELDATES[0])} & ${fmtDay(SELDATES[1])}</em>` : (SELDATES[0] === ymd(DAYS[0]) ? `Aujourd’hui · <em>${fmtDay(SELDATES[0])}</em>` : `<em>${fmtDay(SELDATES[0])}</em>`);
   $(".today").innerHTML = t;
   $$(".qk").forEach(b => b.classList.toggle("on", b.dataset.q === "ap" ? APONLY : b.dataset.q === "today" ? SELDATES.length === 1 && SELDATES[0] === ymd(DAYS[0]) : SELDATES.length > 1));
   $$(".qk[data-q=ap]").forEach(b => b.setAttribute("aria-pressed", APONLY));
+  $$(".qk[data-q=tonight]").forEach(b => { b.classList.toggle("on", TONIGHT); b.setAttribute("aria-pressed", TONIGHT); });
+  $$(".qk[data-q=tomorrow]").forEach(b => b.classList.toggle("on", SELDATES.length === 1 && SELDATES[0] === ymd(DAYS[1])));
+  $(".period").classList.toggle("on", SELDATES.length > 2 || (SELDATES.length === 2 && new Date(SELDATES[0]+"T12:00").getDay() !== 6));
 }
 $("#dates").onclick = e => { const b = e.target.closest("button"); if (!b) return; SELDATES = [b.dataset.d]; renderDates(); loadData(); };
 $(".quick").onclick = e => { const b = e.target.closest("button"); if (!b) return;
   if (b.dataset.q === "today") SELDATES = [ymd(DAYS[0])];
   if (b.dataset.q === "weekend") { const sat = DAYS.find(d => d.getDay() === 6), sun = DAYS.find(d => d.getDay() === 0); SELDATES = DAYS[0].getDay() === 0 ? [ymd(DAYS[0])] : [ymd(sat), ymd(DAYS.find(d => d > sat && d.getDay() === 0) || sun)]; }
   if (b.dataset.q === "ap") { APONLY = !APONLY; renderDates(); return renderAll(); }
+  if (b.dataset.q === "tonight") { TONIGHT = !TONIGHT; if (TONIGHT && SELDATES[0] !== ymd(DAYS[0])) { SELDATES = [ymd(DAYS[0])]; renderDates(); loadData(); return; } renderDates(); return renderAll(); }
+  if (b.dataset.q === "tomorrow") SELDATES = [ymd(DAYS[1])];
+  if (b.closest(".period")) return;
   renderDates(); loadData(); };
 
 // ---------- Géolocalisation ----------
@@ -131,6 +234,7 @@ async function loadData() {
     else { FILMS = []; ERR = "Impossible de charger les séances (serveur en veille ou Allociné indisponible)."; }
   }
   renderAll(); injectLD();
+  if (typeof FILMPATH !== 'undefined' && FILMPATH && !window._fp) { window._fp = 1; openFilm(FILMPATH[1]); }
 }
 function classify(f) {
   const D = SELDATES[0], Y = +D.slice(0, 4);
@@ -150,18 +254,23 @@ function timeOk(t, f) {
   if (sp === "special" && !(t.events || []).length) return false;
   if (sp === "acc" && !t.acc) return false;
   if (APONLY && !(t.preview || f.cl.ap)) return false;
+  if (TONIGHT && new Date(t.time) < new Date()) return false;
   return true;
 }
 function view() {
   const q = norm($("#sfilm").value), age = $("#sage").value, sc = $("#scope").value;
-  return FILMS.filter(f => (!q || norm([f.title, f.originalTitle, (f.cast||[]).join(" "), f.directors].join(" ")).includes(q)) && (!age || !f.age))
+  const g = $("#sgenre").value, du = +$("#sdur").value, ra = +$("#srate").value, lb = $("#slb").value;
+  return FILMS.filter(f => (!q || q.split(" ").every(w => norm([f.title, f.originalTitle, (f.cast||[]).join(" "), f.directors, (f.genres||[]).join(" ")].join(" ")).includes(w))) && (!age || !f.age)
+      && (!g || (f.genres||[]).includes(g)) && (!du || (du === 999 ? f.dur > 135 : f.dur && f.dur <= du)) && (!ra || (+f.rating || 0) >= ra)
+      && (!lb || (lb === "unseen" ? !lbState(f).seen : lbState(f).watch)))
     .map(f => { const by = f.by.filter(b => sc === "pathe" ? b.c.type === "pathe" : sc === "partner" ? b.c.type === "partner" : true).map(b => ({c: b.c, times: b.times.filter(t => timeOk(t, f))})).filter(b => b.times.length);
       return {...f, vby: by, n: by.reduce((a, b) => a + b.times.length, 0)}; })
     .filter(f => f.n).sort((a, b) => b.n - a.n);
 }
 function posterCard(f, extra) {
   const t = [f.cl.ap && `<span class="tag g">Avant-première</span>`, f.cl.special[0] && `<span class="tag g">${esc(f.cl.special[0])}</span>`, f.cl.fresh && `<span class="tag">Nouveau</span>`, f.year && f.year < 2026 && f.cl.retro && `<span class="tag">Rétro ${f.year}</span>`].filter(Boolean).join("");
-  return `<button class="poster" onclick="openFilm('${f.id}')" aria-label="${esc(f.title)}"><div class="im">${f.poster ? `<img src="${esc(f.poster)}" alt="Affiche de ${esc(f.title)}" loading="lazy" decoding="async">` : ""}</div><div class="tags">${t}</div>${f.rating ? `<span class="rating" aria-label="Note spectateurs">★ ${(+f.rating).toFixed(1)}</span>` : ""}<h3>${esc(f.title)}</h3><small>${extra || `${f.vby.length} cinéma${f.vby.length>1?"s":""} · ${f.n} séance${f.n>1?"s":""}`}</small></button>`;
+  const L = lbState(f), my = myList(f);
+  return `<button class="poster${L.seen ? " seen" : ""}" onclick="openFilm('${f.id}')" aria-label="${esc(f.title)}${L.seen ? " (déjà vu)" : ""}${L.watch ? " (dans ma watchlist)" : ""}">${L.watch ? `<span class="lbw" title="Dans votre watchlist Letterboxd">Watchlist</span>` : ""}${L.seen ? `<span class="lbs">✓ Vu</span>` : my ? `<span class="lbs">${my}</span>` : ""}<div class="im">${f.poster ? `<img src="${esc(f.poster)}" alt="Affiche de ${esc(f.title)}" loading="lazy" decoding="async">` : ""}</div><div class="tags">${t}</div>${f.rating ? `<span class="rating" aria-label="Note spectateurs">★ ${(+f.rating).toFixed(1)}</span>` : ""}<h3>${esc(f.title)}</h3><small>${extra || `${f.vby.length} cinéma${f.vby.length>1?"s":""} · ${f.n} séance${f.n>1?"s":""}`}</small></button>`;
 }
 function renderAll() {
   const V = view(), none = `<div class="empty">Aucun film pour ces critères.</div>`;
@@ -170,14 +279,20 @@ function renderAll() {
   rail("#c-sp", V.filter(f => f.cl.ap || f.cl.special.length));
   rail("#c-retro", V.filter(f => f.year && f.year < 2026 && f.vby.some(b => b.c.type !== "pathe")).sort((a, b) => a.year - b.year), f => `${f.year} · ${f.vby.filter(b => b.c.type !== "pathe").length} cinéma(s) hors Pathé`);
   rail("#c-all", V);
-  renderShows(V); fresh();
+  rail("#c-ev", V.filter(f => f.cl.special.length || f.times.some(t => (t.events||[]).length)));
+  const reco = recommend(V); $("#s-reco").hidden = !reco.length; if (reco.length) rail("#c-reco", reco);
+  renderShows(V); fresh(); checkAlerts();
+  const gsel = $("#sgenre"), cur = gsel.value, gl = [...new Set(FILMS.flatMap(f => f.genres || []))].sort();
+  gsel.innerHTML = `<option value="">Tous genres</option>` + gl.map(g => `<option ${g === cur ? "selected" : ""}>${esc(g)}</option>`).join("");
 }
 let SHOWN = 25;
 function renderShows(V) {
   V = V || view(); const now = new Date();
+  if (GRID) { $("#shows").innerHTML = `<div class="pgrid">${V.slice(0, SHOWN * 2).map(f => posterCard(f)).join("")}</div>` + (V.length > SHOWN * 2 ? `<div class="pad"><button class="ghost" onclick="SHOWN+=25;renderShows()">Afficher plus</button></div>` : "") || `<div class="empty">Aucune séance.</div>`; return; }
   const html = V.slice(0, SHOWN).map(f => {
     const lines = f.vby.slice().sort((a, b) => (dist(a.c) ?? 0) - (dist(b.c) ?? 0) || a.c.name.localeCompare(b.c.name)).map(({c, times}) => `<div class="cine-line"><b>${FAVS.has(c.id) ? "⭐ " : ""}${esc(c.name)}${distTxt(c)}</b>${times.slice().sort((a,b)=>a.time.localeCompare(b.time)).map(t => timeBtn(f, c, t, now)).join("")}</div>`).join("");
-    return `<article class="film">${f.poster ? `<img src="${esc(f.poster)}" alt="Affiche de ${esc(f.title)}" loading="lazy" onclick="openFilm('${f.id}')">` : `<div class="noimg"></div>`}<div><h3><a href="#" onclick="openFilm('${f.id}');return false" style="color:inherit;text-decoration:none">${esc(f.title)}</a></h3><div class="meta">${meta(f)}</div>${lines}</div></article>`;
+    const L = lbState(f);
+    return `<article class="film${L.seen ? " seen" : ""}">${f.poster ? `<img src="${esc(f.poster)}" alt="Affiche de ${esc(f.title)}" loading="lazy" onclick="openFilm('${f.id}')">` : `<div class="noimg"></div>`}<div><h3><a href="#" onclick="openFilm('${f.id}');return false" style="color:inherit;text-decoration:none">${esc(f.title)}</a>${L.watch ? ` <span class="lbw">Watchlist</span>` : ""}${L.seen ? ` <span class="lbs">✓ Vu</span>` : ""}</h3><div class="meta">${meta(f)}</div>${lines}</div></article>`;
   }).join("");
   $("#shows").innerHTML = (html || `<div class="empty">${esc(ERR || "Aucune séance pour ces critères.")}</div>`) + (V.length > SHOWN ? `<div class="pad"><button class="ghost" onclick="SHOWN+=25;renderShows()">Afficher plus de films (${V.length - SHOWN})</button></div>` : "");
 }
@@ -187,7 +302,7 @@ const TB = {};
 function timeBtn(f, c, t, now) {
   const k = Math.random().toString(36).slice(2, 9); TB[k] = {f, c, t};
   const past = new Date(t.time) < now; const fx = (t.fmt || []).concat((t.events||[]).length ? ["★"] : []);
-  return `<button class="t${past ? " past" : ""}" onclick="openTime('${k}')" aria-label="${t.time.slice(11,16)} ${t.version} ${esc(c.name)}"><b>${t.time.slice(11,16)}</b><small>${esc((t.version||"").toUpperCase())}${t.acc ? " ♿" : ""}</small>${fx.length ? `<span class="fx">${esc(fx.join(" "))}</span>` : ""}</button>`;
+  return `<button class="t${past ? " past" : ""}" onclick="openTime('${k}')" aria-label="${t.time.slice(11,16)} ${t.version} ${esc(c.name)}"><b>${t.time.slice(11,16)}</b><small class="pill${t.version === "vo" ? " vo" : ""}">${t.version === "vo" ? "VOST" : esc((t.version||"").toUpperCase())}${t.acc ? " ♿" : ""}</small>${fx.length ? `<span class="fx">${esc(fx.join(" "))}</span>` : ""}</button>`;
 }
 function fresh() {
   const m = FETCHED ? Math.round((Date.now() - FETCHED) / 60000) : null;
@@ -195,14 +310,14 @@ function fresh() {
 }
 setInterval(fresh, 60000);
 ["#sfilm"].forEach(s => $(s).oninput = () => { SHOWN = 25; renderAll(); });
-["#sver", "#sfmt", "#sspec", "#sage"].forEach(s => $(s).onchange = () => { SHOWN = 25; renderAll(); });
+["#sver", "#sfmt", "#sspec", "#sage", "#sgenre", "#sdur", "#srate", "#slb"].forEach(s => $(s).onchange = () => { SHOWN = 25; renderAll(); });
 $("#scope").onchange = () => { SHOWN = 25; loadData(); };
 
 // ---------- Séance : réserver, billet, agenda ----------
 window.openTime = k => { const {f, c, t} = TB[k]; const when = new Date(t.time);
   $("#sheetc").innerHTML = `<div class="sheet"><h2 style="margin:0">${esc(f.title)}</h2><p class="sub">${esc(c.name)} · ${when.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})} à ${t.time.slice(11,16)} · ${esc((t.version||"").toUpperCase())} ${esc((t.fmt||[]).join(" "))}</p>
    <a class="primary" style="display:block;padding:12px;border-radius:10px;color:#141414" href="${esc(t.url || c.website || "#")}" target="_blank" rel="noopener">🎟️ Réserver / choisir ma place</a>
-   <button class="ghost" onclick="addTicket('${k}')">＋ Ajouter à mes billets</button><button class="ghost" onclick="ics('${k}')">📅 Ajouter à mon agenda (.ics)</button><button class="ghost" onclick="closeSheet()">Fermer</button></div>`;
+   <button class="ghost" onclick="addTicket('${k}')">＋ Ajouter à mes billets</button><a class="ghost" href="${gcal(f, c, t)}" target="_blank" rel="noopener">📅 Google Agenda</a><button class="ghost" onclick="ics('${k}')">🍎 Apple / Outlook (.ics)</button><button class="ghost" onclick="closeSheet()">Fermer</button></div>`;
   $("#sheet").classList.remove("hidden"); };
 window.addTicket = k => { const {f, c, t} = TB[k]; const id = f.id + "|" + c.id + "|" + t.time; if (!TICKETS.some(x => x.id === id)) TICKETS.push({id, title: f.title, poster: f.poster || "", cinema: c.name, time: t.time, url: t.url || c.website || "", version: (t.version||"").toUpperCase()}); sync(); closeSheet(); toast("Ajouté à « Mes billets »"); };
 window.ics = k => { const {f, c, t} = TB[k]; const s = new Date(t.time), e = new Date(s.getTime() + ((f.dur || 120) + 15) * 60000);
@@ -230,10 +345,14 @@ window.openFilm = id => {
    <div>${labs.map(l => `<span class="tag g" style="display:inline-block;margin:0 4px 4px 0">${esc(l)}</span>`).join("")}</div>
    <p class="sub">${meta(f)}${f.directors ? " · de " + esc(f.directors) : ""}</p>${(f.cast||[]).length ? `<p class="sub">Avec ${esc(f.cast.join(", "))}</p>` : ""}
    <p class="syn">${esc(f.synopsis || "")}</p>
-   <div class="btns"><a class="ghost" href="${yt}" target="_blank" rel="noopener">▶ Bande-annonce</a><a class="ghost" href="https://www.allocine.fr/film/fichefilm_gen_cfilm=${esc(f.id)}.html" target="_blank" rel="noopener">Plus d’infos (Allociné)</a></div>
-   <h3 style="clear:both;color:var(--gold2)">Séances ${SELDATES.length > 1 ? "du week-end" : "– " + fmtDay(SELDATES[0])} · ${V.vby.length} cinéma(s)</h3>${lines || `<p class="sub">Aucune séance avec les filtres actuels.</p>`}
+   ${lbState(f).watch ? `<p><span class="lbw">Dans votre watchlist Letterboxd</span></p>` : ""}${lbState(f).seen ? `<p><span class="lbs">✓ Déjà vu (Letterboxd)</span></p>` : ""}
+   <div class="btns" role="group" aria-label="Mes listes">${[["towatch","📌 À voir"],["seen","✓ Vu"],["rewatch","🔁 À revoir"]].map(([k,l]) => `<button class="ghost${inList(k, f) ? " on" : ""}" aria-pressed="${inList(k, f)}" onclick="toggleList('${k}','${f.id}')">${l}</button>`).join("")}</div>
+   <div id="trailer"></div>
+   <div class="btns"><a class="ghost" href="${yt}" target="_blank" rel="noopener">▶ Bande-annonce (YouTube)</a><a class="ghost" href="https://www.allocine.fr/film/fichefilm_gen_cfilm=${esc(f.id)}.html" target="_blank" rel="noopener">Plus d’infos (Allociné)</a><button class="ghost" onclick="shareFilm('${f.id}')">↗ Partager</button></div>
+   <h3 style="clear:both;color:var(--gold2)">Séances ${SELDATES.length > 1 ? "de la période" : "– " + fmtDay(SELDATES[0])} · ${V.vby.length} cinéma(s)</h3>${lines || `<p class="sub">Aucune séance avec les filtres actuels.</p>`}
    <p class="sub">Touchez un horaire : réserver, ajouter à mes billets ou à l’agenda. ★ = séance spéciale, ♿ = accessible.</p>
-   ${sim.length ? `<h3 style="color:var(--gold2)">Films similaires</h3><div class="rail" style="padding-left:0">${sim.map(x => posterCard(x)).join("")}</div>` : ""}</div>`);
+   <div id="photos"></div>${sim.length ? `<h3 style="color:var(--gold2)">Films similaires</h3><div class="rail" style="padding-left:0">${sim.map(x => posterCard(x)).join("")}</div>` : ""}</div>`);
+  filmExtras(f);
 };
 
 // ---------- Carte ----------
@@ -274,19 +393,27 @@ $("#depopts").innerHTML = DEPS.map(d => `<option value="dep:${esc(d)}">${esc(d)}
 
 // ---------- Fiche cinéma ----------
 const gmaps = c => "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(c.name + " " + (c.fullAddress || c.address));
-window.openCine = async (id, focus) => {
-  const c = byId(id); if (!c) return;
+const travel = c => { const d = dist(c); if (d == null) return ""; return ` · ≈ ${Math.round(d < 1.2 ? d / 4.5 * 60 : 12 + d / 18 * 60)} min ${d < 1.2 ? "à pied" : "en transports"} (estimation)`; };
+window.openCine = async (id, focus, day) => {
+  const c = byId(id); if (!c) return; day = day || SELDATES[0];
   modal(`<div class="mhead" style="${c.photo ? `background-image:url('${esc(c.photo.url)}')` : ""}" role="img" aria-label="Photo de ${esc(c.name)}"></div><div class="mbody"><span class="badge b-${c.type}">${TYPE[c.type]}</span>${c.cinepass || c.type !== "other" ? ` <span class="badge b-partner">CinéPass</span>` : ""}
-   <h2>${esc(c.name)}</h2><button class="favbtn ${FAVS.has(c.id) ? "on" : ""}" onclick="toggleFav('${c.id}')" aria-pressed="${FAVS.has(c.id)}">${FAVS.has(c.id) ? "⭐ Dans mes favoris" : "☆ Ajouter aux favoris"}</button>
-   <p>${esc(c.fullAddress || c.address)}${distTxt(c)}</p><div class="btns"><a class="ghost" href="${gmaps(c)}" target="_blank" rel="noopener">Itinéraire</a>${c.website ? `<a class="ghost" href="${esc(c.website)}" target="_blank" rel="noopener">Site du cinéma</a>` : ""}</div>
-   <h3 style="color:var(--gold2)">Séances – ${fmtDay(SELDATES[0])}</h3><div id="cshows">${c.allocineId ? "Chargement…" : "Séances non disponibles."}</div></div>`);
-  if (!c.allocineId) return;
+   <h2>${esc(c.name)}</h2><button class="favbtn ${FAVS.has(c.id) ? "on" : ""}" onclick="toggleFav('${c.id}')" aria-pressed="${FAVS.has(c.id)}">${FAVS.has(c.id) ? "⭐ Dans mes cinémas" : "☆ Ajouter à mes cinémas"}</button>
+   <p>${esc(c.fullAddress || c.address)}${distTxt(c)}<small>${travel(c)}</small></p><div class="btns"><a class="ghost" href="${gmaps(c)}" target="_blank" rel="noopener">Itinéraire</a>${c.website ? `<a class="ghost" href="${esc(c.website)}" target="_blank" rel="noopener">Site du cinéma</a>` : ""}</div>
+   <h3 style="color:var(--gold2)">Séances de la semaine</h3><div class="dates cdates" role="tablist" aria-label="Jour des séances">${DAYS.map((d, i) => { const k = ymd(d); return `<button role="tab" aria-selected="${k === day}" class="${k === day ? "on" : ""}" onclick="cineDay('${c.id}','${k}')">${i === 0 ? "Auj." : i === 1 ? "Demain" : d.toLocaleDateString("fr-FR",{weekday:"short"})}<b>${d.getDate()}</b>${d.toLocaleDateString("fr-FR",{month:"short"})}</button>`; }).join("")}</div>
+   <div id="cshows">${c.allocineId ? "" : "Séances non disponibles."}</div></div>`);
+  cineDay(id, day);
+};
+window.cineDay = async (id, day) => {
+  const c = byId(id); if (!c?.allocineId) return;
+  $$(".cdates button").forEach(b => { const on = b.getAttribute("onclick").includes(day); b.classList.toggle("on", on); b.setAttribute("aria-selected", on); });
+  $("#cshows").innerHTML = `<p class="sub">Chargement des séances du ${fmtDay(day)}…</p>`;
   try {
-    const d = await fetch(`/allocine/${c.allocineId}/${SELDATES[0]}`).then(j); const now = new Date();
+    const d = await fetch(`/allocine/${c.allocineId}/${day}`).then(j); const now = new Date();
     const films = (d.films || []).map(f => classify({...f, by: [{c, times: f.times}]}));
     films.forEach(f => FILMS.some(x => String(x.id) === String(f.id)) || FILMS.push(f));
-    $("#cshows").innerHTML = films.map(f => `<article class="film" style="margin:0 0 10px">${f.poster ? `<img src="${esc(f.poster)}" alt="Affiche de ${esc(f.title)}" loading="lazy" onclick="openFilm('${f.id}')">` : `<div class="noimg"></div>`}<div><h3>${esc(f.title)}</h3><div class="meta">${meta(f)}</div>${f.times.slice().sort((a,b)=>a.time.localeCompare(b.time)).map(t => timeBtn(f, c, t, now)).join("")}</div></article>`).join("") || `<p class="sub">Aucune séance ce jour-là.</p>`;
-  } catch (e) { $("#cshows").innerHTML = `<p class="sub">⚠️ Allociné ne répond pas pour ce cinéma. <a href="${esc(c.website || "#")}" target="_blank" rel="noopener">Voir le site du cinéma</a></p>`; }
+    if (!$("#cshows")) return;
+    $("#cshows").innerHTML = `<p class="sub">${fmtDay(day)} · ${films.length} film(s)</p>` + (films.map(f => { const L = lbState(f); return `<article class="film${L.seen ? " seen" : ""}" style="margin:0 0 10px">${f.poster ? `<img src="${esc(f.poster)}" alt="Affiche de ${esc(f.title)}" loading="lazy" onclick="openFilm('${f.id}')">` : `<div class="noimg"></div>`}<div><h3>${esc(f.title)}${L.watch ? ` <span class="lbw">Watchlist</span>` : ""}${L.seen ? ` <span class="lbs">✓ Vu</span>` : ""}</h3><div class="meta">${meta(f)}</div>${f.times.slice().sort((a,b)=>a.time.localeCompare(b.time)).map(t => timeBtn(f, c, t, now)).join("")}</div></article>`; }).join("") || `<p class="sub">Aucune séance ce jour-là.</p>`);
+  } catch (e) { if ($("#cshows")) $("#cshows").innerHTML = `<p class="sub">⚠️ Allociné ne répond pas pour ce cinéma. <button class="ghost" onclick="cineDay('${c.id}','${day}')">Réessayer</button> <a href="${esc(c.website || "#")}" target="_blank" rel="noopener">Site du cinéma</a></p>`; }
 };
 
 // ---------- Recherche globale ----------
@@ -321,10 +448,17 @@ function injectLD() {
 }
 
 // ---------- Démarrage ----------
-renderDates(); updAcct(); renderMap(); renderGrid(); loadData();
-if (TOKEN) post("/api/me").then(onAuth).catch(e => { if (/Session/.test(e.message)) logoutLocal(); });
-if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+renderDates(); updAcct(); renderMap(); renderGrid(); loadData(); loadLB();
+const setGrid = g => { GRID = g; LS.set("grid", g); $("#vgrid").classList.toggle("on", g); $("#vlist").classList.toggle("on", !g); $("#vgrid").setAttribute("aria-pressed", g); $("#vlist").setAttribute("aria-pressed", !g); renderShows(); };
+$("#vgrid").onclick = () => setGrid(true); $("#vlist").onclick = () => setGrid(false); setGrid(GRID);
+const pchg = () => { const a = $("#pfrom").value, b = $("#pto").value || a; if (!a) return; const out = []; for (let d = new Date(a + "T12:00"); ymd(d) <= b && out.length < 7; d.setDate(d.getDate() + 1)) out.push(ymd(d)); SELDATES = out; renderDates(); loadData(); };
+$("#pfrom").min = $("#pto").min = ymd(DAYS[0]); $("#pfrom").max = $("#pto").max = ymd(DAYS[13]); $("#pfrom").onchange = $("#pto").onchange = pchg;
+// géolocalisation automatique si déjà autorisée
+if (navigator.permissions) navigator.permissions.query({name: "geolocation"}).then(p => { if (p.state === "granted") locate().then(() => { renderGrid(); renderMap(); }).catch(() => {}); }).catch(() => {});
+if (TOKEN) post("/api/me").then(onAuth).catch(async e => { if (/Session/.test(e.message)) { if (await restore()) sync(); } }); // on ne déconnecte jamais sans « Se déconnecter »
+if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
 if (location.hash === "#billets") go("billets");
+const FILMPATH = location.pathname.match(/^\/film\/(\d+)/);
 
 // ---------- Installation de l'application ----------
 let DEFERRED = null;

@@ -3,12 +3,12 @@
 <title>Ciné IDF – Séances Pathé, CinéPass et cinémas d’Île-de-France</title>
 <meta name="description" content="Toutes les séances de cinéma en Île-de-France : Pathé, Gaumont, partenaires CinéPass et salles indépendantes. Sorties, avant-premières, séances rétro, carte des cinémas, favoris et billets.">
 <meta name="theme-color" content="#050505"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="canonical" href="https://cine-idf.onrender.com/"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="apple-touch-icon.png"><meta name="apple-mobile-web-app-title" content="Ciné IDF"><meta name="mobile-web-app-capable" content="yes"><meta name="application-name" content="Ciné IDF">
-<meta property="og:type" content="website"><meta property="og:title" content="Ciné IDF – toutes les séances d’Île-de-France"><meta property="og:description" content="Sorties, avant-premières, séances rétro et horaires de 360 cinémas franciliens."><meta property="og:url" content="https://cine-idf.onrender.com/"><meta property="og:locale" content="fr_FR">
+<link rel="canonical" href="https://cine-idf.onrender.com/"><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="/icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="apple-mobile-web-app-title" content="Ciné IDF"><meta name="mobile-web-app-capable" content="yes"><meta name="application-name" content="Ciné IDF">
+<meta property="og:type" content="website"><meta property="og:title" content="Ciné IDF – toutes les séances d’Île-de-France"><meta property="og:description" content="Sorties, avant-premières, séances rétro et horaires de 360 cinémas franciliens."><meta property="og:url" content="https://cine-idf.onrender.com/"><meta property="og:locale" content="fr_FR"><meta property="og:image" content="https://cine-idf.onrender.com/icon-512.png"><meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="/style.css">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Ciné IDF","url":"https://cine-idf.onrender.com/","inLanguage":"fr-FR","description":"Séances de cinéma en Île-de-France (source Allociné)."}</script>
 <script type="application/ld+json" id="ld-events">[]</script>
 </head><body>
@@ -24,32 +24,40 @@
 <main id="main">
 <section id="v-seances" class="view on" aria-labelledby="h-seances">
  <div class="daybar"><h1 id="h-seances" class="today"></h1><div id="dates" class="dates" role="tablist" aria-label="Choisir le jour"></div>
-  <div class="quick"><button data-q="today" class="qk on">Aujourd’hui</button><button data-q="weekend" class="qk">Ce week-end</button><button data-q="ap" class="qk" aria-pressed="false">✨ Avant-premières seulement</button></div></div>
+  <div class="quick"><button data-q="today" class="qk on">Aujourd’hui</button><button data-q="weekend" class="qk">Ce week-end</button><button data-q="tomorrow" class="qk">Demain</button><button data-q="tonight" class="qk" aria-pressed="false">🌙 Ce soir (à venir)</button><button data-q="ap" class="qk" aria-pressed="false">✨ Avant-premières seulement</button><label class="qk period">Période libre <input id="pfrom" type="date" aria-label="Du"> → <input id="pto" type="date" aria-label="Au"></label></div></div>
  <div class="filters" aria-label="Filtres">
-  <input id="sfilm" type="search" placeholder="Rechercher un film…" aria-label="Rechercher un film">
+  <input id="sfilm" type="search" placeholder="Film, acteur, réalisateur…" aria-label="Rechercher un film, un acteur ou un réalisateur">
   <select id="scope" aria-label="Cinémas"><option value="core">Pathé + partenaires CinéPass</option><option value="pathe">Pathé / Gaumont</option><option value="partner">Partenaires CinéPass</option><option value="fav">⭐ Mes favoris</option><option value="near">📍 Près de moi</option><optgroup label="Département (toutes salles)" id="depopts"></optgroup></select>
   <select id="sver" aria-label="Version"><option value="">VF + VO</option><option value="vf">VF</option><option value="vo">VO / VOST</option></select>
   <select id="sfmt" aria-label="Format"><option value="">Tous formats</option><option value="IMAX">IMAX</option><option value="4DX">4DX</option><option value="ScreenX">ScreenX</option><option value="Dolby">Dolby Cinema</option><option value="3D">3D</option></select>
-  <select id="sspec" aria-label="Séances spéciales"><option value="">Toutes séances</option><option value="special">Séances spéciales (live, opéra, concert)</option><option value="acc">♿ Accessibles</option></select>
+  <details class="more"><summary>⚙️ Filtres avancés</summary><div class="morein">
+  <select id="sspec" aria-label="Séances spéciales"><option value="">Toutes séances</option><option value="special">Séances spéciales (live, opéra, concert)</option><option value="acc">♿ Accessibles (PMR, malentendants, audiodescription)</option></select>
+  <select id="sgenre" aria-label="Genre"><option value="">Tous genres</option></select>
+  <select id="sdur" aria-label="Durée"><option value="">Toutes durées</option><option value="105">Moins de 1h45</option><option value="135">Moins de 2h15</option><option value="999">Plus de 2h15</option></select>
+  <select id="srate" aria-label="Note"><option value="">Toutes notes</option><option value="3">★ 3+ spectateurs</option><option value="3.5">★ 3,5+</option><option value="4">★ 4+</option></select>
+  <select id="slb" aria-label="Letterboxd"><option value="">Letterboxd : tous</option><option value="unseen">Pas encore vus</option><option value="watch">Ma watchlist</option></select>
   <select id="sage" aria-label="Âge"><option value="">Tous âges</option><option value="tp">Tout public</option></select>
+  </div></details>
  </div>
- <div id="fresh" class="fresh" aria-live="polite"></div>
+ <div id="fresh" class="fresh" aria-live="polite"></div><div id="alerts" class="alerts" aria-live="polite"></div>
  <div id="home">
+  <section class="fsec" id="s-reco" aria-labelledby="h0" hidden><h2 id="h0">💛 Pour vous</h2><p class="sub">Votre watchlist Letterboxd à l’affiche, et des films proches de vos goûts.</p><div id="c-reco" class="rail" tabindex="0"></div></section>
   <section class="fsec" aria-labelledby="h1"><h2 id="h1">🆕 Sorties de la semaine</h2><div id="c-new" class="rail" tabindex="0" aria-label="Sorties de la semaine"></div></section>
   <section class="fsec" aria-labelledby="h2"><h2 id="h2">✨ Séances spéciales & avant-premières</h2><div id="c-sp" class="rail" tabindex="0"></div></section>
+  <section class="fsec" aria-labelledby="h2b"><h2 id="h2b">🎭 Événements</h2><p class="sub">Concerts, opéras, ballets, retransmissions en direct, ciné-débats.</p><div id="c-ev" class="rail" tabindex="0"></div></section>
   <section class="fsec" aria-labelledby="h3"><h2 id="h3">🎞️ Séances rétro</h2><p class="sub">Films sortis avant 2026, projetés dans un cinéma hors Pathé.</p><div id="c-retro" class="rail" tabindex="0"></div></section>
   <section class="fsec" aria-labelledby="h4"><h2 id="h4">🍿 Tous les films au cinéma</h2><div id="c-all" class="rail" tabindex="0"></div></section>
  </div>
- <section class="fsec"><h2>🕒 Toutes les séances</h2><div id="shows" aria-live="polite"></div></section>
+ <section class="fsec"><div class="shead"><h2>🕒 Toutes les séances</h2><div class="seg" role="group" aria-label="Affichage"><button id="vlist" class="on" aria-pressed="true">☰ Liste</button><button id="vgrid" aria-pressed="false">▦ Affiches</button></div></div><p class="legend sub"><b class="pill">VF</b> version française · <b class="pill vo">VO</b> version originale sous-titrée · <span class="fx">IMAX / 4DX / Dolby / 3D</span> salle · ★ séance spéciale · ♿ accessible · <span class="lbw">Watchlist</span> dans votre watchlist Letterboxd · affiche grisée = déjà vu. Touchez un horaire pour réserver (redirection vers pathe.fr ou le site du cinéma).</p><div id="shows" aria-live="polite"></div></section>
 </section>
 <section id="v-map" class="view" aria-label="Carte des cinémas"><div class="mapbar"><input id="q" type="search" placeholder="Rechercher un cinéma, une ville…" aria-label="Rechercher un cinéma"><select id="ftype" aria-label="Type"><option value="">Tous</option><option value="pathe">Pathé</option><option value="partner">Partenaires CinéPass</option><option value="other">Autres cinémas</option><option value="fav">⭐ Mes favoris</option></select><select id="fdep" aria-label="Département"><option value="">Toute l’IDF</option></select><button id="near" class="ghost" aria-label="Cinémas près de moi">📍 Près de moi</button><span id="count"></span></div><div id="map"></div></section>
 <section id="v-list" class="view" aria-label="Liste des cinémas"><div class="filters"><input id="q2" type="search" placeholder="Rechercher…" aria-label="Rechercher un cinéma"><select id="ftype2" aria-label="Type"><option value="">Tous</option><option value="pathe">Pathé</option><option value="partner">Partenaires CinéPass</option><option value="other">Autres cinémas</option><option value="fav">⭐ Mes favoris</option></select><select id="fdep2" aria-label="Département"><option value="">Toute l’IDF</option></select><button id="near2" class="ghost">📍 Trier par distance</button></div><div id="grid" class="grid"></div></section>
-<section id="v-billets" class="view" aria-labelledby="h-b"><div class="pad"><h1 id="h-b">🎫 Mes billets</h1><p class="sub">Après avoir réservé, ajoutez votre séance ici (bouton « Ajouter à mes billets » sur chaque horaire). Touchez un billet pour rouvrir la réservation / votre place.</p><div id="tickets" class="tickets"></div></div></section>
+<section id="v-billets" class="view" aria-labelledby="h-b"><div class="pad"><h1 id="h-b">🎫 Mes billets</h1><p class="sub">Après avoir réservé, ajoutez votre séance ici (bouton « Ajouter à mes billets » sur chaque horaire). Touchez un billet pour rouvrir la réservation / votre place.</p><div id="tickets" class="tickets"></div><h1 style="margin-top:28px">📚 Mes listes</h1><p class="sub">« À voir », « Vu », « À revoir » : ajoutez un film depuis sa fiche. Synchronisé avec votre compte.</p><div id="lists"></div></div></section>
 <section id="v-infos" class="view"><div class="pad prose" id="infos"></div></section>
 </main>
 <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Détails"><div class="mbox"><button class="x" onclick="closeModal()" aria-label="Fermer">×</button><div id="mcontent"></div></div></div>
 <div id="sheet" class="modal hidden" role="dialog" aria-modal="true" aria-label="Séance"><div class="mbox small" id="sheetc"></div></div>
 <noscript><p class="pad">Activez JavaScript pour voir les séances.</p></noscript>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="data/cinemas.js"></script><script src="app.js"></script>
+<script src="/data/cinemas.js"></script><script src="/app.js"></script>
 </body></html>
