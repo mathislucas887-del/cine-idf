@@ -559,12 +559,11 @@
   "address": "19 avenue Robespierre",
   "zip": "94400",
   "city": "Vitry-sur-Seine",
-  "photo": null,
   "fullAddress": "19 avenue Robespierre 94400 Vitry-sur-Seine",
   "geoSource": "OpenStreetMap (Nominatim)",
   "cinepass": true,
   "group": "Cinéma indépendant partenaire",
-  "website": null,
+  "website": "https://3cines.vitry94.fr/",
   "allocineId": "B0151"
  },
  {
@@ -739,12 +738,11 @@
   "address": "Place de France",
   "zip": "91300",
   "city": "Massy",
-  "photo": null,
   "fullAddress": "Place de France 91300 Massy",
   "geoSource": "Base Adresse Nationale",
   "cinepass": true,
   "group": "Cinéma indépendant partenaire",
-  "website": null,
+  "website": "https://cinemassy.com/",
   "allocineId": "B0215"
  },
  {
@@ -981,12 +979,11 @@
   "address": "12 avenue Cousin de Méricourt",
   "zip": "94230",
   "city": "Cachan",
-  "photo": null,
   "fullAddress": "12 avenue Cousin de Méricourt 94230 Cachan",
   "geoSource": "OpenStreetMap (Nominatim)",
   "cinepass": true,
   "group": "Cinéma indépendant partenaire",
-  "website": null,
+  "website": "https://www.cinema-lapleiade.fr/",
   "allocineId": "B0127"
  },
  {
@@ -1021,13 +1018,6 @@
   "address": "3 rue Ledru-Rollin",
   "zip": "92150",
   "city": "Suresnes",
-  "photo": {
-   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e2/Cin%C3%A9ma_Capitole%2C_2009_%28cropped%29.jpg/960px-Cin%C3%A9ma_Capitole%2C_2009_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
-   "credit": "Wikimedia Commons",
-   "source": "https://commons.wikimedia.org/wiki/File:Cin%C3%A9ma_Capitole,_2009_(cropped).jpg",
-   "title": "File:Cinéma Capitole, 2009 (cropped).jpg",
-   "auto": true
-  },
   "fullAddress": "3 rue Ledru-Rollin 92150 Suresnes",
   "geoSource": "OpenStreetMap (Nominatim)",
   "cinepass": true,
@@ -1149,12 +1139,11 @@
   "address": "14 passage de l'Aqueduc",
   "zip": "93200",
   "city": "Saint-Denis",
-  "photo": null,
   "fullAddress": "14 passage de l'Aqueduc 93200 Saint-Denis",
   "geoSource": "OpenStreetMap (Nominatim)",
   "cinepass": true,
   "group": "Cinéma indépendant partenaire",
-  "website": null,
+  "website": "https://www.lecranstdenis.fr",
   "allocineId": "B0122"
  },
  {
@@ -1167,12 +1156,11 @@
   "address": "7 rue Francis de Pressensé",
   "zip": "75014",
   "city": "Paris",
-  "photo": null,
   "fullAddress": "7 rue Francis de Pressensé 75014 Paris",
   "geoSource": "OpenStreetMap (Nominatim)",
   "cinepass": true,
   "group": "Cinéma indépendant partenaire",
-  "website": null,
+  "website": "https://www.cinemalentrepot.fr/",
   "allocineId": "C0005"
  },
  {
@@ -1295,7 +1283,11 @@
   "address": "6 rue de l'École de Médecine",
   "zip": "75006",
   "city": "Paris",
-  "photo": null,
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/57/Nouvel_Od%C3%A9on%2C_Paris_29_May_2017.jpg/1280px-Nouvel_Od%C3%A9on%2C_Paris_29_May_2017.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "xiquinhosilva from Cacau · CC BY 2.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:Nouvel_Od%C3%A9on,_Paris_29_May_2017.jpg"
+  },
   "fullAddress": "6 rue de l'École de Médecine 75006 Paris",
   "geoSource": "OpenStreetMap (Nominatim)",
   "cinepass": true,
@@ -1313,7 +1305,6 @@
   "address": "129 avenue des Champs-Élysées",
   "zip": "75008",
   "city": "Paris",
-  "photo": null,
   "fullAddress": "129 avenue des Champs-Élysées 75008 Paris",
   "geoSource": "OpenStreetMap (Nominatim)",
   "cinepass": true,
@@ -1353,13 +1344,17 @@
   "address": "17 boulevard de Strasbourg",
   "zip": "75010",
   "city": "Paris",
-  "photo": null,
   "fullAddress": "17 boulevard de Strasbourg 75010 Paris",
   "geoSource": "OpenStreetMap (Nominatim)",
   "cinepass": true,
   "group": "Cinéma indépendant partenaire",
-  "website": null,
-  "allocineId": "C0134"
+  "website": "https://larchipel.net/",
+  "allocineId": "C0134",
+  "photo": {
+   "url": "https://upload.wikimedia.org/wikipedia/commons/f/fa/L%27Archipel_Paris%2C_de_nuit.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+   "credit": "Estherarchipel · CC BY-SA 4.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:L%27Archipel_Paris,_de_nuit.jpg"
+  }
  },
  {
   "id": "majestic-bastille",
@@ -1544,11 +1539,10 @@
   "address": "3 allee Jean ferrat 91130 Ris-Orangis",
   "zip": "91130",
   "city": "Ris-Orangis",
-  "photo": null,
   "fullAddress": "3 allee Jean ferrat 91130 Ris-Orangis",
   "cinepass": false,
   "allocineId": "B0066",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0066.html",
+  "website": "https://cinemas.grandparissud.fr/",
   "dep": "Essonne"
  },
  {
@@ -1640,12 +1634,16 @@
   "address": "rue Anatole-France 91220 Brétigny-sur-Orge",
   "zip": "91220",
   "city": "Brétigny-sur-Orge",
-  "photo": null,
   "fullAddress": "rue Anatole-France 91220 Brétigny-sur-Orge",
   "cinepass": false,
   "allocineId": "B0051",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0051.html",
-  "dep": "Essonne"
+  "website": "https://www.cine220.com",
+  "dep": "Essonne",
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8d/Br%C3%A9tigny-sur-Orge_Cin%C3%A9_220_3_Rue_Anatole_France_en_travaux_1.jpg/1280px-Br%C3%A9tigny-sur-Orge_Cin%C3%A9_220_3_Rue_Anatole_France_en_travaux_1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "Lionel Allorge · CC BY-SA 3.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:Br%C3%A9tigny-sur-Orge_Cin%C3%A9_220_3_Rue_Anatole_France_en_travaux_1.jpg"
+  }
  },
  {
   "id": "allo-G05H3",
@@ -1736,11 +1734,10 @@
   "address": "Square de la Mairie 91190 Gif-sur-Yvette",
   "zip": "91190",
   "city": "Gif-sur-Yvette",
-  "photo": null,
   "fullAddress": "Square de la Mairie 91190 Gif-sur-Yvette",
   "cinepass": false,
   "allocineId": "B0060",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0060.html",
+  "website": "https://www.ugc.fr/cinema.html?id=47",
   "dep": "Essonne"
  },
  {
@@ -1912,11 +1909,10 @@
   "address": "allée de la bouvèche 91400 Orsay",
   "zip": "91400",
   "city": "Orsay",
-  "photo": null,
   "fullAddress": "allée de la bouvèche 91400 Orsay",
   "cinepass": false,
   "allocineId": "B0065",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0065.html",
+  "website": "https://www.mjctati.fr/",
   "dep": "Essonne"
  },
  {
@@ -1928,11 +1924,10 @@
   "address": "place Marcel Carne 91240 Saint-Michel-sur-Orge",
   "zip": "91240",
   "city": "Saint-Michel-sur-Orge",
-  "photo": null,
   "fullAddress": "place Marcel Carne 91240 Saint-Michel-sur-Orge",
   "cinepass": false,
   "allocineId": "B0078",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0078.html",
+  "website": "https://www.emc91.org/",
   "dep": "Essonne"
  },
  {
@@ -1944,11 +1939,10 @@
   "address": "38, rue Victor-Basch 91170 Viry-Châtillon",
   "zip": "91170",
   "city": "Viry-Châtillon",
-  "photo": null,
   "fullAddress": "38, rue Victor-Basch 91170 Viry-Châtillon",
   "cinepass": false,
   "allocineId": "B0072",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0072.html",
+  "website": "https://cinema-calypso.fr",
   "dep": "Essonne"
  },
  {
@@ -2088,12 +2082,16 @@
   "address": "184, bd. Saint-Denis 92400 Courbevoie",
   "zip": "92400",
   "city": "Courbevoie",
-  "photo": null,
   "fullAddress": "184, bd. Saint-Denis 92400 Courbevoie",
   "cinepass": false,
   "allocineId": "B0084",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0084.html",
-  "dep": "Hauts-de-Seine"
+  "website": "https://www.sortiracourbevoie.fr/voir/cinema/tous",
+  "dep": "Hauts-de-Seine",
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/54/Courbevoie_Cinema_001.jpg/1280px-Courbevoie_Cinema_001.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "Moonik · CC BY-SA 3.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:Courbevoie_Cinema_001.jpg"
+  }
  },
  {
   "id": "allo-B0219",
@@ -2120,11 +2118,15 @@
   "address": "35, rue du Bournard 92700 Colombes",
   "zip": "92700",
   "city": "Colombes",
-  "photo": null,
+  "photo": {
+   "url": "https://all.web.img.acsta.net/r_1472_x/img/6e/02/6e025b3f523f5ad28c7a641c1d0235de.JPG",
+   "credit": "Site officiel · helios-cinema.fr",
+   "source": "https://www.helios-cinema.fr/"
+  },
   "fullAddress": "35, rue du Bournard 92700 Colombes",
   "cinepass": false,
   "allocineId": "B0082",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0082.html",
+  "website": "https://www.helios-cinema.fr/",
   "dep": "Hauts-de-Seine"
  },
  {
@@ -2136,11 +2138,10 @@
   "address": "96-98 rue Saint-Denis 92700 Colombes",
   "zip": "92700",
   "city": "Colombes",
-  "photo": null,
   "fullAddress": "96-98 rue Saint-Denis 92700 Colombes",
   "cinepass": false,
   "allocineId": "B0083",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0083.html",
+  "website": "https://www.helios-cinema.fr/",
   "dep": "Hauts-de-Seine"
  },
  {
@@ -2184,11 +2185,10 @@
   "address": "8 promenade Cœur de Ville 92130 Issy-les-Moulineaux",
   "zip": "92130",
   "city": "Issy-les-Moulineaux",
-  "photo": null,
   "fullAddress": "8 promenade Cœur de Ville 92130 Issy-les-Moulineaux",
   "cinepass": false,
   "allocineId": "W9213",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=W9213.html",
+  "website": "https://www.ugc.fr/cinema.html?id=59",
   "dep": "Hauts-de-Seine"
  },
  {
@@ -2216,12 +2216,16 @@
   "address": "Le Dôme - Centre commercial Westfield - Les 4 Temps 92092 Puteaux",
   "zip": "92092",
   "city": "Puteaux",
-  "photo": null,
   "fullAddress": "Le Dôme - Centre commercial Westfield - Les 4 Temps 92092 Puteaux",
   "cinepass": false,
   "allocineId": "B2619",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B2619.html",
-  "dep": "Hauts-de-Seine"
+  "website": "https://www.ugc.fr/cinema.html?id=20",
+  "dep": "Hauts-de-Seine",
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d1/La_Defense_2007_7.jpg/1280px-La_Defense_2007_7.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "Luctor · Public domain · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:La_Defense_2007_7.jpg"
+  }
  },
  {
   "id": "allo-W9280",
@@ -2616,11 +2620,10 @@
   "address": "1 place Jane Rhodes 92350 Le Plessis-Robinson",
   "zip": "92350",
   "city": "Le Plessis-Robinson",
-  "photo": null,
   "fullAddress": "1 place Jane Rhodes 92350 Le Plessis-Robinson",
   "cinepass": false,
   "allocineId": "B0091",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0091.html",
+  "website": "https://maisondesarts.plessis-robinson.com/",
   "dep": "Hauts-de-Seine"
  },
  {
@@ -2824,11 +2827,10 @@
   "address": "cour Emile-Zola 77370 Nangis",
   "zip": "77370",
   "city": "Nangis",
-  "photo": null,
   "fullAddress": "cour Emile-Zola 77370 Nangis",
   "cinepass": false,
   "allocineId": "B0048",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0048.html",
+  "website": "https://espaceculturel-ville-nangis.fr/",
   "dep": "Seine-et-Marne"
  },
  {
@@ -2888,11 +2890,10 @@
   "address": "Allée des Arts 77178 Saint-Pathus",
   "zip": "77178",
   "city": "Saint-Pathus",
-  "photo": null,
   "fullAddress": "Allée des Arts 77178 Saint-Pathus",
   "cinepass": false,
   "allocineId": "G04QH",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=G04QH.html",
+  "website": "https://cinema-des-brumiers.fr/",
   "dep": "Seine-et-Marne"
  },
  {
@@ -2952,11 +2953,10 @@
   "address": "22, av. de la Resistance 77500 Chelles",
   "zip": "77500",
   "city": "Chelles",
-  "photo": null,
   "fullAddress": "22, av. de la Resistance 77500 Chelles",
   "cinepass": false,
   "allocineId": "B0003",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0003.html",
+  "website": "https://www.cinema-cosmos-chelles.fr",
   "dep": "Seine-et-Marne"
  },
  {
@@ -2968,11 +2968,10 @@
   "address": "allee de la Ferme 77186 Noisiel",
   "zip": "77186",
   "city": "Noisiel",
-  "photo": null,
   "fullAddress": "allee de la Ferme 77186 Noisiel",
   "cinepass": false,
   "allocineId": "B0087",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0087.html",
+  "website": "https://www.lafermedubuisson.com/presentation/plan-de-la-ferme/cinema",
   "dep": "Seine-et-Marne"
  },
  {
@@ -3080,12 +3079,16 @@
   "address": "11, place Henri-IV 77100 Meaux",
   "zip": "77100",
   "city": "Meaux",
-  "photo": null,
   "fullAddress": "11, place Henri-IV 77100 Meaux",
   "cinepass": false,
   "allocineId": "B0009",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0009.html",
-  "dep": "Seine-et-Marne"
+  "website": "https://www.ugc.fr/cinema.html?id=39",
+  "dep": "Seine-et-Marne",
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6f/Meaux_%2877%29%2C_ancien_th%C3%A9%C3%A2tre%2C_place_Henri-IV.jpg/1280px-Meaux_%2877%29%2C_ancien_th%C3%A9%C3%A2tre%2C_place_Henri-IV.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "P.poschadel · CC BY-SA 3.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:Meaux_(77),_ancien_th%C3%A9%C3%A2tre,_place_Henri-IV.jpg"
+  }
  },
  {
   "id": "allo-W7717",
@@ -3128,7 +3131,11 @@
   "address": "Promenade du 7ème Art 77200 Torcy",
   "zip": "77200",
   "city": "Torcy",
-  "photo": null,
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6c/Mega_CGR_Torcy_a_Bay_1.JPG/1280px-Mega_CGR_Torcy_a_Bay_1.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "Griolin · CC BY-SA 3.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:Mega_CGR_Torcy_a_Bay_1.JPG"
+  },
   "fullAddress": "Promenade du 7ème Art 77200 Torcy",
   "cinepass": false,
   "allocineId": "B9114",
@@ -3144,11 +3151,10 @@
   "address": "Centre commercial Bobigny 2, Rue du Chemin-Vert 93000 Bobigny",
   "zip": "93000",
   "city": "Bobigny",
-  "photo": null,
   "fullAddress": "Centre commercial Bobigny 2, Rue du Chemin-Vert 93000 Bobigny",
   "cinepass": false,
   "allocineId": "B0195",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0195.html",
+  "website": "https://www.cine-aliceguy.fr",
   "dep": "Seine-Saint-Denis"
  },
  {
@@ -3208,11 +3214,15 @@
   "address": "4, rue de l’Union 93000 Bobigny",
   "zip": "93000",
   "city": "Bobigny",
-  "photo": null,
+  "photo": {
+   "url": "https://www.cine-aliceguy.fr/cine-themes/groupe-est-ensemble/452/fond-cine.jpg",
+   "credit": "Site officiel · cine-aliceguy.fr",
+   "source": "https://www.cine-aliceguy.fr"
+  },
   "fullAddress": "4, rue de l’Union 93000 Bobigny",
   "cinepass": false,
   "allocineId": "W9303",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=W9303.html",
+  "website": "https://www.cine-aliceguy.fr",
   "dep": "Seine-Saint-Denis"
  },
  {
@@ -3256,11 +3266,10 @@
   "address": "24 Rue Aretha Franklin 93000 Bobigny",
   "zip": "93000",
   "city": "Bobigny",
-  "photo": null,
   "fullAddress": "24 Rue Aretha Franklin 93000 Bobigny",
   "cinepass": false,
   "allocineId": "G05C6",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=G05C6.html",
+  "website": "https://www.cine-aliceguy.fr",
   "dep": "Seine-Saint-Denis"
  },
  {
@@ -3304,7 +3313,11 @@
   "address": "104, av. Jean-Lolive 93500 Pantin",
   "zip": "93500",
   "city": "Pantin",
-  "photo": null,
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/03/Cine104Pantin.JPG/1280px-Cine104Pantin.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "antomoro · FAL · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:Cine104Pantin.JPG"
+  },
   "fullAddress": "104, av. Jean-Lolive 93500 Pantin",
   "cinepass": false,
   "allocineId": "B0047",
@@ -3384,11 +3397,10 @@
   "address": "Centre commercial les Arcades 93160 Noisy-le-Grand",
   "zip": "93160",
   "city": "Noisy-le-Grand",
-  "photo": null,
   "fullAddress": "Centre commercial les Arcades 93160 Noisy-le-Grand",
   "cinepass": false,
   "allocineId": "B0114",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0114.html",
+  "website": "https://www.ugc.fr/cinema.html?id=19",
   "dep": "Seine-Saint-Denis"
  },
  {
@@ -3400,7 +3412,11 @@
   "address": "4 place de la libération 93160 Noisy-le-Grand",
   "zip": "93160",
   "city": "Noisy-le-Grand",
-  "photo": null,
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/dc/Cin%C3%A9ma_Bijou_-_Noisy-le-Grand_%28FR93%29_-_2021-10-12_-_1.jpg/1280px-Cin%C3%A9ma_Bijou_-_Noisy-le-Grand_%28FR93%29_-_2021-10-12_-_1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "Chabe01 · CC BY-SA 4.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:Cin%C3%A9ma_Bijou_-_Noisy-le-Grand_(FR93)_-_2021-10-12_-_1.jpg"
+  },
   "fullAddress": "4 place de la libération 93160 Noisy-le-Grand",
   "cinepass": false,
   "allocineId": "P9316",
@@ -3416,11 +3432,10 @@
   "address": "Centre commercial O’Parinor Le Haut de Galy 93600 Aulnay-sous-Bois",
   "zip": "93600",
   "city": "Aulnay-sous-Bois",
-  "photo": null,
   "fullAddress": "Centre commercial O’Parinor Le Haut de Galy 93600 Aulnay-sous-Bois",
   "cinepass": false,
   "allocineId": "W9360",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=W9360.html",
+  "website": "https://www.ugc.fr/cinema.html?id=38",
   "dep": "Seine-Saint-Denis"
  },
  {
@@ -3448,11 +3463,10 @@
   "address": "16, rue Conrad-Adenauer, Centre Commercial WESTFIELD Rosny 2 93110 Rosny-sous-Bois",
   "zip": "93110",
   "city": "Rosny-sous-Bois",
-  "photo": null,
   "fullAddress": "16, rue Conrad-Adenauer, Centre Commercial WESTFIELD Rosny 2 93110 Rosny-sous-Bois",
   "cinepass": false,
   "allocineId": "B0199",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0199.html",
+  "website": "https://www.ugc.fr/cinema.html?id=18",
   "dep": "Seine-Saint-Denis"
  },
  {
@@ -3480,11 +3494,10 @@
   "address": "2, rue Edouard-Poisson 93300 Aubervilliers",
   "zip": "93300",
   "city": "Aubervilliers",
-  "photo": null,
   "fullAddress": "2, rue Edouard-Poisson 93300 Aubervilliers",
   "cinepass": false,
   "allocineId": "B0101",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0101.html",
+  "website": "https://lestudio-aubervilliers.fr/",
   "dep": "Seine-Saint-Denis"
  },
  {
@@ -3496,11 +3509,10 @@
   "address": "25 cours de la République 93140 Bondy",
   "zip": "93140",
   "city": "Bondy",
-  "photo": null,
   "fullAddress": "25 cours de la République 93140 Bondy",
   "cinepass": false,
   "allocineId": "B0107",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0107.html",
+  "website": "https://www.cinemalraux.fr/",
   "dep": "Seine-Saint-Denis"
  },
  {
@@ -3624,7 +3636,11 @@
   "address": "21, av. Daniel-Perdrige 93360 Neuilly-Plaisance",
   "zip": "93360",
   "city": "Neuilly-Plaisance",
-  "photo": null,
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4b/Cin%C3%A9ma_Fauvette_Neuilly_Plaisance_5.jpg/1280px-Cin%C3%A9ma_Fauvette_Neuilly_Plaisance_5.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "Chabe01 · CC BY-SA 4.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:Cin%C3%A9ma_Fauvette_Neuilly_Plaisance_5.jpg"
+  },
   "fullAddress": "21, av. Daniel-Perdrige 93360 Neuilly-Plaisance",
   "cinepass": false,
   "allocineId": "B0108",
@@ -3656,7 +3672,11 @@
   "address": "Place Carnot 93230 Romainville",
   "zip": "93230",
   "city": "Romainville",
-  "photo": null,
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f2/Cin%C3%A9ma_Trianon_Romainville_1.jpg/1280px-Cin%C3%A9ma_Trianon_Romainville_1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "Chabe01 · CC BY-SA 4.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:Cin%C3%A9ma_Trianon_Romainville_1.jpg"
+  },
   "fullAddress": "Place Carnot 93230 Romainville",
   "cinepass": false,
   "allocineId": "B0119",
@@ -3768,11 +3788,10 @@
   "address": "38, rue du Général de Gaulle 95880 Enghien-les-Bains",
   "zip": "95880",
   "city": "Enghien-les-Bains",
-  "photo": null,
   "fullAddress": "38, rue du Général de Gaulle 95880 Enghien-les-Bains",
   "cinepass": false,
   "allocineId": "B0159",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0159.html",
+  "website": "https://www.ugc.fr/cinema.html?id=17",
   "dep": "Val-d'Oise"
  },
  {
@@ -3784,11 +3803,10 @@
   "address": "12-16 rue de la Libération 95880 Enghien-les-Bains",
   "zip": "95880",
   "city": "Enghien-les-Bains",
-  "photo": null,
   "fullAddress": "12-16 rue de la Libération 95880 Enghien-les-Bains",
   "cinepass": false,
   "allocineId": "B1386",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B1386.html",
+  "website": "https://www.ugc.fr/cinema.html?id=17",
   "dep": "Val-d'Oise"
  },
  {
@@ -3864,7 +3882,11 @@
   "address": "6, av. Anatole-France 95260 Beaumont-sur-Oise",
   "zip": "95260",
   "city": "Beaumont-sur-Oise",
-  "photo": null,
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1c/Beaumont-sur-Oise_%2895%29%2C_cin%C3%A9ma_Beaumont-Palace%2C_rue_de_Paris_-_rue_Henri-Pasdeloup.jpg/1280px-Beaumont-sur-Oise_%2895%29%2C_cin%C3%A9ma_Beaumont-Palace%2C_rue_de_Paris_-_rue_Henri-Pasdeloup.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "P.poschadel · CC BY-SA 2.0 fr · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:Beaumont-sur-Oise_(95),_cin%C3%A9ma_Beaumont-Palace,_rue_de_Paris_-_rue_Henri-Pasdeloup.jpg"
+  },
   "fullAddress": "6, av. Anatole-France 95260 Beaumont-sur-Oise",
   "cinepass": false,
   "allocineId": "B0154",
@@ -3880,11 +3902,10 @@
   "address": "12, allée Sainte-Thérèse 95330 Domont",
   "zip": "95330",
   "city": "Domont",
-  "photo": null,
   "fullAddress": "12, allée Sainte-Thérèse 95330 Domont",
   "cinepass": false,
   "allocineId": "B0158",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0158.html",
+  "website": "https://domontcinema.com/",
   "dep": "Val-d'Oise"
  },
  {
@@ -4024,11 +4045,10 @@
   "address": "14 rue Alexandre-Prachay 95300 Pontoise",
   "zip": "95300",
   "city": "Pontoise",
-  "photo": null,
   "fullAddress": "14 rue Alexandre-Prachay 95300 Pontoise",
   "cinepass": false,
   "allocineId": "B0218",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0218.html",
+  "website": "https://saintouen.cinemas-utopia.org/",
   "dep": "Val-d'Oise"
  },
  {
@@ -4120,11 +4140,10 @@
   "address": "1 place du coeur-battant 95490 Vauréal",
   "zip": "95490",
   "city": "Vauréal",
-  "photo": null,
   "fullAddress": "1 place du coeur-battant 95490 Vauréal",
   "cinepass": false,
   "allocineId": "B4834",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B4834.html",
+  "website": "https://cine-antares.fr/",
   "dep": "Val-d'Oise"
  },
  {
@@ -4152,11 +4171,10 @@
   "address": "1, place Pierre-Mendes-France 95310 Saint-Ouen-l'Aumône",
   "zip": "95310",
   "city": "Saint-Ouen-l'Aumône",
-  "photo": null,
   "fullAddress": "1, place Pierre-Mendes-France 95310 Saint-Ouen-l'Aumône",
   "cinepass": false,
   "allocineId": "B0186",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0186.html",
+  "website": "https://saintouen.cinemas-utopia.org/",
   "dep": "Val-d'Oise"
  },
  {
@@ -4184,11 +4202,10 @@
   "address": "8, place des trois gares 95800 Cergy",
   "zip": "95800",
   "city": "Cergy",
-  "photo": null,
   "fullAddress": "8, place des trois gares 95800 Cergy",
   "cinepass": false,
   "allocineId": "B0016",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0016.html",
+  "website": "https://www.ugc.fr/cinema.html?id=16",
   "dep": "Val-d'Oise"
  },
  {
@@ -4344,11 +4361,15 @@
   "address": "Place du Forum (Quartier de la Haie-Griselle) 94470 Boissy-Saint-Léger",
   "zip": "94470",
   "city": "Boissy-Saint-Léger",
-  "photo": null,
+  "photo": {
+   "url": "https://ville-boissy.fr/wp-content/uploads/2021/07/PICT0648-scaled.jpg",
+   "credit": "Site officiel · ville-boissy.fr",
+   "source": "https://ville-boissy.fr/vivre-a-boissy/culture-evenements/cinema-le-forum/"
+  },
   "fullAddress": "Place du Forum (Quartier de la Haie-Griselle) 94470 Boissy-Saint-Léger",
   "cinepass": false,
   "allocineId": "B0179",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0179.html",
+  "website": "https://ville-boissy.fr/vivre-a-boissy/culture-evenements/cinema-le-forum/",
   "dep": "Val-de-Marne"
  },
  {
@@ -4408,7 +4429,11 @@
   "address": "243 ter, av. de la Republique 94120 Fontenay-sous-Bois",
   "zip": "94120",
   "city": "Fontenay-sous-Bois",
-  "photo": null,
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b9/Cin%C3%A9ma_Kosmos_Fontenay_Bois_3.jpg/1280px-Cin%C3%A9ma_Kosmos_Fontenay_Bois_3.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "Chabe01 · CC BY-SA 4.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:Cin%C3%A9ma_Kosmos_Fontenay_Bois_3.jpg"
+  },
   "fullAddress": "243 ter, av. de la Republique 94120 Fontenay-sous-Bois",
   "cinepass": false,
   "allocineId": "B0134",
@@ -4456,11 +4481,10 @@
   "address": "14, rue Dispan 94240 L' Haÿ-les-Roses",
   "zip": "94240",
   "city": "L' Haÿ-les-Roses",
-  "photo": null,
   "fullAddress": "14, rue Dispan 94240 L' Haÿ-les-Roses",
   "cinepass": false,
   "allocineId": "B0136",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0136.html",
+  "website": "https://www.lhaylesroses.fr/cinema",
   "dep": "Val-de-Marne"
  },
  {
@@ -4600,11 +4624,10 @@
   "address": "18 rue Eugène Varlin 94800 Villejuif",
   "zip": "94800",
   "city": "Villejuif",
-  "photo": null,
   "fullAddress": "18 rue Eugène Varlin 94800 Villejuif",
   "cinepass": false,
   "allocineId": "B0145",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0145.html",
+  "website": "https://trr.fr/cinema/",
   "dep": "Val-de-Marne"
  },
  {
@@ -4648,11 +4671,10 @@
   "address": "30 avenue de Paris 94300 Vincennes",
   "zip": "94300",
   "city": "Vincennes",
-  "photo": null,
   "fullAddress": "30 avenue de Paris 94300 Vincennes",
   "cinepass": false,
   "allocineId": "B0148",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0148.html",
+  "website": "https://cinemalevincennes.com/",
   "dep": "Val-de-Marne"
  },
  {
@@ -4680,7 +4702,11 @@
   "address": "165, grande rue Charles-de-Gaulle 94130 Nogent-sur-Marne",
   "zip": "94130",
   "city": "Nogent-sur-Marne",
-  "photo": null,
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/68/Cin%C3%A9ma_Royal_Palace_-_Nogent-sur-Marne_%28FR94%29_-_2021-10-28_-_4.jpg/1280px-Cin%C3%A9ma_Royal_Palace_-_Nogent-sur-Marne_%28FR94%29_-_2021-10-28_-_4.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "Chabe01 · CC BY-SA 4.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:Cin%C3%A9ma_Royal_Palace_-_Nogent-sur-Marne_(FR94)_-_2021-10-28_-_4.jpg"
+  },
   "fullAddress": "165, grande rue Charles-de-Gaulle 94130 Nogent-sur-Marne",
   "cinepass": false,
   "allocineId": "B0189",
@@ -4744,11 +4770,10 @@
   "address": "7, rue Rameau 78000 Versailles",
   "zip": "78000",
   "city": "Versailles",
-  "photo": null,
   "fullAddress": "7, rue Rameau 78000 Versailles",
   "cinepass": false,
   "allocineId": "B0045",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0045.html",
+  "website": "https://www.ugc.fr/cinema.html?id=41",
   "dep": "Yvelines"
  },
  {
@@ -4760,11 +4785,10 @@
   "address": "6, rue Saint-Simon 78000 Versailles",
   "zip": "78000",
   "city": "Versailles",
-  "photo": null,
   "fullAddress": "6, rue Saint-Simon 78000 Versailles",
   "cinepass": false,
   "allocineId": "B0044",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0044.html",
+  "website": "https://www.ugc.fr/cinema.html?id=40",
   "dep": "Yvelines"
  },
  {
@@ -4776,11 +4800,10 @@
   "address": "1 avenue de la Source de la Bievre 78180 Montigny-le-Bretonneux",
   "zip": "78180",
   "city": "Montigny-le-Bretonneux",
-  "photo": null,
   "fullAddress": "1 avenue de la Source de la Bievre 78180 Montigny-le-Bretonneux",
   "cinepass": false,
   "allocineId": "B9052",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B9052.html",
+  "website": "https://www.ugc.fr/cinema.html?id=6",
   "dep": "Yvelines"
  },
  {
@@ -4856,11 +4879,15 @@
   "address": "8E, av. Charles-de-Gaulle (mairie) 78170 La Celle-Saint-Cloud",
   "zip": "78170",
   "city": "La Celle-Saint-Cloud",
-  "photo": null,
+  "photo": {
+   "url": "https://www.culture-lacellesaintcloud.fr/wp-content/uploads/2013/10/cine.jpg",
+   "credit": "Site officiel · culture-lacellesaintcloud.fr",
+   "source": "https://www.culture-lacellesaintcloud.fr/cinema/"
+  },
   "fullAddress": "8E, av. Charles-de-Gaulle (mairie) 78170 La Celle-Saint-Cloud",
   "cinepass": false,
   "allocineId": "B0022",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0022.html",
+  "website": "https://www.culture-lacellesaintcloud.fr/cinema/",
   "dep": "Yvelines"
  },
  {
@@ -4888,11 +4915,10 @@
   "address": "48, rue du Prieuré 78600 Maisons-Laffitte",
   "zip": "78600",
   "city": "Maisons-Laffitte",
-  "photo": null,
   "fullAddress": "48, rue du Prieuré 78600 Maisons-Laffitte",
   "cinepass": false,
   "allocineId": "B0256",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0256.html",
+  "website": "https://cineatalante.com/",
   "dep": "Yvelines"
  },
  {
@@ -5048,11 +5074,10 @@
   "address": "10, rue Carnot 78160 Marly-le-Roi",
   "zip": "78160",
   "city": "Marly-le-Roi",
-  "photo": null,
   "fullAddress": "10, rue Carnot 78160 Marly-le-Roi",
   "cinepass": false,
   "allocineId": "B0183",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0183.html",
+  "website": "https://www.cineode.fr/marly-fontenelle/",
   "dep": "Yvelines"
  },
  {
@@ -5080,11 +5105,10 @@
   "address": "11 bis av. Jean Jaurès 78210 Saint-Cyr-l'École",
   "zip": "78210",
   "city": "Saint-Cyr-l'École",
-  "photo": null,
   "fullAddress": "11 bis av. Jean Jaurès 78210 Saint-Cyr-l'École",
   "cinepass": false,
   "allocineId": "B0037",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0037.html",
+  "website": "https://www.saintcyr78.fr/loisirs/cinema-les-yeux-delsa/",
   "dep": "Yvelines"
  },
  {
@@ -5128,11 +5152,10 @@
   "address": "112 Rue du Général de Gaulle 78300 Poissy",
   "zip": "78300",
   "city": "Poissy",
-  "photo": null,
   "fullAddress": "112 Rue du Général de Gaulle 78300 Poissy",
   "cinepass": false,
   "allocineId": "B0052",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0052.html",
+  "website": "https://www.ugc.fr/cinema.html?id=54",
   "dep": "Yvelines"
  },
  {
@@ -5144,11 +5167,10 @@
   "address": "25-27-29, rue du Vieux-Marche 78100 Saint-Germain-en-Laye",
   "zip": "78100",
   "city": "Saint-Germain-en-Laye",
-  "photo": null,
   "fullAddress": "25-27-29, rue du Vieux-Marche 78100 Saint-Germain-en-Laye",
   "cinepass": false,
   "allocineId": "B0038",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0038.html",
+  "website": "https://www.ugc.fr/cinema.html?id=48",
   "dep": "Yvelines"
  },
  {
@@ -5160,11 +5182,10 @@
   "address": "6, rue Hoche 78500 Sartrouville",
   "zip": "78500",
   "city": "Sartrouville",
-  "photo": null,
   "fullAddress": "6, rue Hoche 78500 Sartrouville",
   "cinepass": false,
   "allocineId": "B0040",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0040.html",
+  "website": "https://www.ugc.fr/cinema-le-cin-hoche.html",
   "dep": "Yvelines"
  },
  {
@@ -5176,11 +5197,10 @@
   "address": "CC. Mon Grand Plaisir - 1170 Avenue de Saint-Germain 78370 Plaisir",
   "zip": "78370",
   "city": "Plaisir",
-  "photo": null,
   "fullAddress": "CC. Mon Grand Plaisir - 1170 Avenue de Saint-Germain 78370 Plaisir",
   "cinepass": false,
   "allocineId": "W7837",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=W7837.html",
+  "website": "https://www.ugc.fr/cinema.html?id=55",
   "dep": "Yvelines"
  },
  {
@@ -5192,11 +5212,10 @@
   "address": "Centre commercial Parly 2, 2 avenue Charles de Gaulle 78150 Le Chesnay",
   "zip": "78150",
   "city": "Le Chesnay",
-  "photo": null,
   "fullAddress": "Centre commercial Parly 2, 2 avenue Charles de Gaulle 78150 Le Chesnay",
   "cinepass": false,
   "allocineId": "W7815",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=W7815.html",
+  "website": "https://www.ugc.fr/cinema.html?id=44",
   "dep": "Yvelines"
  },
  {
@@ -5208,11 +5227,10 @@
   "address": "Centre commercial Régional Vélizy 2 78140 Vélizy-Villacoublay",
   "zip": "78140",
   "city": "Vélizy-Villacoublay",
-  "photo": null,
   "fullAddress": "Centre commercial Régional Vélizy 2 78140 Vélizy-Villacoublay",
   "cinepass": false,
   "allocineId": "B0042",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=B0042.html",
+  "website": "https://www.ugc.fr/cinema.html?id=43",
   "dep": "Yvelines"
  },
  {
@@ -5240,12 +5258,16 @@
   "address": "2, cour Saint-Emilion 75012 Paris",
   "zip": "75012",
   "city": "Paris",
-  "photo": null,
   "fullAddress": "2, cour Saint-Emilion 75012 Paris",
   "cinepass": false,
   "allocineId": "C0026",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=C0026.html",
-  "dep": "Paris"
+  "website": "https://www.ugc.fr/cinema.html?id=12",
+  "dep": "Paris",
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b2/Bercy_village_02.jpg/1280px-Bercy_village_02.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "jean-louis zimmermann · CC BY 2.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:Bercy_village_02.jpg"
+  }
  },
  {
   "id": "allo-C2954",
@@ -5256,12 +5278,16 @@
   "address": "128-162 avenue de France 75013 Paris",
   "zip": "75013",
   "city": "Paris",
-  "photo": null,
   "fullAddress": "128-162 avenue de France 75013 Paris",
   "cinepass": false,
   "allocineId": "C2954",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=C2954.html",
-  "dep": "Paris"
+  "website": "https://www.mk2.com/salle/mk2-bibliotheque",
+  "dep": "Paris",
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5e/MK2_Biblioth%C3%A8que_en_aout_2024.jpg/1280px-MK2_Biblioth%C3%A8que_en_aout_2024.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "Cyril5C · CC BY-SA 4.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:MK2_Biblioth%C3%A8que_en_aout_2024.jpg"
+  }
  },
  {
   "id": "allo-C0003",
@@ -5272,12 +5298,16 @@
   "address": "14 quai de la seine 75019 Paris 19e arrondissement",
   "zip": "75019",
   "city": "Paris",
-  "photo": null,
   "fullAddress": "14 quai de la seine 75019 Paris 19e arrondissement",
   "cinepass": false,
   "allocineId": "C0003",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=C0003.html",
-  "dep": "Paris"
+  "website": "https://www.mk2.com/salle/mk2-quai-seine-quai-loire",
+  "dep": "Paris",
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4c/MK2_Quai_de_Loire%2C_Paris_7_April_2015.jpg/1280px-MK2_Quai_de_Loire%2C_Paris_7_April_2015.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "Greg Hanson from Seattle, USA · CC BY 2.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:MK2_Quai_de_Loire,_Paris_7_April_2015.jpg"
+  }
  },
  {
   "id": "allo-C1621",
@@ -5288,12 +5318,16 @@
   "address": "7 quai de Loire 75019 Paris",
   "zip": "75019",
   "city": "Paris",
-  "photo": null,
   "fullAddress": "7 quai de Loire 75019 Paris",
   "cinepass": false,
   "allocineId": "C1621",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=C1621.html",
-  "dep": "Paris"
+  "website": "https://www.mk2.com/salle/mk2-quai-seine-quai-loire",
+  "dep": "Paris",
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4c/MK2_Quai_de_Loire%2C_Paris_7_April_2015.jpg/1280px-MK2_Quai_de_Loire%2C_Paris_7_April_2015.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "Greg Hanson from Seattle, USA · CC BY 2.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:MK2_Quai_de_Loire,_Paris_7_April_2015.jpg"
+  }
  },
  {
   "id": "allo-C0103",
@@ -5304,11 +5338,10 @@
   "address": "83, bd du Montparnasse 75006 Paris",
   "zip": "75006",
   "city": "Paris",
-  "photo": null,
   "fullAddress": "83, bd du Montparnasse 75006 Paris",
   "cinepass": false,
   "allocineId": "C0103",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=C0103.html",
+  "website": "https://www.ugc.fr/cinema.html?id=14",
   "dep": "Paris"
  },
  {
@@ -5320,11 +5353,10 @@
   "address": "66bis, av. des Gobelins 75013 Paris 13e arrondissement",
   "zip": "75013",
   "city": "Paris",
-  "photo": null,
   "fullAddress": "66bis, av. des Gobelins 75013 Paris 13e arrondissement",
   "cinepass": false,
   "allocineId": "C0150",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=C0150.html",
+  "website": "https://www.ugc.fr/cinema.html?id=5",
   "dep": "Paris"
  },
  {
@@ -5336,11 +5368,15 @@
   "address": "6, rue Belgrand 75020 Paris",
   "zip": "75020",
   "city": "Paris",
-  "photo": null,
+  "photo": {
+   "url": "https://images.prismic.io/mk2-paris-prod/YjYwYTdlM2UtNmM3NS00NDMzLTg4YjYtY2E5YzE5YWQwMTA0_b152d3eb-d30d-4cda-9641-36230ca49512_dscf7246_03.jpg",
+   "credit": "Site officiel · mk2.com",
+   "source": "https://www.mk2.com/salle/mk2-gambetta"
+  },
   "fullAddress": "6, rue Belgrand 75020 Paris",
   "cinepass": false,
   "allocineId": "C0192",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=C0192.html",
+  "website": "https://www.mk2.com/salle/mk2-gambetta",
   "dep": "Paris"
  },
  {
@@ -5352,11 +5388,15 @@
   "address": "4, boulevard Beaumarchais 75011 Paris",
   "zip": "75011",
   "city": "Paris",
-  "photo": null,
+  "photo": {
+   "url": "https://images.prismic.io/mk2-paris-prod/YjYwYTdlM2UtNmM3NS00NDMzLTg4YjYtY2E5YzE5YWQwMTA0_b152d3eb-d30d-4cda-9641-36230ca49512_dscf7246_03.jpg",
+   "credit": "Site officiel · mk2.com",
+   "source": "https://www.mk2.com/salle/mk2-bastille-beaumarchais-fg-st-antoine"
+  },
   "fullAddress": "4, boulevard Beaumarchais 75011 Paris",
   "cinepass": false,
   "allocineId": "C0140",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=C0140.html",
+  "website": "https://www.mk2.com/salle/mk2-bastille-beaumarchais-fg-st-antoine",
   "dep": "Paris"
  },
  {
@@ -5368,11 +5408,15 @@
   "address": "1, bd Poissonniere 75002 Paris",
   "zip": "75002",
   "city": "Paris",
-  "photo": null,
+  "photo": {
+   "url": "https://www.legrandrex.com/images/photo_grand_rex2.jpg",
+   "credit": "Site officiel · legrandrex.com",
+   "source": "https://www.legrandrex.com"
+  },
   "fullAddress": "1, bd Poissonniere 75002 Paris",
   "cinepass": false,
   "allocineId": "C0065",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=C0065.html",
+  "website": "https://www.legrandrex.com",
   "dep": "Paris"
  },
  {
@@ -5384,12 +5428,16 @@
   "address": "133, bd Diderot 75012 Paris",
   "zip": "75012",
   "city": "Paris",
-  "photo": null,
   "fullAddress": "133, bd Diderot 75012 Paris",
   "cinepass": false,
   "allocineId": "C0144",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=C0144.html",
-  "dep": "Paris"
+  "website": "https://www.mk2.com/salle/mk2-nation",
+  "dep": "Paris",
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/58/MK2_Nation.JPG/1280px-MK2_Nation.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "LPLT · CC BY-SA 3.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:MK2_Nation.JPG"
+  }
  },
  {
   "id": "allo-C0050",
@@ -5400,11 +5448,15 @@
   "address": "50 Rue Rambuteau 75003 Paris",
   "zip": "75003",
   "city": "Paris",
-  "photo": null,
+  "photo": {
+   "url": "https://images.prismic.io/mk2-paris-prod/YjYwYTdlM2UtNmM3NS00NDMzLTg4YjYtY2E5YzE5YWQwMTA0_b152d3eb-d30d-4cda-9641-36230ca49512_dscf7246_03.jpg",
+   "credit": "Site officiel · mk2.com",
+   "source": "https://www.mk2.com/salle/mk2-beaubourg"
+  },
   "fullAddress": "50 Rue Rambuteau 75003 Paris",
   "cinepass": false,
   "allocineId": "C0050",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=C0050.html",
+  "website": "https://www.mk2.com/salle/mk2-beaubourg",
   "dep": "Paris"
  },
  {
@@ -5416,11 +5468,10 @@
   "address": "12, rue de Lyon 75012 Paris 12e arrondissement",
   "zip": "75012",
   "city": "Paris",
-  "photo": null,
   "fullAddress": "12, rue de Lyon 75012 Paris 12e arrondissement",
   "cinepass": false,
   "allocineId": "C0146",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=C0146.html",
+  "website": "https://www.ugc.fr/cinema.html?id=11",
   "dep": "Paris"
  },
  {
@@ -5432,11 +5483,10 @@
   "address": "124, bd Saint-Germain 75006 Paris 6ème",
   "zip": "75006",
   "city": "Paris 6ème",
-  "photo": null,
   "fullAddress": "124, bd Saint-Germain 75006 Paris 6ème",
   "cinepass": false,
   "allocineId": "C0104",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=C0104.html",
+  "website": "https://www.ugc.fr/cinema.html?id=13",
   "dep": "Paris"
  },
  {
@@ -5448,11 +5498,10 @@
   "address": "32, bd des Italiens 75009 Paris",
   "zip": "75009",
   "city": "Paris",
-  "photo": null,
   "fullAddress": "32, bd des Italiens 75009 Paris",
   "cinepass": false,
   "allocineId": "C0126",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=C0126.html",
+  "website": "https://www.ugc.fr/cinema.html?id=9",
   "dep": "Paris"
  },
  {
@@ -5464,7 +5513,11 @@
   "address": "113, bd Saint-Germain 75006 Paris",
   "zip": "75006",
   "city": "Paris",
-  "photo": null,
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/12/MK2_Od%C3%A9on.JPG/1280px-MK2_Od%C3%A9on.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "LPLT · CC BY-SA 3.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:MK2_Od%C3%A9on.JPG"
+  },
   "fullAddress": "113, bd Saint-Germain 75006 Paris",
   "cinepass": false,
   "allocineId": "C0097",
@@ -5480,11 +5533,10 @@
   "address": "2 Pl. de la Prte Maillot, Palais des Congres, les Boutiques du Palais 75017 Paris",
   "zip": "75017",
   "city": "Paris",
-  "photo": null,
   "fullAddress": "2 Pl. de la Prte Maillot, Palais des Congres, les Boutiques du Palais 75017 Paris",
   "cinepass": false,
   "allocineId": "C0175",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=C0175.html",
+  "website": "https://www.ugc.fr/cinema.html?id=7",
   "dep": "Paris"
  },
  {
@@ -5496,7 +5548,11 @@
   "address": "5, rue du Faubourg-Saint-Antoine 75011 Paris",
   "zip": "75011",
   "city": "Paris",
-  "photo": null,
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d4/La_Bastille_%28cin%C3%A9ma%29.JPG/1280px-La_Bastille_%28cin%C3%A9ma%29.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "LPLT · CC BY-SA 3.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:La_Bastille_(cin%C3%A9ma).JPG"
+  },
   "fullAddress": "5, rue du Faubourg-Saint-Antoine 75011 Paris",
   "cinepass": false,
   "allocineId": "C0040",
@@ -5512,11 +5568,10 @@
   "address": "99, bd Saint-Germain 75006 Paris 6ème",
   "zip": "75006",
   "city": "Paris 6ème",
-  "photo": null,
   "fullAddress": "99, bd Saint-Germain 75006 Paris 6ème",
   "cinepass": false,
   "allocineId": "C0102",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=C0102.html",
+  "website": "https://www.ugc.fr/cinema.html?id=4",
   "dep": "Paris"
  },
  {
@@ -5528,12 +5583,16 @@
   "address": "7, rue Hautefeuille 75006 Paris",
   "zip": "75006",
   "city": "Paris",
-  "photo": null,
   "fullAddress": "7, rue Hautefeuille 75006 Paris",
   "cinepass": false,
   "allocineId": "C0092",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=C0092.html",
-  "dep": "Paris"
+  "website": "https://www.mk2.com/salle/mk2-odeon-st-germain-st-michel",
+  "dep": "Paris",
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/38/MK2_Hautefeuille.JPG/1280px-MK2_Hautefeuille.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "LPLT · CC BY-SA 3.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:MK2_Hautefeuille.JPG"
+  }
  },
  {
   "id": "allo-C0073",
@@ -5544,7 +5603,11 @@
   "address": "51, rue des Ecoles 75005 Paris",
   "zip": "75005",
   "city": "Paris",
-  "photo": null,
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4e/Le_Champollion.JPG/1280px-Le_Champollion.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "LPLT · CC BY-SA 3.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:Le_Champollion.JPG"
+  },
   "fullAddress": "51, rue des Ecoles 75005 Paris",
   "cinepass": false,
   "allocineId": "C0073",
@@ -5560,12 +5623,16 @@
   "address": "166 Bd Macdonald 75019 Paris",
   "zip": "75019",
   "city": "Paris",
-  "photo": null,
   "fullAddress": "166 Bd Macdonald 75019 Paris",
   "cinepass": false,
   "allocineId": "W7509",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=W7509.html",
-  "dep": "Paris"
+  "website": "https://www.ugc.fr/cinema.html?id=37",
+  "dep": "Paris",
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ec/UGC_Cin%C3%A9_Cit%C3%A9_Paris_19.jpg/1280px-UGC_Cin%C3%A9_Cit%C3%A9_Paris_19.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "Marmat8951 · CC BY 4.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:UGC_Cin%C3%A9_Cit%C3%A9_Paris_19.jpg"
+  }
  },
  {
   "id": "allo-W7510",
@@ -5576,7 +5643,11 @@
   "address": "170 boulevard de Magenta 75010 Paris 10e arrondissement",
   "zip": "75010",
   "city": "Paris",
-  "photo": null,
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/18/Le_louxor-Paris_1.JPG/1280px-Le_louxor-Paris_1.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "Khader · CC BY-SA 3.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:Le_louxor-Paris_1.JPG"
+  },
   "fullAddress": "170 boulevard de Magenta 75010 Paris 10e arrondissement",
   "cinepass": false,
   "allocineId": "W7510",
@@ -5592,11 +5663,10 @@
   "address": "103, bd du Montparnasse 75006 Paris",
   "zip": "75006",
   "city": "Paris",
-  "photo": null,
   "fullAddress": "103, bd du Montparnasse 75006 Paris",
   "cinepass": false,
   "allocineId": "C0105",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=C0105.html",
+  "website": "https://www.ugc.fr/cinema.html?id=15",
   "dep": "Paris"
  },
  {
@@ -5608,12 +5678,16 @@
   "address": "11, rue Jules Chaplain 75006 Paris",
   "zip": "75006",
   "city": "Paris",
-  "photo": null,
   "fullAddress": "11, rue Jules Chaplain 75006 Paris",
   "cinepass": false,
   "allocineId": "C0099",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=C0099.html",
-  "dep": "Paris"
+  "website": "https://www.mk2.com/salle/mk2-parnasse",
+  "dep": "Paris",
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3a/MK2_Parnasse.JPG/1280px-MK2_Parnasse.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "LPLT · CC BY-SA 3.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:MK2_Parnasse.JPG"
+  }
  },
  {
   "id": "allo-W7519",
@@ -5640,12 +5714,16 @@
   "address": "10, rue Tholoze 75018 Paris",
   "zip": "75018",
   "city": "Paris",
-  "photo": null,
   "fullAddress": "10, rue Tholoze 75018 Paris",
   "cinepass": false,
   "allocineId": "C0061",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=C0061.html",
-  "dep": "Paris"
+  "website": "https://www.cinema-studio28.fr/",
+  "dep": "Paris",
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/87/Studio_28_nuit.jpg/1280px-Studio_28_nuit.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "Tatvam · CC BY-SA 4.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:Studio_28_nuit.jpg"
+  }
  },
  {
   "id": "allo-C0016",
@@ -5656,7 +5734,11 @@
   "address": "42, rue Galande 75005 Paris 5e arrondissement",
   "zip": "75005",
   "city": "Paris",
-  "photo": null,
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/52/Studio_Galande_alter.JPG/1280px-Studio_Galande_alter.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "LPLT · CC BY-SA 3.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:Studio_Galande_alter.JPG"
+  },
   "fullAddress": "42, rue Galande 75005 Paris 5e arrondissement",
   "cinepass": false,
   "allocineId": "C0016",
@@ -5672,12 +5754,16 @@
   "address": "34 rue Daubenton 75005 Paris",
   "zip": "75005",
   "city": "Paris",
-  "photo": null,
   "fullAddress": "34 rue Daubenton 75005 Paris",
   "cinepass": false,
   "allocineId": "C0170",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=C0170.html",
-  "dep": "Paris"
+  "website": "https://laclefrevival.org",
+  "dep": "Paris",
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9b/Cin%C3%A9ma_La_Clef.JPG/1280px-Cin%C3%A9ma_La_Clef.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "LPLT · CC BY-SA 3.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:Cin%C3%A9ma_La_Clef.JPG"
+  }
  },
  {
   "id": "allo-C1559",
@@ -5736,7 +5822,11 @@
   "address": "20 rue Cujas 75005 Paris",
   "zip": "75005",
   "city": "Paris",
-  "photo": null,
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9b/Cin%C3%A9ma_du_Panth%C3%A9on%2C_13_rue_Victor-Cousin%2C_Paris_5e.jpg/1280px-Cin%C3%A9ma_du_Panth%C3%A9on%2C_13_rue_Victor-Cousin%2C_Paris_5e.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "Celette · CC BY-SA 4.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:Cin%C3%A9ma_du_Panth%C3%A9on,_13_rue_Victor-Cousin,_Paris_5e.jpg"
+  },
   "fullAddress": "20 rue Cujas 75005 Paris",
   "cinepass": false,
   "allocineId": "W7505",
@@ -5768,11 +5858,10 @@
   "address": "14 Rue Troyon 75017 Paris",
   "zip": "75017",
   "city": "Paris",
-  "photo": null,
   "fullAddress": "14 Rue Troyon 75017 Paris",
   "cinepass": false,
   "allocineId": "W7517",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=W7517.html",
+  "website": "https://clubdeletoile.fr",
   "dep": "Paris"
  },
  {
@@ -5816,7 +5905,11 @@
   "address": "73 avenue des Gobelins 75013 Paris",
   "zip": "75013",
   "city": "Paris",
-  "photo": null,
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/68/Th%C3%A9%C3%A2tre_Gobelins_vue.jpg/1280px-Th%C3%A9%C3%A2tre_Gobelins_vue.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "CarlottaOlmez · CC BY-SA 4.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:Th%C3%A9%C3%A2tre_Gobelins_vue.jpg"
+  },
   "fullAddress": "73 avenue des Gobelins 75013 Paris",
   "cinepass": false,
   "allocineId": "W7513",
@@ -5832,7 +5925,11 @@
   "address": "60, rue des Ecoles 75005 Paris",
   "zip": "75005",
   "city": "Paris",
-  "photo": null,
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4e/Le_Champollion.JPG/1280px-Le_Champollion.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "LPLT · CC BY-SA 3.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:Le_Champollion.JPG"
+  },
   "fullAddress": "60, rue des Ecoles 75005 Paris",
   "cinepass": false,
   "allocineId": "C0014",
@@ -5880,11 +5977,15 @@
   "address": "46 rue Quincampoix 75004 Paris",
   "zip": "75004",
   "city": "Paris",
-  "photo": null,
+  "photo": {
+   "url": "https://images.prismic.io/mk2-paris-prod/YjYwYTdlM2UtNmM3NS00NDMzLTg4YjYtY2E5YzE5YWQwMTA0_b152d3eb-d30d-4cda-9641-36230ca49512_dscf7246_03.jpg",
+   "credit": "Site officiel · mk2.com",
+   "source": "https://www.mk2.com/salle/mk2-beaubourg"
+  },
   "fullAddress": "46 rue Quincampoix 75004 Paris",
   "cinepass": false,
   "allocineId": "C0059",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=C0059.html",
+  "website": "https://www.mk2.com/salle/mk2-beaubourg",
   "dep": "Paris"
  },
  {
@@ -6008,12 +6109,16 @@
   "address": "Musée du Louvre 75001 Paris",
   "zip": "75001",
   "city": "Paris",
-  "photo": null,
   "fullAddress": "Musée du Louvre 75001 Paris",
   "cinepass": false,
   "allocineId": "C0169",
-  "website": "https://www.allocine.fr/seance/salle_gen_csalle=C0169.html",
-  "dep": "Paris"
+  "website": "https://www.ugc.fr/cinema.html?id=10",
+  "dep": "Paris",
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f4/UGC%2C_Forum_des_Halles%2C_Paris_November_2010.jpg/1280px-UGC%2C_Forum_des_Halles%2C_Paris_November_2010.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "jean-louis Zimmermann from Moulins, FRANCE · CC BY 2.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:UGC,_Forum_des_Halles,_Paris_November_2010.jpg"
+  }
  },
  {
   "id": "allo-W5003",
@@ -6088,7 +6193,11 @@
   "address": "92, rue Bonaparte 75006 Paris",
   "zip": "75006",
   "city": "Paris",
-  "photo": null,
+  "photo": {
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1d/Cin%C3%A9ma_L%27Arlequin%2C_76_rue_de_Rennes%2C_Paris_6e.jpg/1280px-Cin%C3%A9ma_L%27Arlequin%2C_76_rue_de_Rennes%2C_Paris_6e.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "credit": "Celette · CC BY-SA 4.0 · Wikimedia Commons",
+   "source": "https://commons.wikimedia.org/wiki/File:Cin%C3%A9ma_L%27Arlequin,_76_rue_de_Rennes,_Paris_6e.jpg"
+  },
   "fullAddress": "92, rue Bonaparte 75006 Paris",
   "cinepass": false,
   "allocineId": "W7506",
