@@ -16,10 +16,10 @@
 <header>
  <div class="top"><div class="brand" aria-label="Ciné IDF">CINÉ<span>IDF</span></div>
   <div class="gsearch" role="search"><input id="gq" type="search" placeholder="Film, cinéma, acteur…" aria-label="Recherche globale : film, cinéma ou acteur" autocomplete="off"><div id="gres" class="gres hidden" role="listbox"></div></div>
-  <button id="install" class="iconbtn" aria-label="Installer l’application" title="Installer l’application">📲</button><button id="theme" class="iconbtn" aria-label="Basculer mode clair / sombre" title="Mode clair / sombre">☀️</button></div>
+  <button id="install" class="iconbtn" aria-label="Installer l’application" title="Installer l’application">📲</button></div>
  <nav id="nav" aria-label="Sections"><button data-v="seances" class="on" aria-current="page"><span class="ic" aria-hidden="true">🎟️</span>Séances</button><button data-v="map"><span class="ic" aria-hidden="true">🗺️</span>Carte</button><button data-v="list"><span class="ic" aria-hidden="true">🎦</span>Cinémas</button><button data-v="billets"><span class="ic" aria-hidden="true">🎫</span>Billets</button><button data-v="infos"><span class="ic" aria-hidden="true">✨</span>CinéPass</button></nav>
 </header>
-<button id="acct" class="acct fab" aria-label="Mon compte">👤 Connexion</button>
+<div class="fabs"><button id="theme" class="fabt" aria-label="Basculer mode clair / sombre" title="Mode clair / sombre">☀️</button><button id="acct" class="acct fab" aria-label="Mon compte">👤 Connexion</button></div>
 <div id="banner" class="banner hidden" role="status"></div>
 <main id="main">
 <section id="v-seances" class="view on" aria-labelledby="h-seances">
@@ -60,5 +60,5 @@
 <div id="sheet" class="modal hidden" role="dialog" aria-modal="true" aria-label="Séance"><div class="mbox small" id="sheetc"></div></div>
 <noscript><p class="pad">Activez JavaScript pour voir les séances.</p></noscript>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="/data/cinemas.js"></script><script src="/app.js"></script><script src="/plus.js"></script>
+<script src="/data/cinemas.js"></script><script src="/app.js"></script><script src="/plus.js"></script><script src="/pathe.js"></script>
 </body></html>

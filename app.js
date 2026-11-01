@@ -368,14 +368,21 @@ window.openFilm = id => {
 // ---------- Carte ----------
 const map = L.map("map", {zoomControl: false, zoomSnap: 0.5, preferCanvas: true}).setView([48.8566, 2.3522], 10);
 L.control.zoom({position: "bottomright"}).addTo(map);
-L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom: 19, className: "dark-tiles", attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(map);
-const lg = L.control({position: "bottomleft"}); lg.onAdd = () => { const d = L.DomUtil.create("div", "legend"); d.innerHTML = '<i style="background:#c9a227"></i>Pathé <i style="background:#0b0a07;border:1.5px solid #c9a227"></i>CinéPass <i style="background:#8a7d5a"></i>Autres'; return d; }; lg.addTo(map);
-const icon = t => t === "other" ? L.divIcon({className: "", iconSize: [12,12], iconAnchor: [6,6], popupAnchor: [0,-6], html: '<div class="dot"></div>'}) : L.divIcon({className: "", iconSize: [24,24], iconAnchor: [12,24], popupAnchor: [0,-24], html: `<div class="pin ${t}"><span>${t==="pathe"?"P":"C"}</span></div>`});
+const TILE = l => `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_${l ? "Light" : "Dark"}_Gray_Base/MapServer/tile/{z}/{y}/{x}`, TREF = l => `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_${l ? "Light" : "Dark"}_Gray_Reference/MapServer/tile/{z}/{y}/{x}`;
+const tiles = L.tileLayer(TILE(document.body.classList.contains("light")), {maxZoom: 19, maxNativeZoom: 16, attribution: 'Tuiles © Esri — Esri, HERE, Garmin, © OpenStreetMap'}).addTo(map);
+const tref = L.tileLayer(TREF(document.body.classList.contains("light")), {maxZoom: 19, maxNativeZoom: 16, pane: "overlayPane", opacity: .9}).addTo(map);
+new MutationObserver(() => { const l = document.body.classList.contains("light"); tiles.setUrl(TILE(l)); tref.setUrl(TREF(l)); }).observe(document.body, {attributes: true, attributeFilter: ["class"]});
+const MAPT = new Set(["pathe", "partner", "other"]);
+const lg = L.control({position: "bottomleft"}); lg.onAdd = () => { const d = L.DomUtil.create("div", "legend mlegend"); L.DomEvent.disableClickPropagation(d);
+  d.innerHTML = [["pathe", "Pathé"], ["partner", "Partenaires"], ["other", "Autres"]].map(([k, l]) => `<button class="lgb on" data-k="${k}" aria-pressed="true"><i class="lg-${k}"></i>${l}</button>`).join("");
+  d.querySelectorAll("button").forEach(b => b.onclick = () => { const k = b.dataset.k; MAPT.has(k) ? MAPT.delete(k) : MAPT.add(k); b.classList.toggle("on"); b.setAttribute("aria-pressed", MAPT.has(k)); renderMap(); }); return d; }; lg.addTo(map);
+const rc = L.control({position: "bottomright"}); rc.onAdd = () => { const b = L.DomUtil.create("button", "mapbtn"); b.title = "Recentrer sur l’Île-de-France"; b.setAttribute("aria-label", b.title); b.textContent = "◎"; L.DomEvent.disableClickPropagation(b); b.onclick = () => map.flyTo([48.8566, 2.3522], 10, {duration: .8}); return b; }; rc.addTo(map);
+const icon = t => t === "other" ? L.divIcon({className: "", iconSize: [14,14], iconAnchor: [7,7], popupAnchor: [0,-8], html: '<div class="mk mk-other"></div>'}) : L.divIcon({className: "", iconSize: [30,38], iconAnchor: [15,36], popupAnchor: [0,-34], html: `<div class="mk mk-${t}"><span>${t === "pathe" ? "P" : "C"}</span></div>`});
 let layer = L.layerGroup().addTo(map), meLayer = L.layerGroup().addTo(map);
 function filtered(q, t, dep) { q = norm(q); return CINES.filter(c => (!t || c.type === t || (t === "fav" && FAVS.has(c.id))) && (!dep || c.dep === dep) && (!q || norm(c.name + " " + c.city + " " + c.zip + " " + c.address).includes(q))); }
 function renderMap() {
   layer.clearLayers(); const list = filtered($("#q").value, $("#ftype").value, $("#fdep").value); $("#count").textContent = list.length + " cinémas";
-  list.forEach(c => { if (c.lat == null) return;
+  list.forEach(c => { if (c.lat == null || !MAPT.has(c.type)) return;
     const m = L.marker([c.lat, c.lng], {icon: icon(c.type), title: c.name, zIndexOffset: c.type === "pathe" ? 500 : c.type === "partner" ? 300 : 0, keyboard: true});
     m.bindPopup(() => `<div class="pop">${c.photo ? `<img src="${esc(c.photo.url)}" alt="${esc(c.name)}" loading="lazy">` : ""}<div class="pb"><span class="badge b-${c.type}">${TYPE[c.type]}</span><h4>${FAVS.has(c.id) ? "⭐ " : ""}${esc(c.name)}</h4><div class="addr">${esc(c.fullAddress || c.address)}${distTxt(c)}</div><div class="acts"><button onclick="openCine('${c.id}')">Fiche</button><button class="gold" onclick="openCine('${c.id}',true)">Séances</button></div></div></div>`, {maxWidth: 270, minWidth: 250});
     layer.addLayer(m); });
