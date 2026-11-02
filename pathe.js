@@ -58,7 +58,7 @@ function box() { const P = EXTRA.pathe || {}, linked = P.email || P.card, n = TI
   <p class="sub">CinéPass : formule, séances restantes et échéance se règlent dans « Mon CinéPass » (onglet CinéPass) ; les séances incluses sont surlignées partout.</p></div>`; }
 function renderPathe() { const t = $("#tickets"); if (t) { document.getElementById("pathebox")?.remove(); t.insertAdjacentHTML("beforebegin", box()); }
   const i = $("#infos"); if (i) { i.querySelector("#pathecta")?.remove(); const P = EXTRA.pathe || {}; const cp = i.querySelector("#cpbox");
-    const h = `<p id="pathecta" class="btns"><button class="primary" onclick="document.querySelector('nav button[data-v=billets]').click();setTimeout(()=>document.getElementById('pathebox')?.scrollIntoView({behavior:'smooth'}),200)">🔗 ${P.email || P.card ? "Compte Pathé lié · importer un billet" : "Lier mon compte Pathé (billets + CinéPass)"}</button></p>`;
+    const h = `<p id="pathecta" class="btns"><button class="primary" onclick="go('billets');setTimeout(()=>document.getElementById('pathebox')?.scrollIntoView({behavior:'smooth'}),200)">🔗 ${P.email || P.card ? "Compte Pathé lié · importer un billet" : "Lier mon compte Pathé (billets + CinéPass)"}</button></p>`;
     cp ? cp.insertAdjacentHTML("afterend", h) : i.insertAdjacentHTML("afterbegin", h); } }
 window.renderPathe = renderPathe;
 const ri = window.renderInfosPlus; if (typeof renderInfosPlus === "function") { const o = renderInfosPlus; renderInfosPlus = function () { o.apply(this, arguments); renderPathe(); }; }

@@ -121,12 +121,12 @@ $$("nav button").forEach(b => b.onclick = () => go(b.dataset.v));
 
 // ---------- Comptes, favoris, billets (local + serveur) ----------
 let TOKEN = LS.get("cineToken", ""), EMAIL = LS.get("cineEmail", "");
-let FAVS = new Set(LS.get("favs", [])), TICKETS = LS.get("tickets", []);
+let FAVS = new Set(LS.get("favs", [])), TICKETS = LS.get("tickets", []), GAME = LS.get("game", {});
 const post = (p, b) => fetch(p, {method: "POST", headers: {"Content-Type": "application/json", ...(TOKEN ? {Authorization: "Bearer " + TOKEN} : {})}, body: JSON.stringify(b || {})})
   .then(async r => { const x = await r.json().catch(() => ({})); if (!r.ok) throw new Error(x.error || "Erreur " + r.status); return x; });
 function saveLocal() { LS.set("favs", [...FAVS]); LS.set("tickets", TICKETS); updAcct(); }
 function updAcct() { $("#acct").textContent = EMAIL ? "👤 " + EMAIL.split("@")[0] + " · ⭐" + FAVS.size : "👤 Connexion"; }
-const profileData = () => ({favs: [...FAVS], tickets: TICKETS, lb: LB.user || "", lists: LISTS, alerts: ALERTS, extra: EXTRA});
+const profileData = () => ({favs: [...FAVS], tickets: TICKETS, lb: LB.user || "", lists: LISTS, alerts: ALERTS, extra: EXTRA, game: GAME});
 async function restore() { // session persistante : reconstitue le compte si le serveur l'a perdu (redéploiement)
   try { const x = await post("/api/restore", {email: EMAIL, restore: LS.get("cineRestore", null), data: profileData()}); applyProfile(x, true); return true; } catch (e) { return false; } }
 async function sync() { saveLocal(); if (!TOKEN) return; try { applyProfile(await post("/api/favs", profileData()), false); }
@@ -135,8 +135,8 @@ function applyProfile(x, merge) {
   if (x.restore) LS.set("cineRestore", x.restore);
   if (merge) { (x.favs || []).forEach(f => FAVS.add(f)); const seen = new Set(TICKETS.map(t => t.id)); (x.tickets || []).forEach(t => seen.has(t.id) || TICKETS.push(t));
     for (const k of ["towatch", "seen", "rewatch"]) { const ids = new Set(LISTS[k].map(i => i.id)); ((x.lists || {})[k] || []).forEach(i => ids.has(i.id) || LISTS[k].push(i)); }
-    if (x.lb && !LB.user) { LB.user = x.lb; LS.set("lb", LB); loadLB(); } Object.assign(ALERTS, x.alerts || {}); EXTRA = {...(x.extra || {}), ...EXTRA}; LS.set("extra", EXTRA); }
-  else { FAVS = new Set(x.favs || []); TICKETS = x.tickets || TICKETS; if (x.lists && Object.keys(x.lists).length) LISTS = {towatch: [], seen: [], rewatch: [], ...x.lists}; }
+    if (x.lb && !LB.user) { LB.user = x.lb; LS.set("lb", LB); loadLB(); } Object.assign(ALERTS, x.alerts || {}); EXTRA = {...(x.extra || {}), ...EXTRA}; LS.set("extra", EXTRA); if (x.game && (x.game.xp || 0) > (GAME.xp || 0)) { GAME = x.game; LS.set("game", GAME); } }
+  else { FAVS = new Set(x.favs || []); TICKETS = x.tickets || TICKETS; if (x.lists && Object.keys(x.lists).length) LISTS = {towatch: [], seen: [], rewatch: [], ...x.lists}; if (x.game && (x.game.xp || 0) >= (GAME.xp || 0)) { GAME = x.game; LS.set("game", GAME); } }
   LS.set("lists", LISTS); LS.set("alerts", ALERTS); saveLocal(); }
 function onAuth(x) {
   TOKEN = x.token || TOKEN; EMAIL = x.email; LS.set("cineToken", TOKEN); LS.set("cineEmail", EMAIL);

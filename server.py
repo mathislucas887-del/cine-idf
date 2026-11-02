@@ -25,6 +25,11 @@ class H(http.server.SimpleHTTPRequestHandler):
     def do_GET(s):
         if s.path.startswith("/allocine-all/"): return s.allo_all()
         if s.path in ("/health", "/status.json"): return s.send_json(200, json.dumps(status()).encode())
+        if s.path.startswith("/u/"):
+            ps = re.sub(r"[^a-z0-9_.-]", "", s.path[3:].split("?")[0].replace(".json", "").lower())[:24]
+            with DBL: e = (db_load().get("pub") or {}).get(ps)
+            if not e: return s.send_json(404, b'{"error":"profil introuvable"}')
+            return s.send_json(200, json.dumps({"pseudo": ps, **{k: e.get(k) for k in ("stats", "collections", "badges", "level", "xp", "at")}}, ensure_ascii=False).encode())
         if s.path.startswith("/agenda"): return s.send_json(200, json.dumps(AGENDA, ensure_ascii=False).encode())
         if s.path.startswith("/allocine/"): return s.allocine()
         if s.path.startswith("/film-extra/"): return s.send_json(200, film_extra(s.path.split("/")[2]))
@@ -106,7 +111,7 @@ def allo_get(url):
             raise
 def status():
     return {"ok": True, "state": "réveillé", "uptime_s": int(time.time() - START), "cache": len(CACHE), "allocine_last_ok": STAT["ok_at"], "allocine_last_error": STAT["err_at"], "allocine_error": STAT["err"],
-            "allocine_ok": STAT["n_ok"], "allocine_errors": STAT["n_err"], "throttled": time.time() < STAT["backoff_until"], "agenda_at": AGENDA["at"], "reports": len(REPORTS), "now": int(time.time())}
+            "allocine_ok": STAT["n_ok"], "allocine_errors": STAT["n_err"], "throttled": time.time() < STAT["backoff_until"], "agenda_at": AGENDA["at"], "reports": len(REPORTS), "now": int(time.time()), "storage": {k: DURABLE.get(k) for k in ("backend", "last_push", "last_pull", "error")}}
 def build_agenda():
     import datetime
     big = [c for c in ALLO_CINES if c.get("type") == "pathe" and c.get("allocineId")][:12]
@@ -177,20 +182,55 @@ DB_PATH = os.environ.get("DB_PATH", os.path.join(ROOT, "users.json")); DBL = thr
 def db_load():
     try: return json.load(open(DB_PATH, encoding="utf-8"))
     except Exception: return {"users": {}, "tokens": {}}
+# ---------- Stockage durable (v11) : copie des comptes dans un Gist GitHub privé ----------
+# Render gratuit efface users.json à chaque redéploiement : si GIST_TOKEN (+ GIST_ID) sont définis,
+# la base est rechargée depuis le Gist au démarrage et sauvegardée (≤ 1 écriture / 10 s) après chaque modification.
+GIST_TOKEN = os.environ.get("GIST_TOKEN", ""); GIST_ID = os.environ.get("GIST_ID", ""); GIST_FILE = "cine-idf-users.json"
+DURABLE = {"backend": "gist" if GIST_TOKEN and GIST_ID else "local", "last_push": 0, "last_pull": 0, "error": ""}
+_dirty = threading.Event()
+def _gh(method, data=None):
+    r = urllib.request.Request("https://api.github.com/gists/" + GIST_ID, method=method, data=json.dumps(data).encode() if data else None,
+        headers={"Authorization": "Bearer " + GIST_TOKEN, "Accept": "application/vnd.github+json", "User-Agent": "cine-idf"})
+    return json.load(urllib.request.urlopen(r, timeout=20))
+def gist_pull():
+    if DURABLE["backend"] != "gist": return
+    try:
+        f = _gh("GET")["files"].get(GIST_FILE) or {}
+        txt = f.get("content") or ""
+        if f.get("truncated") and f.get("raw_url"): txt = urllib.request.urlopen(urllib.request.Request(f["raw_url"], headers={"Authorization": "Bearer " + GIST_TOKEN, "User-Agent": "cine-idf"}), timeout=30).read().decode()
+        remote = json.loads(txt) if txt.strip() else {}
+        if remote.get("users") is not None:
+            local = db_load()
+            for k in ("users", "tokens", "pub"):
+                merged = dict(remote.get(k) or {}); merged.update(local.get(k) or {}); local[k] = merged
+            tmp = DB_PATH + ".tmp"; json.dump(local, open(tmp, "w", encoding="utf-8")); os.replace(tmp, DB_PATH)
+        DURABLE["last_pull"] = int(time.time()); DURABLE["error"] = ""; print("Gist : comptes rechargés", len((remote.get("users") or {})), flush=True)
+    except Exception as e: DURABLE["error"] = "pull: " + str(e)[:120]; print("Gist pull KO", e, flush=True)
+def _gist_loop():
+    while True:
+        _dirty.wait(); time.sleep(10); _dirty.clear()
+        try:
+            with DBL: body = open(DB_PATH, encoding="utf-8").read()
+            _gh("PATCH", {"files": {GIST_FILE: {"content": body}}}); DURABLE["last_push"] = int(time.time()); DURABLE["error"] = ""
+        except Exception as e: DURABLE["error"] = "push: " + str(e)[:120]; print("Gist push KO", e, flush=True); time.sleep(30); _dirty.set()
+if DURABLE["backend"] == "gist":
+    gist_pull(); threading.Thread(target=_gist_loop, daemon=True).start()
 def db_save(d):
     tmp = DB_PATH + ".tmp"; json.dump(d, open(tmp, "w", encoding="utf-8")); os.replace(tmp, DB_PATH)
+    if DURABLE["backend"] == "gist": _dirty.set()
 def pw_hash(pw, salt): return hashlib.pbkdf2_hmac("sha256", pw.encode(), bytes.fromhex(salt), 200000).hex()
 
-PROFILE_KEYS = ("favs", "tickets", "lb", "lists", "alerts", "extra")
+PROFILE_KEYS = ("favs", "tickets", "lb", "lists", "alerts", "extra", "game")
 def clean_profile(u, body):
     if "favs" in body: u["favs"] = [str(x)[:80] for x in body.get("favs") or []][:300]
-    if "tickets" in body: u["tickets"] = [{k: str(t.get(k, ""))[:600] for k in ("id", "title", "poster", "cinema", "cid", "time", "url", "version", "seat", "room", "fid")} for t in (body.get("tickets") or [])[:200] if isinstance(t, dict)]
+    if "tickets" in body: u["tickets"] = [{k: str(t.get(k, ""))[:600] for k in ("id", "title", "poster", "cinema", "cid", "time", "url", "version", "seat", "room", "fid", "src", "ref", "ev")} for t in (body.get("tickets") or [])[:200] if isinstance(t, dict)]
     if "lb" in body: u["lb"] = re.sub(r"[^A-Za-z0-9_-]", "", str(body.get("lb") or ""))[:40]
     if "lists" in body and isinstance(body["lists"], dict):
         u["lists"] = {k: [{f: str(x.get(f, ""))[:400] for f in ("id", "title", "poster", "year", "at")} for x in (body["lists"].get(k) or [])[:500] if isinstance(x, dict)] for k in ("towatch", "seen", "rewatch")}
     if "extra" in body and isinstance(body["extra"], dict) and len(json.dumps(body["extra"])) < 30000: u["extra"] = body["extra"]
+    if "game" in body and isinstance(body["game"], dict) and len(json.dumps(body["game"])) < 60000: u["game"] = body["game"]
     if "alerts" in body and isinstance(body["alerts"], dict): u["alerts"] = {k: bool(v) for k, v in list(body["alerts"].items())[:10]}
-def prof(email, u): return {"email": email, **{k: u.get(k, [] if k in ("favs", "tickets") else ({} if k in ("lists", "alerts", "extra") else "")) for k in PROFILE_KEYS}, "restore": {"salt": u["salt"], "hash": u["hash"]}}
+def prof(email, u): return {"email": email, **{k: u.get(k, [] if k in ("favs", "tickets") else ({} if k in ("lists", "alerts", "extra", "game") else "")) for k in PROFILE_KEYS}, "restore": {"salt": u["salt"], "hash": u["hash"]}}
 
 def api_post(h, path):
     n = int(h.headers.get("Content-Length") or 0)
@@ -239,6 +279,39 @@ def api_post(h, path):
         if path == "/api/favs":
             clean_profile(u, body); db_save(d); return out(200, prof(email, u))
         if path == "/api/me": return out(200, prof(email, u))
+        # ---------- Social (v11) ----------
+        P = d.setdefault("pub", {}); me = u.get("pseudo")
+        def pubview(p, full=False):
+            e = P.get(p) or {}; v = {"pseudo": p, **{k: e.get(k) for k in ("stats", "collections", "badges", "level", "xp", "week", "weekXp", "at")}}
+            return v
+        if path == "/api/public":
+            ps = re.sub(r"[^a-z0-9_.-]", "", str(body.get("pseudo", "")).lower())[:24]
+            if len(ps) < 3: return out(400, {"error": "Pseudo : 3 caractères minimum (lettres, chiffres, . _ -)."})
+            if ps in P and P[ps].get("email") != email: return out(409, {"error": "Ce pseudo est déjà pris."})
+            if me and me != ps: P.pop(me, None)
+            old = P.get(ps, {}); st = body.get("stats") if isinstance(body.get("stats"), dict) else {}
+            P[ps] = {"email": email, "inbox": old.get("inbox", []), "stats": {k: st.get(k) for k in list(st)[:20]}, "collections": (body.get("collections") or [])[:20] if isinstance(body.get("collections"), list) else [],
+                     "badges": [str(x)[:40] for x in (body.get("badges") or [])[:40]], "level": str(body.get("level", ""))[:30], "xp": int(body.get("xp") or 0), "week": str(body.get("week", ""))[:10], "weekXp": int(body.get("weekXp") or 0), "at": int(time.time())}
+            if len(json.dumps(P[ps])) > 40000: P[ps]["collections"] = []
+            u["pseudo"] = ps; db_save(d); return out(200, {"ok": True, "pseudo": ps})
+        if path == "/api/friend":
+            ps = re.sub(r"[^a-z0-9_.-]", "", str(body.get("pseudo", "")).lower())[:24]; fr = u.setdefault("friends", [])
+            if body.get("remove"): u["friends"] = [x for x in fr if x != ps]; db_save(d); return out(200, {"ok": True})
+            if ps not in P: return out(404, {"error": "Aucun profil public avec ce pseudo."})
+            if ps == me: return out(400, {"error": "C’est votre propre pseudo."})
+            if ps not in fr: fr.append(ps); del fr[:-100]
+            db_save(d); return out(200, {"ok": True})
+        if path == "/api/board":
+            names = [x for x in ([me] if me else []) + u.get("friends", []) if x in P]
+            rows = sorted([pubview(x) for x in dict.fromkeys(names)], key=lambda r: -(r.get("weekXp") or 0))
+            inbox = (P.get(me) or {}).get("inbox", []) if me else []
+            return out(200, {"me": me, "friends": u.get("friends", []), "board": rows, "inbox": inbox[-50:]})
+        if path == "/api/reco":
+            to = re.sub(r"[^a-z0-9_.-]", "", str(body.get("to", "")).lower())[:24]; f = body.get("film") or {}
+            if not me: return out(400, {"error": "Créez d’abord votre profil public (pseudo)."})
+            if to not in P: return out(404, {"error": "Pseudo introuvable."})
+            box = P[to].setdefault("inbox", []); box.append({"from": me, "id": str(f.get("id", ""))[:20], "title": str(f.get("title", ""))[:120], "poster": str(f.get("poster", ""))[:400], "msg": str(body.get("msg", ""))[:200], "at": int(time.time())}); del box[:-100]
+            db_save(d); return out(200, {"ok": True})
     return out(404, {"error": "inconnu"})
 
 # ---------- Bande-annonce et photos (fiche Allociné) ----------
