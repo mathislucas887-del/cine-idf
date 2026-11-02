@@ -79,7 +79,7 @@ class H(http.server.SimpleHTTPRequestHandler):
         q = urllib.parse.parse_qs(urllib.parse.urlparse(s.path).query)
         ids = set((q.get("ids") or [""])[0].split(",")) - {""}
         sel = [c for c in ALLO_CINES if c["id"] in ids][:80] if ids else [c for c in ALLO_CINES if c.get("type") in ("pathe", "partner")]
-        with ThreadPoolExecutor(12) as ex: res = dict(ex.map(one, sel))
+        with ThreadPoolExecutor(4) as ex: res = dict(ex.map(one, sel))
         s.send_json(200, json.dumps({"date": d, "cinemas": res}, ensure_ascii=False).encode())
 
 def allo_fetch(cid, date):
@@ -87,7 +87,7 @@ def allo_fetch(cid, date):
         key = "allo:" + cid + date; now = time.time()
         with LOCK: hit = CACHE.get(key)
         if hit and now - hit[0] < TTL: return hit[1]
-        if hit and now - hit[0] < 6 * 3600:  # stale-while-revalidate
+        if hit and now - hit[0] < 8 * 86400:  # stale-while-revalidate (inclut le dernier instantané sauvegardé)
             if key not in REFRESHING:
                 REFRESHING.add(key)
                 def bg():
@@ -101,20 +101,27 @@ def allo_fetch(cid, date):
             if hit: return hit[1]
             raise
 REFRESHING = set()
-ASEM = threading.BoundedSemaphore(4); STAT = {"ok_at": 0, "err_at": 0, "err": "", "backoff_until": 0, "n_ok": 0, "n_err": 0}; REPORTS = []; AGENDA = {"at": 0, "films": []}
+ASEM = threading.BoundedSemaphore(1); STAT = {"ok_at": 0, "err_at": 0, "err": "", "backoff_until": 0, "n_ok": 0, "n_err": 0, "backoff_s": 0, "last_req": 0, "snap_loaded": 0, "snap_push": 0, "snap_err": ""}
+REPORTS = []; AGENDA = {"at": 0, "films": []}
+_snap_dirty = threading.Event(); ALLO_GAP = 1.5  # v17 : 1 requête Allociné à la fois, espacées de 1,5 s; REPORTS = []; AGENDA = {"at": 0, "films": []}
 def allo_get(url):
     if time.time() < STAT["backoff_until"]: raise RuntimeError("Allociné ralentit : file d’attente, réessai sous peu")
     with ASEM:
+        w = STAT["last_req"] + ALLO_GAP - time.time()
+        if w > 0: time.sleep(w)
+        STAT["last_req"] = time.time()
+        if time.time() < STAT["backoff_until"]: raise RuntimeError("Allociné ralentit : file d’attente, réessai sous peu")
         try:
             d = json.loads(urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json"}), timeout=20).read())
-            STAT["ok_at"] = int(time.time()); STAT["n_ok"] += 1; return d
+            STAT["ok_at"] = int(time.time()); STAT["n_ok"] += 1; STAT["backoff_s"] = 0; return d
         except urllib.error.HTTPError as e:
             STAT["err_at"] = int(time.time()); STAT["err"] = str(e); STAT["n_err"] += 1
-            if e.code == 429: STAT["backoff_until"] = time.time() + 60
+            if e.code in (429, 503):  # backoff exponentiel : 2 min → 4 → … → 60 min max
+                STAT["backoff_s"] = min(3600, max(120, STAT["backoff_s"] * 2)); STAT["backoff_until"] = time.time() + STAT["backoff_s"]
             raise
 def status():
     return {"ok": True, "state": "réveillé", "uptime_s": int(time.time() - START), "cache": len(CACHE), "allocine_last_ok": STAT["ok_at"], "allocine_last_error": STAT["err_at"], "allocine_error": STAT["err"],
-            "allocine_ok": STAT["n_ok"], "allocine_errors": STAT["n_err"], "throttled": time.time() < STAT["backoff_until"], "agenda_at": AGENDA["at"], "reports": len(REPORTS), "now": int(time.time()), "storage": {k: DURABLE.get(k) for k in ("backend", "last_push", "last_pull", "error")}}
+            "allocine_ok": STAT["n_ok"], "allocine_errors": STAT["n_err"], "throttled": time.time() < STAT["backoff_until"], "agenda_at": AGENDA["at"], "backoff_s": STAT["backoff_s"], "snapshot": {k: STAT[k] for k in ("snap_loaded", "snap_push", "snap_err")}, "reports": len(REPORTS), "now": int(time.time()), "storage": {k: DURABLE.get(k) for k in ("backend", "last_push", "last_pull", "error")}}
 def build_agenda():
     import datetime
     big = [c for c in ALLO_CINES if c.get("type") == "pathe" and c.get("allocineId")][:12]
@@ -175,6 +182,7 @@ def allo_live(cid, date, key):
                                   "synopsis": re.sub(r"<[^>]+>", "", m.get("synopsis") or "")[:400]})
             body = json.dumps({"source": "allocine", "films": films}, ensure_ascii=False).encode()
             with LOCK: CACHE[key] = (now, body)
+            if films: _snap_dirty.set()
             return body
 
 ALLO_CINES = [c for c in json.load(open(os.path.join(ROOT, "data", "cinemas.json"), encoding="utf-8")) if c.get("allocineId")]
@@ -218,6 +226,35 @@ def _gist_loop():
         except Exception as e: DURABLE["error"] = "push: " + str(e)[:120]; print("Gist push KO", e, flush=True); time.sleep(30); _dirty.set()
 if DURABLE["backend"] == "gist":
     gist_pull(); threading.Thread(target=_gist_loop, daemon=True).start()
+# ---------- v17 : instantané des séances dans un 2e fichier du même Gist ----------
+# Au démarrage, le dernier cache valide est rechargé et servi tout de suite (même si Allociné répond 429).
+SNAP_FILE = "cine-idf-showtimes.json"
+def snap_pull():
+    if DURABLE["backend"] != "gist": return
+    try:
+        import datetime
+        f = _gh("GET")["files"].get(SNAP_FILE) or {}
+        txt = f.get("content") or ""
+        if f.get("truncated") and f.get("raw_url"): txt = urllib.request.urlopen(urllib.request.Request(f["raw_url"], headers={"Authorization": "Bearer " + GIST_TOKEN, "User-Agent": "cine-idf"}), timeout=60).read().decode()
+        data = json.loads(txt) if txt.strip() else {}
+        today = datetime.date.today().isoformat(); n = 0
+        with LOCK:
+            for k, (ts, body) in data.items():
+                if k[-10:] >= today and k not in CACHE: CACHE[k] = (ts, body.encode()); n += 1
+        STAT["snap_loaded"] = n; print("Instantané séances rechargé :", n, flush=True)
+    except Exception as e: STAT["snap_err"] = "pull: " + str(e)[:120]; print("Snapshot pull KO", e, flush=True)
+def _snap_loop():
+    import datetime
+    while True:
+        _snap_dirty.wait(); time.sleep(300); _snap_dirty.clear()
+        try:
+            today = datetime.date.today().isoformat()
+            with LOCK: data = {k: (v[0], v[1].decode()) for k, v in CACHE.items() if k.startswith("allo:") and k[-10:] >= today and b'"films": []' not in v[1]}
+            if not data: continue
+            _gh("PATCH", {"files": {SNAP_FILE: {"content": json.dumps(data, ensure_ascii=False, separators=(",", ":"))}}}); STAT["snap_push"] = int(time.time()); STAT["snap_err"] = ""
+        except Exception as e: STAT["snap_err"] = "push: " + str(e)[:120]; print("Snapshot push KO", e, flush=True); time.sleep(120); _snap_dirty.set()
+if DURABLE["backend"] == "gist":
+    threading.Thread(target=snap_pull, daemon=True).start(); threading.Thread(target=_snap_loop, daemon=True).start()
 def db_save(d):
     tmp = DB_PATH + ".tmp"; json.dump(d, open(tmp, "w", encoding="utf-8")); os.replace(tmp, DB_PATH)
     if DURABLE["backend"] == "gist": _dirty.set()
@@ -572,7 +609,9 @@ if __name__ == "__main__":
         while True:
             for k in range(2):
                 dd = (datetime.date.today() + datetime.timedelta(days=k)).isoformat()
-                with ThreadPoolExecutor(6) as ex: list(ex.map(lambda c: one(c, dd), [c for c in ALLO_CINES if c.get("type") in ("pathe", "partner")]))
+                for c in [c for c in ALLO_CINES if c.get("type") in ("pathe", "partner")]:
+                    while time.time() < STAT["backoff_until"]: time.sleep(15)
+                    one(c, dd)
             time.sleep(900)
     threading.Thread(target=warm, daemon=True).start()
     threading.Thread(target=build_agenda, daemon=True).start()

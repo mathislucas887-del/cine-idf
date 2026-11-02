@@ -297,3 +297,30 @@ body.light .mc{background:linear-gradient(170deg,#fffaf0,#f3eddc)}
 .lbprof{margin:10px 0 14px;border-color:#00c03055}.lbprof h3{margin:0 0 4px}.lbprof .row{display:flex;gap:8px;flex-wrap:wrap}.lbprof input{flex:1 1 180px}
 .mc.seen .mcp img{filter:grayscale(1) brightness(.6)}.mlb{position:absolute;z-index:3;top:12px}.lbw.mlb{right:12px}.lbs.mlb{left:12px;top:auto;bottom:12px}
 .mwi{position:relative}.mwi.seen img{filter:grayscale(1) brightness(.6)}.mwi>.lbw{position:absolute;left:14px;top:14px}
+/* v17 : « Tous les films » en grille verticale de grandes affiches */
+#c-all.pgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 12px;padding:4px 14px 18px;overflow:visible}
+@media(min-width:700px){#c-all.pgrid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:22px 18px;padding:4px 16px 22px}}
+#c-all.pgrid .poster,#c-all.pgrid .sk{flex:none;width:100%}
+#c-all.pgrid .poster .im{border-radius:16px;border:1px solid rgba(212,175,55,.35);box-shadow:0 12px 26px rgba(0,0,0,.45)}
+#c-all.pgrid .poster:hover .im,#c-all.pgrid .poster:focus-visible .im{border-color:var(--gold)}
+#c-all.pgrid .poster h3{font-size:14.5px;color:var(--txt);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* v17 : jours de séance dans la fiche film */
+.fdays{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}.fdays::-webkit-scrollbar{display:none}
+.fdays button{flex:0 0 auto;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);color:var(--txt);font:inherit;font-size:14px;cursor:pointer;text-transform:capitalize}
+.fdays button.on{background:linear-gradient(135deg,#f3d27a,#c9a227);color:#111;border-color:#d4af37;font-weight:700}
+.fdt .chip small{opacity:.75;font-size:11px}.fdt a.chip{text-decoration:none;color:inherit}
+/* v17 : séances modernes */
+.fdays button{transition:background .25s,color .25s,box-shadow .25s,transform .15s;min-height:40px}
+.fdays button.on{box-shadow:0 0 0 1px #d4af37,0 4px 14px rgba(212,175,55,.35)}.fdays button:active{transform:scale(.96)}
+.fdt.in{animation:fd17 .28s ease}@keyframes fd17{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.cc17{background:var(--panel2);border:1px solid rgba(212,175,55,.22);border-radius:16px;padding:12px 12px 10px;margin:0 0 10px;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.cch{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px}.cch b{font-size:15px;line-height:1.25}.cch small{display:block;color:var(--mut);font-size:12px;margin-top:2px}
+.bdg{flex:0 0 auto;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;border:1px solid rgba(212,175,55,.5);color:#d4af37;white-space:nowrap}.bdg.p{background:linear-gradient(135deg,#f3d27a,#c9a227);color:#111;border-color:transparent}
+.tps{display:flex;flex-wrap:wrap;gap:8px}
+.tp{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;min-width:64px;min-height:48px;padding:6px 10px;border-radius:14px;border:1px solid rgba(212,175,55,.45);background:rgba(212,175,55,.06);color:var(--txt);text-decoration:none;transition:transform .15s,box-shadow .2s,border-color .2s}
+a.tp:hover,a.tp:focus-visible{border-color:#d4af37;box-shadow:0 0 12px rgba(212,175,55,.35)}a.tp:active{transform:scale(.95)}
+.tp b{font-size:16px;font-variant-numeric:tabular-nums}.tl{display:flex;gap:3px;margin-top:2px}.tl i{font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.3px;padding:0 4px;border-radius:4px;background:rgba(212,175,55,.18);color:#d4af37}
+.tp.past{opacity:.38;border-color:var(--line);background:none;filter:grayscale(1)}
+#sheet{z-index:2100}button.tp{font:inherit;cursor:pointer}
+#c-all.pgrid .poster .im{aspect-ratio:2/3}#c-all.pgrid .poster img{width:100%;height:100%;object-fit:cover}.mfh img{aspect-ratio:2/3;object-fit:cover;height:auto}
+#c-all.pgrid .poster small{display:block;padding-right:46px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

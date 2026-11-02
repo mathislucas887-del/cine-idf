@@ -27,14 +27,30 @@ window.renderHome15 = function () { const el = $("#v-home"); if (!el) return; co
 window.homeDay = d => { ST.day = d; SHOWN = 60; LS.set("homeDay", {day: d}); renderHome15(); const b = $(".dayp .on"); b && b.scrollIntoView({inline: "center", block: "nearest", behavior: "smooth"}); };
 let qT; window.homeQ = v => { clearTimeout(qT); qT = setTimeout(() => { ST.q = v; SHOWN = 60; renderHome15(); }, 150); };
 window.homeMore = () => { SHOWN += 120; renderHome15(); };
-window.homeFilm = id => { const f = C().films.find(x => x.id === String(id)); if (!f) return;
-  const D = days(), by = onDay(f, ST.day), dl = ST.day === "all" ? "Cette semaine" : D.find(d => d.k === ST.day).l;
-  const rows = Object.entries(by).sort((a, b) => b[1].length - a[1].length).map(([cid, ts]) => { const c = byId(cid) || {name: cid}; const g = {}; ts.slice().sort((a, b) => a.time.localeCompare(b.time)).forEach(t => (g[t.time.slice(0, 10)] ||= []).push(t));
-    return `<div class="mrow"><b>${esc(c.name)}</b>${c.type === "pathe" ? ` <span class="tag">Pathé</span>` : c.type === "partner" || c.cinepass ? ` <span class="tag g">CinéPass</span>` : ""}${Object.entries(g).map(([d, l]) => `<div class="mday">${ST.day === "all" ? `<small>${new Date(d + "T12:00").toLocaleDateString("fr-FR", {weekday: "short", day: "numeric"})}</small>` : ""}${l.map(t => `<span class="chip">${t.time.slice(11, 16)}${t.version === "vo" ? " VOST" : ""}</span>`).join("")}</div>`).join("")}</div>`; }).join("");
+// v17 : fiche film — barre des jours réels de séance + horaires du jour groupés par cinéma
+const FD = {id: null, day: null};
+const dLab = k => { const t = days(); if (k === t[0].k) return "Auj."; if (t[1] && k === t[1].k) return "Demain"; return new Date(k + "T12:00").toLocaleDateString("fr-FR", {weekday: "short", day: "numeric"}); };
+const tRows = (by, f0) => { const now = Date.now(); return Object.entries(by).sort((a, b) => ((byId(a[0]) || {}).type === "pathe" ? 0 : 1) - ((byId(b[0]) || {}).type === "pathe" ? 0 : 1) || b[1].length - a[1].length).map(([cid, ts]) => { const c = byId(cid) || {name: cid};
+  let dk = null; try { const d = dist(c); if (d != null) dk = d < 1 ? Math.round(d * 1000) + " m" : d.toFixed(1) + " km"; } catch (e) {}
+  const meta = [c.city, dk].filter(Boolean).map(esc).join(" · ");
+  const pills = ts.slice().sort((a, b) => a.time.localeCompare(b.time)).map(t => { const past = new Date(t.time).getTime() < now - 5 * 60000;
+    const lab = [t.version === "vo" ? "VO" : t.version === "vf" ? "VF" : "", ...(t.fmt || [])].filter(Boolean).map(x => `<i>${esc(x)}</i>`).join("");
+    const inner = `<b>${t.time.slice(11, 16)}</b>${lab ? `<span class="tl">${lab}</span>` : ""}`;
+    const k = "f" + Math.random().toString(36).slice(2, 9); TB[k] = {f: {...f0, dur: f0.dur || (parseInt(f0.runtime) || 0) * 60 + (parseInt(String(f0.runtime || "").split("h")[1]) || 0) || null}, c, t};
+    return `<button class="tp${past ? " past" : ""}" onclick="openTime('${k}')" aria-label="Séance ${t.time.slice(11, 16)}${past ? " (passée)" : ""} – réserver, billet, agenda">${inner}</button>`; }).join("");
+  return `<div class="cc17"><div class="cch"><div><b>${esc(c.name)}</b>${meta ? `<small>${meta}</small>` : ""}</div>${c.type === "pathe" ? `<span class="bdg p">Pathé</span>` : c.type === "partner" || c.cinepass ? `<span class="bdg">Partenaire CinéPass</span>` : ""}</div><div class="tps">${pills}</div></div>`; }).join(""); };
+window.filmDay = d => { FD.day = d; const f = C().films.find(x => x.id === FD.id); if (!f) return; const box = $("#fd17"); if (!box) return;
+  box.querySelectorAll(".fdays button").forEach(b => { const on = b.dataset.d === d; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); });
+  const by = onDay(f, d), el = box.querySelector(".fdt"); el.classList.remove("in"); void el.offsetWidth; el.classList.add("in"); el.innerHTML = `<p class="sub">${Object.keys(by).length} cinéma${Object.keys(by).length > 1 ? "s" : ""}</p>` + (tRows(by, f) || `<p class="sub">Aucune séance ce jour-là.</p>`); };
+window.homeFilm = id => { const f = C().films.find(x => x.id === String(id)); if (!f) return false;
+  const today = days()[0].k, ds = [...new Set(Object.values(f.by).flat().map(t => t.time.slice(0, 10)))].filter(k => k >= today).sort();
+  FD.id = f.id; FD.day = ST.day !== "all" && ds.includes(ST.day) ? ST.day : ds[0];
   const inW = (LISTS.towatch || []).some(x => x.id === f.id), inT = FILMS.some(x => String(x.id) === f.id);
   modal(`<div class="mbody"><div class="mfh">${f.poster ? `<img src="${esc(f.poster)}" alt="Affiche de ${esc(f.title)}">` : ""}<div><h2>${esc(f.title)}</h2><p class="sub">${[f.year, (f.genres || []).join(", "), f.runtime, f.directors && "de " + f.directors].filter(Boolean).map(esc).join(" · ")}</p>${f.rating ? `<p>★ ${f.rating.toFixed(1)} spectateurs Allociné</p>` : ""}
-   <div class="row2"><button class="ghost sm" onclick="matchTrailer('${esc(f.id)}')">▶ Bande-annonce</button><button class="ghost sm" id="hw15" onclick="homeWatch('${esc(f.id)}')">${inW ? "✓ Dans ma watchlist" : "📌 À voir"}</button>${inT ? `<button class="ghost sm" onclick="closeModal();openFilm('${esc(f.id)}')">Fiche complète</button>` : ""}</div></div></div>
-   <p>${esc(f.synopsis || "")}</p><h3>🎟️ Séances · ${esc(dl)} · ${Object.keys(by).length} cinéma${Object.keys(by).length > 1 ? "s" : ""}</h3>${rows || `<p class="sub">Aucune séance ce jour-là.</p>`}<p class="sub">Horaires Allociné. Réservation sur le site du cinéma.</p></div>`); };
+   <div class="row2"><button class="ghost sm" onclick="matchTrailer('${esc(f.id)}')">▶ Bande-annonce</button><button class="ghost sm" id="hw15" onclick="homeWatch('${esc(f.id)}')">${inW ? "✓ Dans ma watchlist" : "📌 À voir"}</button>${inT && window._openFilmFull ? `<button class="ghost sm" onclick="closeModal();_openFilmFull('${esc(f.id)}')">Fiche complète</button>` : ""}</div></div></div>
+   <p>${esc(f.synopsis || "")}</p><h3>🎟️ Séances</h3><div id="fd17">${ds.length ? `<div class="fdays" role="tablist" aria-label="Jour des séances">${ds.map(k => `<button role="tab" data-d="${k}" onclick="filmDay('${k}')">${esc(dLab(k))}</button>`).join("")}</div>` : ""}<div class="fdt">${ds.length ? "" : `<p class="sub">Aucune séance à venir.</p>`}</div></div><p class="sub">Horaires Allociné. Réservation sur le site du cinéma.</p></div>`);
+  if (FD.day) { filmDay(FD.day); const b = document.querySelector(".fdays .on"); b && b.scrollIntoView({inline: "center", block: "nearest"}); } return true; };
+if (window.openFilm && !window._openFilmFull) { window._openFilmFull = window.openFilm; window.openFilm = function (id) { if (C().films.some(x => x.id === String(id))) return homeFilm(id); return window._openFilmFull.apply(this, arguments); }; try { openFilm = window.openFilm; } catch (e) {} }
 window.homeWatch = id => { const f = C().films.find(x => x.id === String(id)); if (!f) return; const has = (LISTS.towatch || []).some(x => x.id === f.id);
   LISTS.towatch = has ? LISTS.towatch.filter(x => x.id !== f.id) : [...(LISTS.towatch || []), {id: f.id, title: f.title, poster: f.poster || "", year: String(f.year || ""), at: ymd(new Date())}];
   LS.set("lists", LISTS); try { lbCache.clear(); } catch (e) {} sync(); toast(has ? "Retiré de ta watchlist" : "Ajouté à ta watchlist !"); const b = $("#hw15"); if (b) b.textContent = has ? "📌 À voir" : "✓ Dans ma watchlist"; };

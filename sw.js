@@ -1,9 +1,18 @@
-const V = "cine-idf-v16", STATIC = ["/", "/index.html", "/style.css", "/app.js", "/data/cinemas.js", "/manifest.webmanifest", "/icon.svg", "/apple-touch-icon.png", "/icon-192.png", "/plus.js", "/pathe.js", "/v11.js", "/v12.js", "/v13.js", "/v15.js", "/durable.js", "/logo-96.png"];
+const V = "cine-idf-v17", STATIC = ["/", "/index.html", "/style.css", "/app.js", "/data/cinemas.js", "/manifest.webmanifest", "/icon.svg", "/apple-touch-icon.png", "/icon-192.png", "/plus.js", "/pathe.js", "/v11.js", "/v12.js", "/v13.js", "/v15.js", "/durable.js", "/logo-96.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(V).then(c => c.addAll(STATIC)).then(() => self.skipWaiting())); });
-self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(k => Promise.all(k.filter(x => x !== V).map(x => caches.delete(x)))).then(() => self.clients.claim())); });
+self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(k => Promise.all(k.filter(x => x !== V && x !== "cine-idf-data").map(x => caches.delete(x)))).then(() => self.clients.claim())); });
 self.addEventListener("fetch", e => {
   const u = new URL(e.request.url);
   if (e.request.method !== "GET" || u.origin !== location.origin || u.pathname.startsWith("/api/")) return;
+  // v17 : séances – si Allociné est saturé (réponse vide), on garde la dernière réponse valide du téléphone
+  if (u.pathname.startsWith("/allocine-all/")) {
+    e.respondWith(fetch(e.request).then(async r => { const cp = r.clone(); let ok = false;
+      try { const x = await cp.clone().json(); ok = Object.values(x.cinemas || {}).some(v => v && v.length); } catch (_) {}
+      if (ok) { caches.open("cine-idf-data").then(c => c.put(e.request, cp)); return r; }
+      return (await caches.open("cine-idf-data").then(c => c.match(e.request))) || r;
+    }).catch(() => caches.open("cine-idf-data").then(c => c.match(e.request)).then(r => r || Response.json({cinemas: {}}))));
+    return;
+  }
   // réseau d'abord (séances, pages), repli sur le cache hors ligne
   e.respondWith(fetch(e.request).then(r => { if (r.ok) { const cp = r.clone(); caches.open(V).then(c => c.put(e.request, cp)); } return r; }).catch(() => caches.match(e.request).then(r => r || caches.match("/index.html"))));
 });
