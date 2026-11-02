@@ -312,6 +312,34 @@ def api_post(h, path):
             if to not in P: return out(404, {"error": "Pseudo introuvable."})
             box = P[to].setdefault("inbox", []); box.append({"from": me, "id": str(f.get("id", ""))[:20], "title": str(f.get("title", ""))[:120], "poster": str(f.get("poster", ""))[:400], "msg": str(body.get("msg", ""))[:200], "at": int(time.time())}); del box[:-100]
             db_save(d); return out(200, {"ok": True})
+        if path == "/api/match":  # CinéMatch : swipes validés côté serveur (dédoublonnage, plafonds quotidiens)
+            M = u.setdefault("match", {"sw": {}, "days": {}, "xp": 0, "likes": 0})
+            op = body.get("op") or "swipe"; today = time.strftime("%Y-%m-%d", time.localtime())
+            def state(extra=None):
+                lk = sum(1 for v in M["sw"].values() if v.get("d") == "like")
+                b = [n for n, k in (("CinéMatch · Premier Match", 1),) if len(M["sw"]) >= k] + [n for n, k in (("CinéMatch · Curieux", 10), ("CinéMatch · Collectionneur", 25), ("CinéMatch · Cinéphile averti", 50)) if lk >= k]
+                return {"ok": True, "sw": M["sw"], "once": list(M.get("once", {}))[-3000:], "xp": M["xp"], "likes": lk, "badges": b, **(extra or {})}
+            if op == "get": return out(200, state())
+            fid = re.sub(r"[^0-9A-Za-z_-]", "", str(body.get("fid", "")))[:20]
+            if not fid: return out(400, {"error": "film manquant"})
+            if op == "undo":
+                M["sw"].pop(fid, None); db_save(d); return out(200, state({"gain": 0}))
+            dr = "like" if body.get("dir") == "like" else "pass"
+            prev = M["sw"].get(fid); gain = 0
+            day = M["days"].setdefault(today, {"like": 0, "swipe": 0, "xp": 0})
+            for k in list(M["days"]):
+                if k < time.strftime("%Y-%m-%d", time.localtime(time.time() - 60 * 86400)): del M["days"][k]
+            once = M.setdefault("once", {}); first = fid not in once
+            if first:
+                day["swipe"] += 1
+                if dr == "like" and day["like"] < 20: day["like"] += 1; gain = 5
+                elif dr == "pass" and day["swipe"] <= 30: gain = 1
+                if day["xp"] + gain > 60: gain = max(0, 60 - day["xp"])
+                day["xp"] += gain; M["xp"] += gain; once[fid] = 1
+            M["sw"][fid] = {"d": dr, "at": int(time.time())}
+            if len(M["sw"]) > 3000:
+                for k in sorted(M["sw"], key=lambda k: M["sw"][k]["at"])[:500]: M["sw"].pop(k)
+            db_save(d); return out(200, state({"gain": gain, "dup": prev is not None}))
     return out(404, {"error": "inconnu"})
 
 # ---------- Bande-annonce et photos (fiche Allociné) ----------

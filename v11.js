@@ -5,9 +5,9 @@ const today = () => ymd(new Date());
 const isoWeek = d => { const x = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const n = x.getUTCDay() || 7; x.setUTCDate(x.getUTCDate() + 4 - n); const y = new Date(Date.UTC(x.getUTCFullYear(), 0, 1)); return x.getUTCFullYear() + "-W" + String(Math.ceil(((x - y) / 864e5 + 1) / 7)).padStart(2, "0"); };
 const WEEK = () => isoWeek(new Date()), MONTH = () => today().slice(0, 7);
 // ---------- Moteur Ciné XP ----------
-const PTS = {watch: 10, cine: 20, fiche: 5, ticket: 25, seen: 30, challenge: 50, lb: 100, mission: 30};
-const CAP = {fiche: 10, watch: 10, cine: 3, ticket: 5, seen: 5, mission: 3};
-const LABEL = {watch: "Ajout à la watchlist", cine: "Nouveau cinéma", fiche: "Fiche film découverte", ticket: "Billet ajouté", seen: "Film vu", challenge: "Défi réussi", lb: "Watchlist Letterboxd importée", mission: "Mission du jour"};
+const PTS = {watch: 10, cine: 20, fiche: 5, ticket: 25, seen: 30, challenge: 50, lb: 100, mission: 30, match: 5};
+const CAP = {fiche: 10, watch: 10, cine: 3, ticket: 5, seen: 5, mission: 3, match: 30};
+const LABEL = {watch: "Ajout à la watchlist", cine: "Nouveau cinéma", fiche: "Fiche film découverte", ticket: "Billet ajouté", seen: "Film vu", challenge: "Défi réussi", lb: "Watchlist Letterboxd importée", mission: "Mission du jour", match: "CinéMatch"};
 const LEVELS = [[0, "Curieux", "🌱"], [250, "Amateur", "🎟️"], [750, "Cinéphile", "🎬"], [1750, "Passionné", "🔥"], [3500, "Expert", "🏆"], [7000, "Légende du cinéma", "👑"]];
 function G() { GAME.xp = GAME.xp || 0; GAME.done = GAME.done || {}; GAME.days = GAME.days || {}; GAME.wk = GAME.wk || {}; GAME.mo = GAME.mo || {}; GAME.seen = GAME.seen || {}; GAME.cines = GAME.cines || {}; GAME.hist = GAME.hist || []; GAME.genres = GAME.genres || {}; GAME.cinefiche = GAME.cinefiche || {}; return GAME; }
 let syncT; const saveGame = () => { LS.set("game", GAME); clearTimeout(syncT); syncT = setTimeout(() => { sync(); autoPublish(); }, 1500); };
@@ -74,6 +74,7 @@ const BADGES = [
   {id: "tour", ic: "🗼", t: "Tour de Paris", d: "Une séance dans chaque arrondissement ayant un Pathé ou un partenaire", cur: () => arrDone().size, get goal() { return ARRS().length || 1; }},
   {id: "legende", ic: "👑", t: "Légende de Paris", d: "Tous les Pathé et partenaires CinéPass de Paris", gold: 1, cur: parisDone, get goal() { return PARIS().length || 1; }},
   {id: "assidu", ic: "📅", t: "Assidu", d: "30 jours actifs", cur: () => Object.values(G().days).filter(x => x.xp > 0).length, goal: 30}];
+const ALLB = () => [...BADGES, ...(window.MATCH_BADGES || [])];
 const C = (...a) => a.map(x => x.split("|"));
 const COLLS = [
   {id: "classiques", ic: "🏛️", t: "Grands classiques", f: C("Citizen Kane", "Le Parrain|The Godfather", "Casablanca", "Sueurs froides|Vertigo", "2001 : l'odyssée de l'espace|2001: A Space Odyssey", "Les Quatre Cents Coups|The 400 Blows", "À bout de souffle|Breathless", "Les Enfants du paradis|Children of Paradise", "La Grande Illusion|Grand Illusion", "Psychose|Psycho", "Chantons sous la pluie|Singin' in the Rain", "Lawrence d'Arabie|Lawrence of Arabia", "Les Sept Samouraïs|Seven Samurai", "Taxi Driver", "Apocalypse Now", "Le Bon, la Brute et le Truand|The Good, the Bad and the Ugly", "Il était une fois dans l'Ouest|Once Upon a Time in the West", "Metropolis", "Fenêtre sur cour|Rear Window", "Les Temps modernes|Modern Times")},
@@ -113,7 +114,7 @@ const SOC = {me: "", friends: [], board: [], inbox: [], at: 0};
 async function loadSocial(force) { if (!TOKEN) return; if (!force && Date.now() - SOC.at < 60000) return; try { Object.assign(SOC, await post("/api/board", {}), {at: Date.now()}); } catch (e) {} refresh(); }
 function pubPayload(ps) { const lv = level(G().xp); return {pseudo: ps, xp: G().xp, level: lv.name, week: WEEK(), weekXp: G().wk[WEEK()] || 0,
   stats: {vus: seenCount(), watchlist: watchCount(), cinemas: Object.keys(G().cines).length, billets: TICKETS.length},
-  badges: BADGES.filter(b => b.cur() >= b.goal).map(b => b.ic + " " + b.t), collections: COLLS.map(c => ({t: c.ic + " " + c.t, pct: collProg(c).pct}))}; }
+  badges: ALLB().filter(b => b.cur() >= b.goal).map(b => b.ic + " " + b.t), collections: COLLS.map(c => ({t: c.ic + " " + c.t, pct: collProg(c).pct}))}; }
 let pubT; function autoPublish() { if (!TOKEN || !G().pub) return; clearTimeout(pubT); pubT = setTimeout(() => post("/api/public", pubPayload(G().pub)).catch(() => {}), 2000); }
 window.publishProfile = async () => { const ps = ($("#pseudo")?.value || "").trim(); if (!TOKEN) return openAcct();
   try { const r = await post("/api/public", pubPayload(ps)); G().pub = r.pseudo; saveGame(); toast("Profil public publié : @" + r.pseudo); loadSocial(true); } catch (e) { toast(e.message); } };
@@ -130,12 +131,12 @@ window.openPublic = async ps => { try { const p = await (await fetch("/u/" + enc
   ${TOKEN && p.pseudo !== SOC.me && !SOC.friends.includes(p.pseudo) ? `<button class="primary" onclick="document.getElementById('fpseudo')||0;post('/api/friend',{pseudo:'${esc(p.pseudo)}'}).then(()=>{toast('Ami ajouté');loadSocialX()}).catch(e=>toast(e.message))">➕ Ajouter en ami</button>` : ""}</div>`); } catch (e) { toast("Profil introuvable"); } };
 window.loadSocialX = () => loadSocial(true);
 // ---------- Navigation 4 espaces ----------
-const TABS = {home: ["🏠", "Accueil"], explorer: ["🔍", "Explorer"], collection: ["🎞️", "Collection"], profil: ["👤", "Profil"]};
-const TABOF = {home: "home", seances: "explorer", map: "explorer", list: "explorer", billets: "collection", coll: "collection", profil: "profil", infos: "profil"};
+const TABS = {home: ["🏠", "Accueil"], explorer: ["🔍", "Explorer"], match: ["💘", "CinéMatch"], collection: ["🎞️", "Collection"], profil: ["👤", "Profil"]};
+const TABOF = {match: "match", home: "home", seances: "explorer", map: "explorer", list: "explorer", billets: "collection", coll: "collection", profil: "profil", infos: "profil"};
 const SUB = {explorer: [["seances", "Séances"], ["map", "Carte"], ["list", "Cinémas"]], collection: [["billets", "Mes films & billets"], ["coll", "Badges & collections"]], profil: [["profil", "Progression & amis"], ["infos", "CinéPass & Pathé"]]};
 const LASTSUB = {explorer: "seances", collection: "billets", profil: "profil"};
 const nav = $("#nav"); nav.innerHTML = Object.entries(TABS).map(([k, [ic, l]]) => `<button data-t="${k}"><span class="ic" aria-hidden="true">${ic}</span>${l}</button>`).join("");
-nav.querySelectorAll("button").forEach(b => b.onclick = () => { const t = b.dataset.t; go(t === "home" ? "home" : LASTSUB[t]); });
+nav.querySelectorAll("button").forEach(b => b.onclick = () => { const t = b.dataset.t; go(t === "home" || t === "match" ? t : LASTSUB[t]); });
 const sub = document.createElement("div"); sub.id = "subnav"; sub.className = "subnav"; sub.setAttribute("role", "tablist"); $("#main").prepend(sub);
 const main = $("#main");
 main.insertAdjacentHTML("afterbegin", `<section id="v-home" class="view" aria-label="Accueil"></section>`);
@@ -143,7 +144,7 @@ main.insertAdjacentHTML("beforeend", `<section id="v-coll" class="view" aria-lab
 const oGo = go; let POP = 0; go = function (v) { const prev = (document.querySelector('.view.on') || {}).id; oGo(v); if (!POP && prev && prev !== 'v-' + v) history.pushState({v}, ''); window.scrollTo(0, 0); const t = TABOF[v] || "explorer"; if (SUB[t]) LASTSUB[t] = v;
   nav.querySelectorAll("button").forEach(b => { const on = b.dataset.t === t; b.classList.toggle("on", on); on ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"); });
   sub.innerHTML = SUB[t] ? SUB[t].map(([k, l]) => `<button role="tab" aria-selected="${k === v}" class="${k === v ? "on" : ""}" onclick="go('${k}')">${l}</button>`).join("") : ""; sub.classList.toggle("hidden", !SUB[t]);
-  document.body.dataset.tab = t; if (v === "home") renderHome(); if (v === "coll") renderColl(); if (v === "profil") { renderProfil(); loadSocial(); } };
+  document.body.dataset.tab = t; if (v === "home") renderHome(); if (v === "coll") renderColl(); if (v === "profil") { renderProfil(); loadSocial(); } if (v === "match" && window.renderMatch) renderMatch(); };
 window.go = go;
 history.replaceState({v: 'home'}, '');
 addEventListener('popstate', e => { const m = document.getElementById('modal'); if (m && !m.classList.contains('hidden')) { closeModal(); return; } POP = 1; go((e.state && e.state.v) || 'home'); POP = 0; });
@@ -189,7 +190,7 @@ function geoBadges() { const A = arrDone(), v = VIS(), P = PARIS(), C2 = cities(
   <div class="bgrid">${C2.filter(c => c.d).map(city).join("") || `<p class="sub">Aucune ville commencée pour l’instant.</p>`}</div>
   <details class="coll"><summary><b>Toutes les villes (${rest.length} à découvrir)</b></summary><div class="bgrid" style="margin-top:10px">${rest.map(city).join("")}</div></details>`; }
 function renderColl() { const el = $("#collc"); if (!el) return;
-  el.innerHTML = `<h1>🏅 Badges</h1><div class="bgrid">${BADGES.map(b => { const n = b.cur(), ok = n >= b.goal; return `<div class="badge2 ${ok ? "ok" : ""}${b.gold ? " gold" : ""}"><span class="bic">${b.ic}</span><b>${b.t}</b><span class="sub">${b.d || ""}</span><div class="xpbar"><i style="width:${Math.min(100, Math.round(n / b.goal * 100))}%"></i></div><small>${Math.min(n, b.goal)} / ${b.goal}</small></div>`; }).join("")}</div>
+  el.innerHTML = `<h1>🏅 Badges</h1><div class="bgrid">${ALLB().map(b => { const n = b.cur(), ok = n >= b.goal; return `<div class="badge2 ${ok ? "ok" : ""}${b.gold ? " gold" : ""}"><span class="bic">${b.ic}</span><b>${b.t}</b><span class="sub">${b.d || ""}</span><div class="xpbar"><i style="width:${Math.min(100, Math.round(n / b.goal * 100))}%"></i></div><small>${Math.min(n, b.goal)} / ${b.goal}</small></div>`; }).join("")}</div>
   ${geoBadges()}
   <h1 style="margin-top:26px">🎞️ Collections</h1><p class="sub">Progression calculée sur vos films « Vu » (liste Ciné IDF + historique Letterboxd) et vos cinémas visités.</p>
   ${COLLS.map(c => { const p = collProg(c); return `<details class="coll"><summary><span class="bic">${c.ic}</span><b>${c.t}</b><span class="cbar"><i style="--p:${p.pct}%"></i></span><b>${p.pct}%</b><small>${p.n}/${p.g}</small></summary>${p.items ? `<ul>${p.items.map(i => `<li class="${i.ok ? "ok" : ""}">${i.ok ? "✓" : "○"} ${esc(i.t)}</li>`).join("")}</ul>` : `<p class="sub">Cinémas indépendants visités : ${p.n}. Utilisez « J’y suis allé » sur la fiche d’un cinéma ou ajoutez un billet.</p>`}</details>`; }).join("")}`; }
