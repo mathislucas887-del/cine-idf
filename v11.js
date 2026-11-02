@@ -168,7 +168,9 @@ function homeRails() { // mêmes données et règles que l'onglet Films (Sorties
     + box("✨", "Séances spéciales", V.filter(f => f.cl.ap || f.cl.special.length || f.times.some(t => (t.events || []).length || t.preview)), f => f.cl.ap ? "Avant-première" : esc(f.cl.special[0] || "Événement"))
     + (window.newWeek ? (() => { const N = newWeek(); return N.length ? box("🔔", "Nouvelles séances de la semaine", N.map(x => x[0]), f => { const x = N.find(y => y[0] === f); return x[1] + " nouvelle" + (x[1] > 1 ? "s" : "") + " séance" + (x[1] > 1 ? "s" : ""); }) : ""; })() : "")
     + box("🎬", "Tous les films", V, null, 1); }
-function renderHome() { const el = $("#v-home"); if (!el) return; const ms = missions(), m = ms.find(x => !G().done["mission:" + today() + ":" + x.id]) || ms[0], mdone = G().done["mission:" + today() + ":" + m.id], R = recos();
+function renderHome() { if (window.renderHome15) return window.renderHome15(); renderHomeOld($("#v-home")); }
+window.renderDash = el => renderHomeOld(el);
+function renderHomeOld(el) { if (!el) return; const ms = missions(), m = ms.find(x => !G().done["mission:" + today() + ":" + x.id]) || ms[0], mdone = G().done["mission:" + today() + ":" + m.id], R = recos();
   el.innerHTML = `<div class="home"><h1 class="hello">${greet()}, ${esc((SOC.me && "@" + SOC.me) || (EMAIL ? EMAIL.split("@")[0] : "cinéphile"))} !</h1><p class="sub">Prêt pour ta prochaine découverte ?</p>
   <form class="hsearch" onsubmit="event.preventDefault();homeSearch()"><input id="hq" type="search" placeholder="Quel film veux-tu découvrir ?" aria-label="Rechercher un film, un cinéma, un acteur"></form>
   <div class="quick"><button class="q1" onclick="go('seances')"><span>🎟️</span>Séances</button><button onclick="go('map')"><span>📍</span>Cinémas</button><button onclick="go('billets')"><span>🎞️</span>Mes films</button></div>
@@ -194,7 +196,11 @@ function renderColl() { const el = $("#collc"); if (!el) return;
   ${geoBadges()}
   <h1 style="margin-top:26px">🎞️ Collections</h1><p class="sub">Progression calculée sur vos films « Vu » (liste Ciné IDF + historique Letterboxd) et vos cinémas visités.</p>
   ${COLLS.map(c => { const p = collProg(c); return `<details class="coll"><summary><span class="bic">${c.ic}</span><b>${c.t}</b><span class="cbar"><i style="--p:${p.pct}%"></i></span><b>${p.pct}%</b><small>${p.n}/${p.g}</small></summary>${p.items ? `<ul>${p.items.map(i => `<li class="${i.ok ? "ok" : ""}">${i.ok ? "✓" : "○"} ${esc(i.t)}</li>`).join("")}</ul>` : `<p class="sub">Cinémas indépendants visités : ${p.n}. Utilisez « J’y suis allé » sur la fiche d’un cinéma ou ajoutez un billet.</p>`}</details>`; }).join("")}`; }
-function renderProfil() { const el = $("#profc"); if (!el) return; const g = G(), ms = missions();
+function renderProfil() { renderProfil0(); const el = $("#profc"); if (!el) return; const h = el.querySelector("h1"); h && h.insertAdjacentHTML("afterend", lbProfileBlock()); if (!window.renderHome15) return;
+  el.insertAdjacentHTML("beforeend", `<details class="coll dash" ${window.__dashOpen ? "open" : ""} ontoggle="window.__dashOpen=this.open"><summary><span class="bic">🏠</span><b>Mon tableau de bord</b><small>défi du jour, recommandations, sélections</small></summary><div id="dashc"></div></details>`);
+  renderHomeOld($("#dashc")); }
+window.lbProfileBlock = () => `<div class="gcard lbprof" id="lbprof">${lbBlock().replace('<div class="lbbox">', "").replace(/<\/div>$/, "")}</div>`;
+function renderProfil0() { const el = $("#profc"); if (!el) return; const g = G(), ms = missions();
   const board = (SOC.board || []), lead = board[0];
   el.innerHTML = `<h1>👤 Mon profil</h1>${progressCard()}
   <div class="row2"><button class="primary" onclick="openAcct()">${EMAIL ? "⚙️ Mon compte · " + esc(EMAIL) : "🔐 Connexion / créer un compte"}</button><button class="ghost" onclick="document.getElementById('theme').click()">◐ Thème clair / sombre</button></div>

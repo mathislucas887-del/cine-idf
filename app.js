@@ -40,24 +40,24 @@ async function loadLB(force) {
     LB = {...LB, seen: [...x.seen, ...keepCsv], watch: [...x.watch, ...keepCsvW], at: x.at, partial: x.partial, liked: x.liked || [], err: ""}; }
   catch (e) { LB.err = e.message; toast(e.message); }
   LS.set("lb", LB); LBIDX = null; lbCache.clear(); if (FILMS.length) renderAll();
-  const st = $("#lbstat"); if (st) st.innerHTML = lbStatus();
+  document.querySelectorAll("#lbstat").forEach(st => st.innerHTML = lbStatus());
 }
 const lbStatus = () => LB.user ? `${LB.err ? "⚠️ " + esc(LB.err) + " · " : ""}<b>${LB.seen.length}</b> films vus · <b>${LB.watch.length}</b> en watchlist${LB.partial ? " (journal récent uniquement : importez votre export CSV pour tout l’historique)" : ""}` : "Non relié";
 window.lbBlock = () => `<div class="lbbox"><h3>🟢 Letterboxd</h3><p class="sub">Reliez votre profil public : les films déjà vus apparaissent grisés, ceux de votre watchlist avec un badge vert.</p>
   <form onsubmit="lbLink(event)" class="row"><input id="lbuser" placeholder="Nom d’utilisateur Letterboxd" value="${esc(LB.user)}" autocapitalize="off" aria-label="Nom d’utilisateur Letterboxd"><button class="primary">${LB.user ? "Mettre à jour" : "Relier"}</button>${LB.user ? `<button type="button" class="ghost" onclick="lbUnlink()">Délier</button>` : ""}</form>
   <p class="sub" id="lbstat">${lbStatus()}</p>
   <label class="sub">Ou importez votre export Letterboxd (Réglages → Data → Export : watched.csv, watchlist.csv, diary.csv) : <input type="file" accept=".csv" multiple onchange="lbCsv(this.files)"></label></div>`;
-window.lbLink = async e => { e.preventDefault(); const raw = $("#lbuser").value.trim(); if (!raw) return;
-  if (/^[^@\s]+@[^@\s]+\.[a-z]+$/i.test(raw)) { $("#lbstat").innerHTML = "⚠️ Entrez votre <b>nom d’utilisateur</b> Letterboxd (celui de l’adresse letterboxd.com/<i>nom</i>), pas votre e-mail."; return; }
+window.lbLink = async e => { e.preventDefault(); const raw = ((e.target && e.target.querySelector && e.target.querySelector("input")) || $("#lbuser")).value.trim(); if (!raw) return;
+  if (/^[^@\s]+@[^@\s]+\.[a-z]+$/i.test(raw)) { document.querySelectorAll("#lbstat").forEach(x => x.innerHTML = "⚠️ Entrez votre <b>nom d’utilisateur</b> Letterboxd (celui de l’adresse letterboxd.com/<i>nom</i>), pas votre e-mail.");  return; }
   const u = raw.replace(/^.*letterboxd\.com\//i, "").replace(/^@/, "").replace(/\/.*$/, "").toLowerCase(); if (!u) return;
-  LB = {...LB, user: u, at: 0}; $("#lbstat").textContent = "Chargement de votre profil Letterboxd…"; LS.set("lb", LB); sync(); await loadLB(true); };
+  LB = {...LB, user: u, at: 0}; document.querySelectorAll("#lbstat").forEach(x => x.textContent = "Chargement de votre profil Letterboxd…"); LS.set("lb", LB); sync(); await loadLB(true); };
 window.lbUnlink = () => { LB = {user: "", seen: [], watch: [], at: 0}; LS.set("lb", LB); LBIDX = null; lbCache.clear(); sync(); renderAll(); openAcct(); };
 window.lbCsv = async files => {
   for (const file of files) { const txt = await file.text(); const rows = txt.split(/\r?\n/).map(l => l.match(/("([^"]|"")*"|[^,]*)(,|$)/g)?.map(x => x.replace(/,$/, "").replace(/^"|"$/g, "").replace(/""/g, '"')) || []);
     const h = rows.shift() || []; const ni = h.indexOf("Name"), yi = h.indexOf("Year"); if (ni < 0) continue;
     const items = rows.filter(r => r[ni]).map(r => ({n: r[ni], y: +r[yi] || null, s: ""}));
     if (/watchlist/i.test(file.name)) { LB.csvWatch = items; LB.watch = [...LB.watch, ...items]; } else { LB.csvSeen = [...(LB.csvSeen || []), ...items]; LB.seen = [...LB.seen, ...items]; } }
-  LB.at = LB.at || Math.floor(Date.now() / 1000); LS.set("lb", LB); LBIDX = null; lbCache.clear(); renderAll(); const st = $("#lbstat"); if (st) st.innerHTML = lbStatus(); toast("Export Letterboxd importé");
+  LB.at = LB.at || Math.floor(Date.now() / 1000); LS.set("lb", LB); LBIDX = null; lbCache.clear(); renderAll(); document.querySelectorAll("#lbstat").forEach(st => st.innerHTML = lbStatus()); toast("Export Letterboxd importé");
 };
 window.alertBlock = () => `<div class="lbbox"><h3>🔔 Alertes</h3><p class="sub">Affichées à l’ouverture de l’app (et en notification si vous l’autorisez).</p>
   ${[["ap", "Avant-premières et séances spéciales dans mes cinémas favoris"], ["watch", "Films de ma watchlist Letterboxd / « À voir » à l’affiche"], ["fav", "Nouveautés près de moi"]].map(([k, l]) => `<label class="sub" style="display:block"><input type="checkbox" ${ALERTS[k] ? "checked" : ""} onchange="ALERTS['${k}']=this.checked;LS.set('alerts',ALERTS);sync()"> ${l}</label>`).join("")}

@@ -285,3 +285,15 @@ body.light .mc{background:linear-gradient(170deg,#fffaf0,#f3eddc)}
  .match.mdeck .mci{padding:10px 14px 12px}.match.mdeck .mci h2{font-size:19px}.match.mdeck .mci .syn{-webkit-line-clamp:2;font-size:13px}
 }
 @media(max-width:700px){body:has(#v-match.on) .fabs{display:none}}
+/* ---------- v15 : Accueil simplifié ---------- */
+.home15{padding:10px 16px 24px;max-width:1200px;margin:0 auto}.h15{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.h15 h1{margin:0;font-size:22px;flex:1 1 auto}.h15 input{flex:1 1 220px;max-width:340px}
+.dayw{position:sticky;top:var(--hh,0px);z-index:5;background:var(--bg);margin:8px -16px 0;padding:8px 16px}.dayp{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}.dayp::-webkit-scrollbar{display:none}
+.dayp button{flex:none;border:1px solid var(--line);background:var(--panel2);color:var(--txt);border-radius:999px;padding:8px 14px;font-size:14px;min-height:40px;cursor:pointer;white-space:nowrap}.dayp button.on{background:linear-gradient(135deg,var(--gold2),var(--gold));color:#141414;border-color:transparent;font-weight:700}
+.hinfo{margin:2px 0 10px}.hgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px 12px}.hgrid .poster{width:auto;max-width:none}.hp b{display:block;font-size:13.5px;line-height:1.25;margin-top:6px;text-align:left}.hp small{display:block;color:var(--mut);font-size:11.5px;text-align:left}
+.hp .noimg{display:grid;place-items:center;height:100%;font-size:40px}.hmore{display:block;margin:18px auto 0}.dash>div{margin-top:10px}
+@media(max-width:700px){.hgrid{grid-template-columns:repeat(3,1fr);gap:12px 8px}.h15 h1{font-size:19px}.h15 input{max-width:none}.hp b{font-size:12.5px}}
+@media(max-width:360px){.hgrid{grid-template-columns:repeat(2,1fr)}}
+.hgrid .poster{flex:none}
+.lbprof{margin:10px 0 14px;border-color:#00c03055}.lbprof h3{margin:0 0 4px}.lbprof .row{display:flex;gap:8px;flex-wrap:wrap}.lbprof input{flex:1 1 180px}
+.mc.seen .mcp img{filter:grayscale(1) brightness(.6)}.mlb{position:absolute;z-index:3;top:12px}.lbw.mlb{right:12px}.lbs.mlb{left:12px;top:auto;bottom:12px}
+.mwi{position:relative}.mwi.seen img{filter:grayscale(1) brightness(.6)}.mwi>.lbw{position:absolute;left:14px;top:14px}
