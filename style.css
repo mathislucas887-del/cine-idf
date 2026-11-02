@@ -284,3 +284,4 @@ body.light .mc{background:linear-gradient(170deg,#fffaf0,#f3eddc)}
  .match.mdeck .deck{flex:1;height:auto;min-height:0}.match.mdeck .mbtns{margin:8px 0 2px;gap:16px}.match.mdeck .mb{width:56px;height:56px}.match.mdeck .mb.undo{width:44px;height:44px}.match.mdeck .mhint{display:none}
  .match.mdeck .mci{padding:10px 14px 12px}.match.mdeck .mci h2{font-size:19px}.match.mdeck .mci .syn{-webkit-line-clamp:2;font-size:13px}
 }
+@media(max-width:700px){body:has(#v-match.on) .fabs{display:none}}
