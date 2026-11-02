@@ -223,3 +223,27 @@ body.logged .fabs .acct.fab{display:none}
  .stats{grid-template-columns:repeat(2,1fr)}.coll ul{columns:1}.cbar i{width:60px}
 }
 .why{color:var(--gold2)}
+.rmore{flex:0 0 110px;border:1px dashed var(--gold);border-radius:12px;background:var(--panel2);color:var(--gold2);font:600 13px Inter,sans-serif;cursor:pointer;aspect-ratio:2/3;align-self:flex-start}.hsec .rail .sk{flex:0 0 140px}
+/* v12 : iPhone / Safari / PWA */
+html,body{overflow-x:clip;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{-webkit-tap-highlight-color:transparent}
+header{padding-top:env(safe-area-inset-top)}
+.rail{-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;touch-action:pan-x pan-y}
+.rail>*{scroll-snap-align:start}
+img{max-width:100%}
+@media(max-width:700px){
+ input,select,textarea{font-size:16px!important}
+ nav button,.subnav button,.quick button,.ghost,button.primary,.dates button,.qk,.iconbtn,.fabt,.acct{min-height:44px}
+ .iconbtn,.fabt{min-width:44px}
+ nav{padding-left:max(4px,env(safe-area-inset-left));padding-right:max(4px,env(safe-area-inset-right))}
+ nav button{font-size:12px}nav button .ic{font-size:22px}
+ .subnav{position:sticky;top:calc(var(--hh,0px));z-index:900;background:color-mix(in srgb,var(--bg) 94%,transparent);backdrop-filter:blur(10px);padding:8px 14px}
+ .fabs{right:max(12px,env(safe-area-inset-right))}
+ .home,.pad{padding-left:max(14px,env(safe-area-inset-left));padding-right:max(14px,env(safe-area-inset-right))}
+ .hsec .rail{margin:0 -14px;padding:4px 14px 10px;scroll-padding:14px}
+ #modal .mbody,#mcontent{padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+}
+.t{position:relative}.tnew{position:absolute;top:-7px;right:-6px;background:linear-gradient(135deg,var(--gold2),var(--gold));color:#141414;font:700 9px Inter,sans-serif;padding:2px 5px;border-radius:6px;letter-spacing:.02em}
+.badge2.gold{background:radial-gradient(circle at 30% 20%,#3a2c08,#0d0a03);border:1px solid #f1d784;filter:none;opacity:1}.badge2.gold.ok{box-shadow:0 0 0 2px #c9a227,0 0 28px #f1d78466;background:linear-gradient(135deg,#f1d784,#c9a227 55%,#8a6a00);color:#141414}.badge2.gold.ok .sub,.badge2.gold.ok small{color:#2a2008}.badge2.gold .bic{font-size:38px}
+.bgrid.arr{grid-template-columns:repeat(auto-fill,minmax(74px,1fr))}.bgrid.arr .bic{font:700 24px Inter,sans-serif;color:var(--gold2)}.bgrid.arr .badge2.ok .bic{color:var(--gold2)}.bgrid.arr sup{font-size:11px}
+@media(max-width:700px){.leaflet-bottom.leaflet-left{top:auto!important;bottom:calc(84px + env(safe-area-inset-bottom))!important}}

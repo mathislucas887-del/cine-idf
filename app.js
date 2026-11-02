@@ -372,9 +372,9 @@ const TILE = l => `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/W
 const tiles = L.tileLayer(TILE(document.body.classList.contains("light")), {maxZoom: 19, maxNativeZoom: 16, attribution: 'Tuiles © Esri — Esri, HERE, Garmin, © OpenStreetMap'}).addTo(map);
 const tref = L.tileLayer(TREF(document.body.classList.contains("light")), {maxZoom: 19, maxNativeZoom: 16, pane: "overlayPane", opacity: .9}).addTo(map);
 new MutationObserver(() => { const l = document.body.classList.contains("light"); tiles.setUrl(TILE(l)); tref.setUrl(TREF(l)); }).observe(document.body, {attributes: true, attributeFilter: ["class"]});
-const MAPT = new Set(["pathe", "partner", "other"]);
+const MAPT = new Set(["pathe", "partner"]);
 const lg = L.control({position: "bottomleft"}); lg.onAdd = () => { const d = L.DomUtil.create("div", "legend mlegend"); L.DomEvent.disableClickPropagation(d);
-  d.innerHTML = [["pathe", "Pathé"], ["partner", "Partenaires"], ["other", "Autres"]].map(([k, l]) => `<button class="lgb on" data-k="${k}" aria-pressed="true"><i class="lg-${k}"></i>${l}</button>`).join("");
+  d.innerHTML = [["pathe", "Pathé"], ["partner", "Partenaires"]].map(([k, l]) => `<button class="lgb on" data-k="${k}" aria-pressed="true"><i class="lg-${k}"></i>${l}</button>`).join("");
   d.querySelectorAll("button").forEach(b => b.onclick = () => { const k = b.dataset.k; MAPT.has(k) ? MAPT.delete(k) : MAPT.add(k); b.classList.toggle("on"); b.setAttribute("aria-pressed", MAPT.has(k)); renderMap(); }); return d; }; lg.addTo(map);
 const rc = L.control({position: "bottomright"}); rc.onAdd = () => { const b = L.DomUtil.create("button", "mapbtn"); b.title = "Recentrer sur l’Île-de-France"; b.setAttribute("aria-label", b.title); b.textContent = "◎"; L.DomEvent.disableClickPropagation(b); b.onclick = () => map.flyTo([48.8566, 2.3522], 10, {duration: .8}); return b; }; rc.addTo(map);
 const icon = t => t === "other" ? L.divIcon({className: "", iconSize: [14,14], iconAnchor: [7,7], popupAnchor: [0,-8], html: '<div class="mk mk-other"></div>'}) : L.divIcon({className: "", iconSize: [30,38], iconAnchor: [15,36], popupAnchor: [0,-34], html: `<div class="mk mk-${t}"><span>${t === "pathe" ? "P" : "C"}</span></div>`});

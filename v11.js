@@ -55,6 +55,15 @@ function missions() { const d = today(), h = [...d].reduce((a, c) => a * 31 + c.
   for (let i = 0; i < 3; i++) out.push(arr.splice((h >> (i * 3)) % arr.length, 1)[0]); return out; }
 window.claimMission = id => { const m = MPOOL.find(x => x.id === id); if (m && m.ok()) award("mission", today() + ":" + id); };
 // ---------- Badges & collections ----------
+// ---------- Badges géographiques (visites confirmées « J’y suis allé », 1 par cinéma) ----------
+const ARR = c => /^75\d{3}$/.test(c.zip || "") ? (+String(c.zip).slice(3) || 0) : 0;
+const ELIG = c => c.type === "pathe" || c.type === "partner" || c.cinepass;
+const PARIS = () => CINES.filter(c => ELIG(c) && ARR(c) >= 1 && ARR(c) <= 20);
+const ARRS = () => [...new Set(PARIS().map(ARR))].sort((a, b) => a - b);
+const VIS = () => new Set(Object.keys(G().cines));
+const arrDone = () => { const v = VIS(); return new Set(PARIS().filter(c => v.has(c.id)).map(ARR)); };
+const parisDone = () => { const v = VIS(); return PARIS().filter(c => v.has(c.id)).length; };
+const cities = () => { const v = VIS(), m = {}; CINES.filter(c => ELIG(c) && !ARR(c) && c.city).forEach(c => { const k = c.city; (m[k] ||= {city: k, n: 0, d: 0}).n++; if (v.has(c.id)) m[k].d++; }); return Object.values(m); };
 const BADGES = [
   {id: "cent", ic: "💯", t: "100 films vus", cur: seenCount, goal: 100},
   {id: "nuit", ic: "🦉", t: "Oiseau de nuit", d: "5 séances après 22 h", cur: () => TICKETS.filter(t => tH(t) >= 22).length, goal: 5},
@@ -62,6 +71,8 @@ const BADGES = [
   {id: "vo", ic: "🌍", t: "Explorateur VO", d: "10 séances en VO", cur: () => TICKETS.filter(isVO).length, goal: 10},
   {id: "idf", ic: "🗺️", t: "Explorateur IDF", d: "10 cinémas différents", cur: () => Object.keys(G().cines).length, goal: 10},
   {id: "coll", ic: "📌", t: "Collectionneur", d: "50 films en watchlist", cur: watchCount, goal: 50},
+  {id: "tour", ic: "🗼", t: "Tour de Paris", d: "Une séance dans chaque arrondissement ayant un Pathé ou un partenaire", cur: () => arrDone().size, get goal() { return ARRS().length || 1; }},
+  {id: "legende", ic: "👑", t: "Légende de Paris", d: "Tous les Pathé et partenaires CinéPass de Paris", gold: 1, cur: parisDone, get goal() { return PARIS().length || 1; }},
   {id: "assidu", ic: "📅", t: "Assidu", d: "30 jours actifs", cur: () => Object.values(G().days).filter(x => x.xp > 0).length, goal: 30}];
 const C = (...a) => a.map(x => x.split("|"));
 const COLLS = [
@@ -86,7 +97,7 @@ const oTL = window.toggleList; window.toggleList = (k, id) => { const f = fid(id
   if (k === "seen") { G().seen[f.id] = today(); noteGenres(f); award("seen", f.id) || saveGame(); } };
 const oAT = window.addTicket; window.addTicket = k => { const x = (window.TB || TB)[k]; oAT(k); if (!x) return;
   const t = TICKETS.find(y => y.id === x.f.id + "|" + x.c.id + "|" + x.t.time); if (t && !t.ev && (x.f.cl?.ap || (x.t.events || []).length || x.t.preview)) { t.ev = "1"; sync(); }
-  award("ticket", x.f.id + "|" + x.c.id + "|" + x.t.time); visitCine(x.c.id, true); };
+  award("ticket", x.f.id + "|" + x.c.id + "|" + x.t.time); };
 function visitCine(cid, quiet) { if (!cid || G().cines[cid]) return; G().cines[cid] = today(); award("cine", cid) || saveGame(); }
 window.iWasThere = cid => { const c = byId(cid); if (!c || G().cines[cid]) return; if (!confirm(`Confirmes-tu être allé au ${c.name} ?`)) return; visitCine(cid); openCine(cid); };
 const oOF = openFilm; openFilm = function (id) { const r = oOF.apply(this, arguments); const f = fid(id); if (f.id) { noteGenres(f); award("fiche", f.id); }
@@ -129,11 +140,14 @@ const sub = document.createElement("div"); sub.id = "subnav"; sub.className = "s
 const main = $("#main");
 main.insertAdjacentHTML("afterbegin", `<section id="v-home" class="view" aria-label="Accueil"></section>`);
 main.insertAdjacentHTML("beforeend", `<section id="v-coll" class="view" aria-label="Badges et collections"><div class="pad" id="collc"></div></section><section id="v-profil" class="view" aria-label="Profil"><div class="pad" id="profc"></div></section>`);
-const oGo = go; go = function (v) { oGo(v); const t = TABOF[v] || "explorer"; if (SUB[t]) LASTSUB[t] = v;
+const oGo = go; let POP = 0; go = function (v) { const prev = (document.querySelector('.view.on') || {}).id; oGo(v); if (!POP && prev && prev !== 'v-' + v) history.pushState({v}, ''); window.scrollTo(0, 0); const t = TABOF[v] || "explorer"; if (SUB[t]) LASTSUB[t] = v;
   nav.querySelectorAll("button").forEach(b => { const on = b.dataset.t === t; b.classList.toggle("on", on); on ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"); });
   sub.innerHTML = SUB[t] ? SUB[t].map(([k, l]) => `<button role="tab" aria-selected="${k === v}" class="${k === v ? "on" : ""}" onclick="go('${k}')">${l}</button>`).join("") : ""; sub.classList.toggle("hidden", !SUB[t]);
   document.body.dataset.tab = t; if (v === "home") renderHome(); if (v === "coll") renderColl(); if (v === "profil") { renderProfil(); loadSocial(); } };
 window.go = go;
+history.replaceState({v: 'home'}, '');
+addEventListener('popstate', e => { const m = document.getElementById('modal'); if (m && !m.classList.contains('hidden')) { closeModal(); return; } POP = 1; go((e.state && e.state.v) || 'home'); POP = 0; });
+const hdr = document.querySelector('header'); const setHH = () => document.documentElement.style.setProperty('--hh', hdr ? hdr.offsetHeight + 'px' : '0px'); setHH(); addEventListener('resize', setHH);
 // ---------- Rendus ----------
 function greet() { const h = new Date().getHours(); return h < 5 ? "Bonne nuit" : h < 18 ? "Bonjour" : "Bonsoir"; }
 function progressCard() { const g = G(), lv = level(g.xp); return `<div class="gcard prog"><div class="ph"><span class="lvic">${lv.ic}</span><div><b>${lv.name}</b><span class="sub">${g.xp} XP${lv.next ? ` · encore ${lv.next - g.xp} XP pour « ${lv.nextName} »` : " · niveau maximum"}</span></div><span class="wk">+${g.wk[WEEK()] || 0} XP<small>cette semaine</small></span></div><div class="xpbar"><i style="width:${lv.pct}%"></i></div></div>`; }
@@ -144,20 +158,39 @@ function recos() { // recommandations réelles : d'abord celles des amis, puis v
   FILMS.filter(f => !ids.has(f.id) && !S.has(lbKey(f.title)) && f.poster).map(f => { const gen = parse(f.genres); const s = gen.reduce((a, x) => a + (GG[x] || 0) * 2 + (liked.has(x) ? 3 : 0), 0) + (+f.rating || 0) * 2 + (+f.press || 0); return [f, s, gen]; })
     .sort((a, b) => b[1] - a[1]).slice(0, 12).forEach(([f, s, gen]) => out.push([f, gs && gen.some(x => GG[x]) ? "Tes goûts : " + gen.find(x => GG[x]) : (+f.rating ? "★ " + (+f.rating).toFixed(1) + " spectateurs" : "")]));
   return out.slice(0, 12); }
+function homeRails() { // mêmes données et règles que l'onglet Films (Sorties / Séances spéciales / Tous les films)
+  let V = []; try { V = view(); } catch (e) { V = FILMS; }
+  const sk = `<div class="sk" aria-hidden="true"><div class="im"></div><i></i></div>`.repeat(6);
+  const box = (ic, t, arr, ex, more) => `<div class="hsec"><h2>${ic} ${t}${arr.length ? ` <small>${arr.length}</small>` : ""}</h2>${arr.length ? `<div class="rail" role="list">${arr.slice(0, 30).map(f => `<div class="rw" role="listitem">${posterCard(f, ex && ex(f))}</div>`).join("")}${arr.length > 30 || more ? `<button class="rmore" onclick="go('seances')">Voir tout<br>→</button>` : ""}</div>` : !FILMS.length && !ERR ? `<div class="rail">${sk}</div>` : `<p class="sub">${esc(FILMS.length ? "Aucun film dans cette catégorie pour l’instant." : ERR || "Séances indisponibles pour le moment, réessayez dans un instant.")}</p>`}</div>`;
+  const rel = f => f.cl.rel ? "Sortie le " + new Date(f.cl.rel + "T12:00").toLocaleDateString("fr-FR", {day: "numeric", month: "short"}) : "";
+  return box("🆕", "Sorties de la semaine", V.filter(f => f.cl.fresh).sort((a, b) => (b.cl.rel || "").localeCompare(a.cl.rel || "") || b.n - a.n), rel)
+    + box("✨", "Séances spéciales", V.filter(f => f.cl.ap || f.cl.special.length || f.times.some(t => (t.events || []).length || t.preview)), f => f.cl.ap ? "Avant-première" : esc(f.cl.special[0] || "Événement"))
+    + (window.newWeek ? (() => { const N = newWeek(); return N.length ? box("🔔", "Nouvelles séances de la semaine", N.map(x => x[0]), f => { const x = N.find(y => y[0] === f); return x[1] + " nouvelle" + (x[1] > 1 ? "s" : "") + " séance" + (x[1] > 1 ? "s" : ""); }) : ""; })() : "")
+    + box("🎬", "Tous les films", V, null, 1); }
 function renderHome() { const el = $("#v-home"); if (!el) return; const ms = missions(), m = ms.find(x => !G().done["mission:" + today() + ":" + x.id]) || ms[0], mdone = G().done["mission:" + today() + ":" + m.id], R = recos();
   el.innerHTML = `<div class="home"><h1 class="hello">${greet()}, ${esc((SOC.me && "@" + SOC.me) || (EMAIL ? EMAIL.split("@")[0] : "cinéphile"))} !</h1><p class="sub">Prêt pour ta prochaine découverte ?</p>
   <form class="hsearch" onsubmit="event.preventDefault();homeSearch()"><input id="hq" type="search" placeholder="Quel film veux-tu découvrir ?" aria-label="Rechercher un film, un cinéma, un acteur"></form>
   <div class="quick"><button class="q1" onclick="go('seances')"><span>🎟️</span>Séances</button><button onclick="go('map')"><span>📍</span>Cinémas</button><button onclick="go('billets')"><span>🎞️</span>Mes films</button></div>
   <div class="hsec"><h2>🎯 Ton défi du jour <small>+${PTS.mission} XP</small></h2><div class="gcard mission ${mdone ? "done" : ""}"><b>${esc(m.t)}</b><span class="sub">${esc(m.d)}</span>${mdone ? `<span class="chip on">✓ Validé</span>` : m.ok() ? `<button class="primary" onclick="claimMission('${m.id}')">Récupérer +${PTS.mission} XP</button>` : `<button class="ghost" onclick="go('${m.go || "seances"}')">C’est parti →</button>`}</div></div>
   <div class="hsec"><h2>🔥 Recommandé pour toi</h2>${R.length ? `<div class="rail">${R.map(([f, why]) => `<div class="rw">${posterCard(f, `<span class="why">${esc(why || "À l’affiche")}</span>`)}</div>`).join("")}</div>` : `<p class="sub">Chargement des films à l’affiche…</p>`}</div>
+  ${homeRails()}
   <div class="hsec"><button class="gcard row" onclick="go('seances')"><span class="bi">🗓️</span><span><b>Trouver une séance</b><span class="sub">Cinémas, horaires et itinéraires</span></span><span>›</span></button>
   <button class="gcard row" onclick="typeof tonightNear==='function'?tonightNear():go('seances')"><span class="bi">🌙</span><span><b>Ce soir près de moi</b><span class="sub">Les prochaines séances autour de toi</span></span><span>›</span></button></div>
   <div class="hsec"><h2>📈 Ta progression</h2>${progressCard()}<button class="ghost" onclick="go('profil')">Défis, badges et amis →</button></div></div>`; }
 window.homeSearch = () => { const q = $("#hq").value.trim(), g = $("#gq"); if (!g) return; g.value = q; g.focus(); g.dispatchEvent(new Event("input", {bubbles: true})); };
 function chCard(c) { const cur = Math.min(c.cur(), c.goal), k = "challenge:" + c.id + ":" + perKey(c.per), done = G().done[k];
   return `<div class="gcard ch ${done ? "done" : ""}"><div class="chh"><span class="bi">${c.ic}</span><span><b>${c.t}</b> <span class="tagp">${c.per}</span><span class="sub">${c.d}</span></span><span class="xp">+${c.xp} XP</span></div><div class="xpbar"><i style="width:${Math.round(cur / c.goal * 100)}%"></i></div><div class="chf"><span class="sub">${cur} / ${c.goal}</span>${done ? `<span class="chip on">✓ Réussi</span>` : cur >= c.goal ? `<button class="primary" onclick="claimCh('${c.id}')">Valider</button>` : ""}</div></div>`; }
+function geoBadges() { const A = arrDone(), v = VIS(), P = PARIS(), C2 = cities().sort((a, b) => (b.d >= b.n) - (a.d >= a.n) || b.d / b.n - a.d / a.n || a.city.localeCompare(b.city));
+  const done = C2.filter(c => c.d >= c.n).length, started = C2.filter(c => c.d && c.d < c.n), rest = C2.filter(c => !c.d);
+  const city = c => `<div class="badge2 ${c.d >= c.n ? "ok" : ""}"><span class="bic">🏙️</span><b>${esc(c.city)}</b><div class="xpbar"><i style="width:${Math.round(c.d / c.n * 100)}%"></i></div><small>${c.d} / ${c.n} cinéma${c.n > 1 ? "s" : ""}</small></div>`;
+  return `<h1 style="margin-top:26px">🗼 Paris</h1><p class="sub">Pathé et partenaires CinéPass uniquement. Un badge par arrondissement dès votre première séance confirmée (« J’y suis allé » sur la fiche du cinéma). Chaque cinéma ne compte qu’une fois.</p>
+  <div class="bgrid arr">${ARRS().map(n => { const cs = P.filter(c => ARR(c) === n), d = cs.filter(c => v.has(c.id)).length; return `<div class="badge2 ${A.has(n) ? "ok" : ""}"><span class="bic">${n}<sup>${n === 1 ? "er" : "e"}</sup></span><small>${cs.length ? d + " / " + cs.length + " cinéma" + (cs.length > 1 ? "s" : "") : "aucun cinéma"}</small></div>`; }).join("")}</div>
+  <h1 style="margin-top:26px">🏙️ Villes d’Île-de-France</h1><p class="sub">Badge de la ville obtenu quand vous avez vu une séance dans <b>tous</b> ses cinémas Pathé et partenaires CinéPass. ${done} ville${done > 1 ? "s" : ""} complétée${done > 1 ? "s" : ""} sur ${C2.length}.</p>
+  <div class="bgrid">${C2.filter(c => c.d).map(city).join("") || `<p class="sub">Aucune ville commencée pour l’instant.</p>`}</div>
+  <details class="coll"><summary><b>Toutes les villes (${rest.length} à découvrir)</b></summary><div class="bgrid" style="margin-top:10px">${rest.map(city).join("")}</div></details>`; }
 function renderColl() { const el = $("#collc"); if (!el) return;
-  el.innerHTML = `<h1>🏅 Badges</h1><div class="bgrid">${BADGES.map(b => { const n = b.cur(), ok = n >= b.goal; return `<div class="badge2 ${ok ? "ok" : ""}"><span class="bic">${b.ic}</span><b>${b.t}</b><span class="sub">${b.d || ""}</span><div class="xpbar"><i style="width:${Math.min(100, Math.round(n / b.goal * 100))}%"></i></div><small>${Math.min(n, b.goal)} / ${b.goal}</small></div>`; }).join("")}</div>
+  el.innerHTML = `<h1>🏅 Badges</h1><div class="bgrid">${BADGES.map(b => { const n = b.cur(), ok = n >= b.goal; return `<div class="badge2 ${ok ? "ok" : ""}${b.gold ? " gold" : ""}"><span class="bic">${b.ic}</span><b>${b.t}</b><span class="sub">${b.d || ""}</span><div class="xpbar"><i style="width:${Math.min(100, Math.round(n / b.goal * 100))}%"></i></div><small>${Math.min(n, b.goal)} / ${b.goal}</small></div>`; }).join("")}</div>
+  ${geoBadges()}
   <h1 style="margin-top:26px">🎞️ Collections</h1><p class="sub">Progression calculée sur vos films « Vu » (liste Ciné IDF + historique Letterboxd) et vos cinémas visités.</p>
   ${COLLS.map(c => { const p = collProg(c); return `<details class="coll"><summary><span class="bic">${c.ic}</span><b>${c.t}</b><span class="cbar"><i style="--p:${p.pct}%"></i></span><b>${p.pct}%</b><small>${p.n}/${p.g}</small></summary>${p.items ? `<ul>${p.items.map(i => `<li class="${i.ok ? "ok" : ""}">${i.ok ? "✓" : "○"} ${esc(i.t)}</li>`).join("")}</ul>` : `<p class="sub">Cinémas indépendants visités : ${p.n}. Utilisez « J’y suis allé » sur la fiche d’un cinéma ou ajoutez un billet.</p>`}</details>`; }).join("")}`; }
 function renderProfil() { const el = $("#profc"); if (!el) return; const g = G(), ms = missions();
