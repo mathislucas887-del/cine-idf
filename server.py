@@ -163,8 +163,8 @@ def allo_live(cid, date, key):
                                 if t.get("urls") and (t.get("provider") == "default" or not url_b): url_b = t["urls"][0]
                             v = st.get("diffusionVersion") or ""
                             tg = st.get("tags") or []
-                            fm = [{"E_4DX": "4DX", "SCREEN_X": "ScreenX", "IMAX": "IMAX", "DOLBY_CINEMA": "Dolby Cinema", "DOLBY": "Dolby", "ONYX": "Onyx"}.get(x, None) for x in (st.get("experience") or [])]
-                            fm = [x for x in fm if x] + [x.split(".")[-1].replace("Imax", "IMAX") for x in tg if x.startswith("Format.Projection.") and x.split(".")[-1] in ("3D", "Imax")]
+                            fm = [{"E_4DX": "4DX", "SCREEN_X": "ScreenX", "IMAX": "IMAX", "DOLBY_CINEMA": "Dolby Cinema", "DOLBY": "Dolby", "DOLBY_ATMOS": "Dolby Atmos", "PLF": "PLF", "ONYX": "Onyx"}.get(x, None) for x in (st.get("experience") or [])]
+                            fm = [x for x in fm if x] + [x.split(".")[-1].replace("Imax", "IMAX").replace("DolbyVision", "Dolby Vision") for x in tg if x.startswith("Format.Projection.") and x.split(".")[-1] in ("3D", "Imax", "DolbyVision")]
                             times.append({"preview": bool(st.get("isPreview")), "events": [x.split(".")[-1] for x in tg if ".Event." in x],
                                           "fmt": sorted(set(fm)), "acc": any("Accessibility" in x for x in tg),
                                           "time": st["startsAt"], "version": {"ORIGINAL": "vo", "LOCAL": "vf", "DUBBED": "vf"}.get(st.get("diffusionVersion") or "", (st.get("diffusionVersion") or "").lower()),

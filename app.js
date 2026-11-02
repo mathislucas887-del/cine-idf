@@ -172,7 +172,7 @@ window.favSeances = () => { closeModal(); go("seances"); $("#scope").value = "fa
 // ---------- Modales ----------
 function modal(html) { $("#mcontent").innerHTML = html; $("#modal").classList.remove("hidden"); setTimeout(() => $("#modal .x").focus(), 30); }
 window.closeModal = () => { $("#modal").classList.add("hidden"); $("#mcontent").innerHTML = ""; };
-window.closeSheet = () => $("#sheet").classList.add("hidden");
+window.closeSheet = () => { $("#sheet").classList.add("hidden"); const b = $("#sheetc"); if (b) b.style.transform = ""; };
 $("#modal").onclick = e => { if (e.target.id === "modal") closeModal(); };
 $("#sheet").onclick = e => { if (e.target.id === "sheet") closeSheet(); };
 addEventListener("keydown", e => { if (e.key === "Escape") { if (!$("#sheet").classList.contains("hidden")) closeSheet(); else closeModal(); $("#gres").classList.add("hidden"); } });
@@ -300,7 +300,7 @@ function renderShows(V) {
   V = V || view(); const now = new Date();
   if (GRID) { $("#shows").innerHTML = `<div class="pgrid">${V.slice(0, SHOWN * 2).map(f => posterCard(f)).join("")}</div>` + (V.length > SHOWN * 2 ? `<div class="pad"><button class="ghost" onclick="SHOWN+=25;renderShows()">Afficher plus</button></div>` : "") || `<div class="empty">Aucune séance.</div>`; return; }
   const html = V.slice(0, SHOWN).map(f => {
-    const lines = f.vby.slice().sort((a, b) => (dist(a.c) ?? 0) - (dist(b.c) ?? 0) || a.c.name.localeCompare(b.c.name)).map(({c, times}) => `<div class="cine-line"><b>${FAVS.has(c.id) ? "⭐ " : ""}${esc(c.name)}${distTxt(c)}</b>${times.slice().sort((a,b)=>a.time.localeCompare(b.time)).map(t => timeBtn(f, c, t, now)).join("")}</div>`).join("");
+    const lines = f.vby.slice().sort((a, b) => (dist(a.c) ?? 0) - (dist(b.c) ?? 0) || a.c.name.localeCompare(b.c.name)).map(({c, times}) => cCard(c, times.slice().sort((a,b)=>a.time.localeCompare(b.time)).map(t => timeBtn(f, c, t, now)).join(""), FAVS.has(c.id) ? "⭐ " : "")).join("");
     const L = lbState(f);
     return `<article class="film${L.seen ? " seen" : ""}">${f.poster ? `<img src="${esc(f.poster)}" alt="Affiche de ${esc(f.title)}" loading="lazy" onclick="openFilm('${f.id}')">` : `<div class="noimg"></div>`}<div><h3><a href="#" onclick="openFilm('${f.id}');return false" style="color:inherit;text-decoration:none">${esc(f.title)}</a>${L.watch ? ` <span class="lbw">Watchlist</span>` : ""}${L.seen ? ` <span class="lbs">✓ Vu</span>` : ""}</h3><div class="meta">${meta(f)}</div>${lines}</div></article>`;
   }).join("");
@@ -309,11 +309,13 @@ function renderShows(V) {
 window.renderShows = renderShows;
 const meta = f => [f.cl.ap && "✨ Avant-première", f.year && f.year < 2026 ? "Film de " + f.year : "", (f.genres||[]).slice(0,3).join(", "), f.runtime, f.age, f.rating && `★ ${(+f.rating).toFixed(1)} spectateurs`, f.press && `${(+f.press).toFixed(1)} presse`].filter(Boolean).map(esc).join(" · ");
 const TB = {};
+window.cCard = (c, pills, pre) => `<div class="cc17"><div class="cch"><div><b>${pre || ""}${esc(c.name)}</b>${(c.city || dist(c) != null) ? `<small>${[c.city, dist(c) != null ? dist(c).toFixed(1) + " km" : ""].filter(Boolean).map(esc).join(" · ")}</small>` : ""}</div>${c.type === "pathe" ? `<span class="bdg p">Pathé</span>` : c.type === "partner" || c.cinepass ? `<span class="bdg">Partenaire</span>` : ""}</div><div class="tps">${pills}</div></div>`;
 function timeBtn(f, c, t, now) {
   const k = Math.random().toString(36).slice(2, 9); TB[k] = {f, c, t};
   const past = new Date(t.time) < now; const fx = (t.fmt || []).concat((t.events||[]).length ? ["★"] : []);
-  const cpOn = EXTRA.cp && EXTRA.cp.on && c.cinepass, prem = (t.fmt || []).some(x => /IMAX|4DX|ScreenX|Dolby|3D|Onyx/.test(x)), here = TICKETS.some(x => x.fid == f.id && x.cid === c.id && x.time < new Date().toISOString());
-  return `<button class="t${past ? " past" : ""}${cpOn ? (prem ? " cpx" : " cp") : ""}" title="${cpOn ? (prem ? "CinéPass + supplément format" : "Inclus dans votre CinéPass") : ""}${here ? " · déjà vu ici" : ""}" onclick="openTime('${k}')" aria-label="${t.time.slice(11,16)} ${t.version} ${esc(c.name)}"><b>${t.time.slice(11,16)}</b><small class="pill${t.version === "vo" ? " vo" : ""}">${t.version === "vo" ? "VOST" : esc((t.version||"").toUpperCase())}${t.acc ? " ♿" : ""}</small>${here ? `<span class="fx">👁 déjà vu ici</span>` : ""}${fx.length ? `<span class="fx">${esc(fx.join(" "))}</span>` : ""}</button>`;
+  const cpOn = EXTRA.cp && EXTRA.cp.on && c.cinepass, prem = (t.fmt || []).some(x => /IMAX|4DX|ScreenX|Dolby|3D|Onyx|PLF/.test(x)), here = TICKETS.some(x => x.fid == f.id && x.cid === c.id && x.time < new Date().toISOString());
+  const lab = [t.version === "vo" ? "VO" : t.version ? esc(String(t.version).toUpperCase()) : "", ...(t.fmt || []).map(x => esc(x === "PLF" ? "Premium" : x)), (t.events||[]).length ? "★" : "", t.acc ? "♿" : ""].filter(Boolean).slice(0, 4).map(x => `<i class="${/IMAX|4DX|ScreenX|Dolby|3D|Onyx|Premium/.test(x) ? "pf" : ""}">${x}</i>`).join("");
+  return `<button class="tp t${past ? " past" : ""}${cpOn ? (prem ? " cpx" : " cp") : ""}" title="${cpOn ? (prem ? "CinéPass + supplément format" : "Inclus dans votre CinéPass") : ""}${here ? " · déjà vu ici" : ""}" onclick="openTime('${k}')" aria-label="${t.time.slice(11,16)} ${t.version} ${esc(c.name)}${past ? " (passée)" : ""} – réserver, billet, agenda"><b>${t.time.slice(11,16)}</b>${lab ? `<span class="tl">${lab}</span>` : ""}${cpOn && prem ? `<span class="sup">supplément</span>` : ""}${here ? `<span class="fx">👁 vu ici</span>` : ""}</button>`;
 }
 function fresh() {
   const m = FETCHED ? Math.round((Date.now() - FETCHED) / 60000) : null;
@@ -326,9 +328,11 @@ $("#scope").onchange = () => { SHOWN = 25; loadData(); };
 
 // ---------- Séance : réserver, billet, agenda ----------
 window.openTime = k => { const {f, c, t} = TB[k]; const when = new Date(t.time);
-  $("#sheetc").innerHTML = `<div class="sheet"><h2 style="margin:0">${esc(f.title)}</h2><p class="sub">${esc(c.name)} · ${when.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})} à ${t.time.slice(11,16)} · ${esc((t.version||"").toUpperCase())} ${esc((t.fmt||[]).join(" "))}</p>
-   <a class="primary" style="display:block;padding:12px;border-radius:10px;color:#141414" href="${esc(t.url || c.website || "#")}" target="_blank" rel="noopener">🎟️ Réserver / choisir ma place</a>
-   <button class="ghost" onclick="addTicket('${k}')">＋ Ajouter à mes billets</button><a class="ghost" href="${gcal(f, c, t)}" target="_blank" rel="noopener">📅 Google Agenda</a><button class="ghost" onclick="ics('${k}')">🍎 Apple / Outlook (.ics)</button><button class="ghost" onclick="closeSheet()">Fermer</button></div>`;
+  const past = when < new Date();
+  $("#sheetc").innerHTML = `<div class="grab" aria-hidden="true"></div><div class="sheet sh18"><div class="shh">${f.poster ? `<img src="${esc(f.poster)}" alt="">` : ""}<div><h2>${esc(f.title)}</h2><p class="sub">${esc(c.name)}</p><p class="when"><b>${t.time.slice(11,16)}</b> · ${when.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})} · ${esc((t.version||"").toUpperCase())} ${esc((t.fmt||[]).join(" "))}${past ? " · <i>séance passée</i>" : ""}</p></div></div>
+   <a class="primary bk18" href="${esc(t.url || c.website || "#")}" target="_blank" rel="noopener"><span>🎟️</span>Réserver / choisir ma place</a>
+   <div class="acts18"><button class="a18" onclick="addTicket('${k}')"><span>🎫</span>Ajouter à mes billets</button><a class="a18" href="${gcal(f, c, t)}" target="_blank" rel="noopener"><span>📅</span>Google Agenda</a><button class="a18" onclick="ics('${k}')"><span>🍎</span>Apple / Outlook (.ics)</button></div>
+   <button class="ghost close18" onclick="closeSheet()">Fermer</button></div>`;
   $("#sheet").classList.remove("hidden"); };
 window.addTicket = k => { const {f, c, t} = TB[k]; const id = f.id + "|" + c.id + "|" + t.time; if (!TICKETS.some(x => x.id === id)) TICKETS.push({id, fid: String(f.id), cid: c.id, title: f.title, poster: f.poster || "", cinema: c.name, time: t.time, url: t.url || c.website || "", version: (t.version||"").toUpperCase()}); sync(); closeSheet(); toast("Ajouté à « Mes billets »"); };
 window.ics = k => { const {f, c, t} = TB[k]; const s = new Date(t.time), e = new Date(s.getTime() + ((f.dur || 120) + 15) * 60000);
@@ -347,8 +351,7 @@ window.rmTicket = id => { TICKETS = TICKETS.filter(t => t.id !== id); sync(); re
 window.openFilm = id => {
   const f = FILMS.find(x => String(x.id) === String(id)); if (!f) return;
   const V = view().find(x => String(x.id) === String(id)) || {...f, vby: f.by}; const now = new Date();
-  const lines = V.vby.slice().sort((a, b) => (dist(a.c) ?? 0) - (dist(b.c) ?? 0) || (a.c.type === "pathe" ? 0 : 1) - (b.c.type === "pathe" ? 0 : 1) || a.c.name.localeCompare(b.c.name))
-    .map(({c, times}) => `<div class="cine-line"><b>${esc(c.name)} <span class="badge b-${c.type}">${TYPE[c.type]}</span>${distTxt(c)}</b>${times.slice().sort((a,b)=>a.time.localeCompare(b.time)).map(t => timeBtn(f, c, t, now)).join("")}</div>`).join("");
+  const lines = window.s18 ? s18(f, f.by, SELDATES[0]) : "";
   const labs = [f.cl.ap && "Avant-première", ...f.cl.special, f.cl.fresh && "Sortie de la semaine", f.cl.retro && f.year < 2026 && "Séance rétro"].filter(Boolean);
   const sim = FILMS.filter(x => x !== f && (x.genres||[]).some(g => (f.genres||[]).includes(g))).slice(0, 10).map(x => ({...x, vby: x.by, n: x.times.length}));
   const yt = "https://www.youtube.com/results?search_query=" + encodeURIComponent(f.title + " bande annonce " + (f.year || ""));
@@ -360,7 +363,7 @@ window.openFilm = id => {
    <div class="btns" role="group" aria-label="Mes listes">${[["towatch","📌 À voir"],["seen","✓ Vu"],["rewatch","🔁 À revoir"]].map(([k,l]) => `<button class="ghost${inList(k, f) ? " on" : ""}" aria-pressed="${inList(k, f)}" onclick="toggleList('${k}','${f.id}')">${l}</button>`).join("")}</div>
    <div id="trailer"></div>
    <div class="btns"><a class="ghost" href="${yt}" target="_blank" rel="noopener">▶ Bande-annonce (YouTube)</a><a class="ghost" href="https://www.allocine.fr/film/fichefilm_gen_cfilm=${esc(f.id)}.html" target="_blank" rel="noopener">Plus d’infos (Allociné)</a><button class="ghost" onclick="shareFilm('${f.id}')">↗ Partager</button></div>
-   <h3 style="clear:both;color:var(--gold2)">Séances ${SELDATES.length > 1 ? "de la période" : "– " + fmtDay(SELDATES[0])} · ${V.vby.length} cinéma(s)</h3>${lines || `<p class="sub">Aucune séance avec les filtres actuels.</p>`}
+   <h3 style="clear:both;color:var(--gold2)">🎟️ Séances</h3>${lines || `<p class="sub">Aucune séance avec les filtres actuels.</p>`}
    <p class="sub">Touchez un horaire : réserver, ajouter à mes billets ou à l’agenda. ★ = séance spéciale, ♿ = accessible.</p>
    <div id="photos"></div>${sim.length ? `<h3 style="color:var(--gold2)">Films similaires</h3><div class="rail" style="padding-left:0">${sim.map(x => posterCard(x)).join("")}</div>` : ""}</div>`);
   filmExtras(f);
@@ -430,7 +433,7 @@ window.cineDay = async (id, day) => {
     const films = (d.films || []).map(f => classify({...f, by: [{c, times: f.times}]}));
     films.forEach(f => FILMS.some(x => String(x.id) === String(f.id)) || FILMS.push(f));
     if (!$("#cshows")) return;
-    $("#cshows").innerHTML = `<p class="sub">${fmtDay(day)} · ${films.length} film(s)</p>` + (films.map(f => { const L = lbState(f); return `<article class="film${L.seen ? " seen" : ""}" style="margin:0 0 10px">${f.poster ? `<img src="${esc(f.poster)}" alt="Affiche de ${esc(f.title)}" loading="lazy" onclick="openFilm('${f.id}')">` : `<div class="noimg"></div>`}<div><h3>${esc(f.title)}${L.watch ? ` <span class="lbw">Watchlist</span>` : ""}${L.seen ? ` <span class="lbs">✓ Vu</span>` : ""}</h3><div class="meta">${meta(f)}</div>${f.times.slice().sort((a,b)=>a.time.localeCompare(b.time)).map(t => timeBtn(f, c, t, now)).join("")}</div></article>`; }).join("") || `<p class="sub">Aucune séance publiée pour ce jour. Les cinémas publient leurs programmes chaque semaine (nouvelle semaine le mercredi), souvent à partir du lundi ou du mardi précédent.</p>`);
+    $("#cshows").innerHTML = `<p class="sub">${fmtDay(day)} · ${films.length} film(s)</p>` + (films.map(f => { const L = lbState(f); return `<article class="film${L.seen ? " seen" : ""}" style="margin:0 0 10px">${f.poster ? `<img src="${esc(f.poster)}" alt="Affiche de ${esc(f.title)}" loading="lazy" onclick="openFilm('${f.id}')">` : `<div class="noimg"></div>`}<div><h3>${esc(f.title)}${L.watch ? ` <span class="lbw">Watchlist</span>` : ""}${L.seen ? ` <span class="lbs">✓ Vu</span>` : ""}</h3><div class="meta">${meta(f)}</div><div class="tps">${f.times.slice().sort((a,b)=>a.time.localeCompare(b.time)).map(t => timeBtn(f, c, t, now)).join("")}</div></div></article>`; }).join("") || `<p class="sub">Aucune séance publiée pour ce jour. Les cinémas publient leurs programmes chaque semaine (nouvelle semaine le mercredi), souvent à partir du lundi ou du mardi précédent.</p>`);
   } catch (e) { if ($("#cshows")) $("#cshows").innerHTML = `<p class="sub">⚠️ Allociné ne répond pas pour ce cinéma. <button class="ghost" onclick="cineDay('${c.id}','${day}')">Réessayer</button> <a href="${esc(c.website || "#")}" target="_blank" rel="noopener">Site du cinéma</a></p>`; }
 };
 

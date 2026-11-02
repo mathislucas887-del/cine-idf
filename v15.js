@@ -33,11 +33,8 @@ const dLab = k => { const t = days(); if (k === t[0].k) return "Auj."; if (t[1] 
 const tRows = (by, f0) => { const now = Date.now(); return Object.entries(by).sort((a, b) => ((byId(a[0]) || {}).type === "pathe" ? 0 : 1) - ((byId(b[0]) || {}).type === "pathe" ? 0 : 1) || b[1].length - a[1].length).map(([cid, ts]) => { const c = byId(cid) || {name: cid};
   let dk = null; try { const d = dist(c); if (d != null) dk = d < 1 ? Math.round(d * 1000) + " m" : d.toFixed(1) + " km"; } catch (e) {}
   const meta = [c.city, dk].filter(Boolean).map(esc).join(" · ");
-  const pills = ts.slice().sort((a, b) => a.time.localeCompare(b.time)).map(t => { const past = new Date(t.time).getTime() < now - 5 * 60000;
-    const lab = [t.version === "vo" ? "VO" : t.version === "vf" ? "VF" : "", ...(t.fmt || [])].filter(Boolean).map(x => `<i>${esc(x)}</i>`).join("");
-    const inner = `<b>${t.time.slice(11, 16)}</b>${lab ? `<span class="tl">${lab}</span>` : ""}`;
-    const k = "f" + Math.random().toString(36).slice(2, 9); TB[k] = {f: {...f0, dur: f0.dur || (parseInt(f0.runtime) || 0) * 60 + (parseInt(String(f0.runtime || "").split("h")[1]) || 0) || null}, c, t};
-    return `<button class="tp${past ? " past" : ""}" onclick="openTime('${k}')" aria-label="Séance ${t.time.slice(11, 16)}${past ? " (passée)" : ""} – réserver, billet, agenda">${inner}</button>`; }).join("");
+  const fd = {...f0, dur: f0.dur || (parseInt(f0.runtime) || 0) * 60 + (parseInt(String(f0.runtime || "").split("h")[1]) || 0) || null}, nw = new Date();
+  const pills = ts.slice().sort((a, b) => a.time.localeCompare(b.time)).map(t => timeBtn(fd, c, t, nw)).join("");
   return `<div class="cc17"><div class="cch"><div><b>${esc(c.name)}</b>${meta ? `<small>${meta}</small>` : ""}</div>${c.type === "pathe" ? `<span class="bdg p">Pathé</span>` : c.type === "partner" || c.cinepass ? `<span class="bdg">Partenaire CinéPass</span>` : ""}</div><div class="tps">${pills}</div></div>`; }).join(""); };
 window.filmDay = d => { FD.day = d; const f = C().films.find(x => x.id === FD.id); if (!f) return; const box = $("#fd17"); if (!box) return;
   box.querySelectorAll(".fdays button").forEach(b => { const on = b.dataset.d === d; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); });

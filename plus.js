@@ -54,7 +54,7 @@ window.openTime = k => {
   const box = document.createElement("div"); box.className = "plan";
   box.innerHTML = `<h3>🌙 Plan de soirée</h3><ul>${tt != null ? `<li>Départ conseillé : <b>${hm(s - (tt + 15) * 60000)}</b> (${travelTxt(d)}, ${d.toFixed(1)} km)</li>` : `<li><a href="#" onclick="locate().then(()=>openTime('${k}')).catch(e=>toast(e.message));return false">📍 Calculer mon trajet</a></li>`}
     <li>Séance <b>${t.time.slice(11, 16)}</b> · publicité ~15 min · fin vers <b>${hm(end)}</b></li><li>Places restantes : <i>non communiquées par la source</i> — visibles sur la page de réservation.</li>
-    ${EXTRA.cp && EXTRA.cp.on ? `<li>${c.cinepass ? ((t.fmt || []).some(x => /IMAX|4DX|ScreenX|Dolby|3D|Onyx/.test(x)) ? "🎫 CinéPass : supplément format probable" : "🎫 Inclus dans votre CinéPass") : "🎫 Hors CinéPass"}</li>` : ""}</ul>
+    ${EXTRA.cp && EXTRA.cp.on ? `<li>${c.cinepass ? ((t.fmt || []).some(x => /IMAX|4DX|ScreenX|Dolby|3D|Onyx|PLF/.test(x)) ? "🎫 CinéPass : supplément format probable" : "🎫 Inclus dans votre CinéPass") : "🎫 Hors CinéPass"}</li>` : ""}</ul>
     <div class="btns"><a class="ghost" href="https://www.google.com/maps/dir/?api=1&travelmode=transit&destination=${encodeURIComponent(c.name + " " + (c.fullAddress || c.address || ""))}" target="_blank" rel="noopener">🧭 Itinéraire</a><button class="ghost" onclick="shareShow('${k}')">↗ Partager la séance</button><button class="ghost" onclick="reportShow('${k}')">⚠️ Signaler un horaire faux</button></div>`;
   const sh = $("#sheetc .sheet"); sh && sh.insertBefore(box, sh.querySelector("button.ghost:last-child"));
 };
