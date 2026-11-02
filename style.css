@@ -272,3 +272,15 @@ body.light .mc{background:linear-gradient(170deg,#fffaf0,#f3eddc)}
 .mtrail .trailer{aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:#000}.mtrail iframe{width:100%;height:100%;border:0}
 .mfh{display:flex;gap:14px}.mfh img{width:110px;border-radius:10px;flex:none}.mrow{border-top:1px solid var(--line);padding:8px 0}.mday{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:4px 0}.mday small{width:70px;color:var(--mut)}
 @media(max-width:700px){nav button{font-size:10.5px}.deck{height:calc(100vh - 330px - env(safe-area-inset-bottom));min-height:400px}.match{padding:8px 12px 20px}.mhd h1{font-size:24px}}
+/* ---------- v14 : bande-annonce YouTube lite + CinéMatch sans scroll sur mobile ---------- */
+.ytlite{position:relative;display:block;width:100%;height:100%;padding:0;border:0;background:#000;cursor:pointer}.ytlite img{width:100%;height:100%;object-fit:cover}
+.ytplay{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:72px;height:50px;border-radius:14px;background:#e00c;color:#fff;font-size:24px;display:grid;place-items:center;box-shadow:0 6px 20px #000a}.ytlite:hover .ytplay{background:#f00}
+.mfp{position:relative;margin:0 0 6px}.mfp>summary{list-style:none;display:inline-flex;align-items:center;gap:6px;cursor:pointer;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:7px 14px;font-size:13.5px;min-height:36px}.mfp>summary::-webkit-details-marker{display:none}
+.mfp[open]>summary{border-color:var(--gold);color:var(--gold2)}.mfp .mfil{position:absolute;z-index:30;left:0;right:0;top:44px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px;box-shadow:0 18px 40px #000c}
+@media(max-width:700px){
+ .match.mdeck{display:flex;flex-direction:column;height:calc(100dvh - var(--hh,130px) - 82px - env(safe-area-inset-bottom));padding:6px 12px 0;overflow:hidden}
+ .match.mdeck .mhd{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.match.mdeck .mhd h1{font-size:19px;margin:0}.match.mdeck .mtabs{padding:0;margin-left:auto}.match.mdeck .mtabs button{padding:6px 10px;font-size:12.5px;min-height:34px}
+ .match.mdeck .mfp{margin:6px 0 0}.match.mdeck .mcount{margin:4px 0 6px;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .match.mdeck .deck{flex:1;height:auto;min-height:0}.match.mdeck .mbtns{margin:8px 0 2px;gap:16px}.match.mdeck .mb{width:56px;height:56px}.match.mdeck .mb.undo{width:44px;height:44px}.match.mdeck .mhint{display:none}
+ .match.mdeck .mci{padding:10px 14px 12px}.match.mdeck .mci h2{font-size:19px}.match.mdeck .mci .syn{-webkit-line-clamp:2;font-size:13px}
+}

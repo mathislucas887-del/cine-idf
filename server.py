@@ -32,6 +32,9 @@ class H(http.server.SimpleHTTPRequestHandler):
             return s.send_json(200, json.dumps({"pseudo": ps, **{k: e.get(k) for k in ("stats", "collections", "badges", "level", "xp", "at")}}, ensure_ascii=False).encode())
         if s.path.startswith("/agenda"): return s.send_json(200, json.dumps(AGENDA, ensure_ascii=False).encode())
         if s.path.startswith("/allocine/"): return s.allocine()
+        if s.path.startswith("/yt-trailer/"):
+            qs = urllib.parse.parse_qs(urllib.parse.urlparse(s.path).query); r = yt_trailer(s.path.split("/")[2].split("?")[0], (qs.get("t") or [""])[0][:120], (qs.get("y") or [""])[0][:4])
+            return s.send_json(200, json.dumps({k: r.get(k) for k in ("id", "title", "ch")}, ensure_ascii=False).encode())
         if s.path.startswith("/film-extra/"): return s.send_json(200, film_extra(s.path.split("/")[2]))
         if s.path.startswith("/film/"):
             b = film_page(s.path.split("/")[2].split("?")[0]); s.send_response(200); s.send_header("Content-Type", "text/html; charset=utf-8"); s.send_header("Content-Length", str(len(b))); s.end_headers(); return s.wfile.write(b)
@@ -41,7 +44,7 @@ class H(http.server.SimpleHTTPRequestHandler):
             try: r = letterboxd(s.path.split("/")[2].split("?")[0]); return s.send_json((503 if r.get("retry") else 404) if "error" in r else 200, json.dumps(r, ensure_ascii=False).encode())
             except Exception as e:
                 import traceback; traceback.print_exc(); return s.send_json(502, json.dumps({"error": "Letterboxd ne répond pas, réessayez."}).encode())
-        if any(x in s.path for x in ("users.json", ".git", "server.py", ".tmp")): return s.send_json(404, b'{"error":"not found"}')
+        if any(x in s.path for x in ("users.json", "yt_cache", ".git", "server.py", ".tmp")): return s.send_json(404, b'{"error":"not found"}')
         if not s.path.startswith("/pathe/"): return super().do_GET()
         path = s.path[len("/pathe/"):]
         url = "https://www.pathe.fr/api/" + path + ("&" if "?" in path else "?") + "language=fr"
@@ -362,6 +365,87 @@ def film_extra(fid):
     body = json.dumps(out).encode()
     with LOCK: CACHE[key] = (time.time(), body)
     return body
+
+# ---------- v14 : bande-annonce YouTube (rapide) ----------
+# Clé YouTube Data API si YT_API_KEY est défini ; sinon lecture de la page publique de résultats YouTube.
+# Chaque ID est vérifié via l'oEmbed officiel, puis mis en cache (mémoire + yt_cache.json). Aucun ID n'est inventé.
+import unicodedata
+YT_KEY = os.environ.get("YT_API_KEY", "") or os.environ.get("YOUTUBE_API_KEY", "")
+YT_PATH = os.environ.get("YT_CACHE", os.path.join(ROOT, "yt_cache.json")); YTL = threading.Lock(); YT_SEM = threading.Semaphore(3)
+try: YT = json.load(open(YT_PATH))
+except Exception: YT = {}
+YT_OFFICIAL = ("studiocanal", "pathé", "pathe", "gaumont", "warner bros", "universal pictures", "sony pictures", "disney", "paramount", "le pacte", "diaphana", "metropolitan", "snd", "ugc", "memento", "haut et court", "ad vitam", "pyramide", "bac films", "wild bunch", "tandem", "apollo", "jour2fête", "rezo", "condor", "mk2", "marvel", "pixar", "dreamworks", "20th century", "lionsgate", "a24", "orange studio", "studio tf1", "tf1 studio", "kmbo", "nour films", "zinc", "sophie dulac", "the jokers", "les films du losange", "epicentre", "ufo distribution", "star invest", "eurozoom", "arp", "warner", "netflix", "amazon mgm", "alba films", "destiny films", "dulac", "artistic", "ciné sorbonne")
+def _n(s): return re.sub(r"[^a-z0-9]+", " ", unicodedata.normalize("NFKD", (s or "").lower()).encode("ascii", "ignore").decode()).strip()
+def _yt_save():
+    try:
+        tmp = YT_PATH + ".tmp"; json.dump(YT, open(tmp, "w")); os.replace(tmp, YT_PATH)
+    except Exception: pass
+def _yt_candidates(q):
+    if YT_KEY:
+        u = "https://www.googleapis.com/youtube/v3/search?" + urllib.parse.urlencode({"part": "snippet", "q": q, "type": "video", "maxResults": 8, "regionCode": "FR", "relevanceLanguage": "fr", "key": YT_KEY})
+        d = json.loads(urllib.request.urlopen(u, timeout=10).read())
+        return [{"id": i["id"]["videoId"], "title": i["snippet"]["title"], "ch": i["snippet"]["channelTitle"], "ver": False} for i in d.get("items", [])]
+    r = urllib.request.Request("https://www.youtube.com/results?" + urllib.parse.urlencode({"search_query": q, "hl": "fr", "gl": "FR"}), headers={"User-Agent": UA, "Accept-Language": "fr-FR,fr;q=0.9"})
+    t = urllib.request.urlopen(r, timeout=10).read().decode("utf-8", "replace")
+    m = re.search(r"var ytInitialData = (\{.*?\});</script>", t)
+    if not m: return []
+    out = []
+    def walk(o):
+        if isinstance(o, dict):
+            v = o.get("videoRenderer")
+            if v and v.get("videoId"):
+                out.append({"id": v["videoId"], "title": "".join(x.get("text", "") for x in v.get("title", {}).get("runs", [])), "ch": ((v.get("ownerText") or {}).get("runs") or [{}])[0].get("text", ""), "ver": "VERIFIED" in json.dumps(v.get("ownerBadges", [])), "len": (v.get("lengthText") or {}).get("simpleText", "")})
+            else:
+                for x in o.values(): walk(x)
+        elif isinstance(o, list):
+            for x in o: walk(x)
+    walk(json.loads(m.group(1))); return out[:12]
+def _yt_score(c, title, year):
+    vt, ch, nt = _n(c["title"]), _n(c["ch"]), _n(title)
+    if not nt or nt not in vt: return -99
+    if re.search(r"\b(critique|review|reaction|analyse|explique|ending|fin expliquee|making of|interview|extrait|clip|parodie|fan made|concept|ia|saison|season|episode|serie)\b", vt): return -99
+    if c.get("len"):
+        p = [int(x) for x in c["len"].split(":") if x.isdigit()]; sec = p[-1] + (p[-2] * 60 if len(p) > 1 else 0) + (p[-3] * 3600 if len(p) > 2 else 0)
+        if sec > 360 or sec < 20: return -99
+    s = 0
+    if re.search(r"bande annonce|trailer", vt): s += 6
+    if "teaser" in vt: s -= 2
+    if re.search(r"\bvf\b|officiel", vt): s += 2
+    if re.search(r"\bvo(st)?\b", vt): s -= 1
+    if year and str(year) in vt: s += 2
+    elif re.search(r"\b(19|20)\d\d\b", vt) and year: s -= 4
+    if any(o in ch for o in map(_n, YT_OFFICIAL)): s += 6
+    elif "allocine" in ch: s += 4
+    elif "filmsactu" in ch: s += 3
+    if c.get("ver"): s += 2
+    return s
+def _yt_exists(vid):
+    try:
+        urllib.request.urlopen(urllib.request.Request("https://www.youtube.com/oembed?format=json&url=" + urllib.parse.quote("https://www.youtube.com/watch?v=" + vid), headers={"User-Agent": UA}), timeout=8).read(); return True
+    except Exception: return False
+def yt_trailer(fid, title, year):
+    fid = re.sub(r"\D", "", fid)[:12] or _n(title)[:60]
+    with YTL: hit = YT.get(fid)
+    if hit and time.time() - hit.get("at", 0) < (30 * 86400 if hit.get("id") else 2 * 86400): return hit
+    if not title:
+        f = films_in_cache().get(fid) or {}; title, year = f.get("title", ""), year or f.get("year", "")
+    if not title: return {"id": None}
+    res = {"id": None, "at": time.time()}; ok = False
+    with YT_SEM:
+        try:
+            best = None
+            for q in (f"{title} {year or ''} bande annonce VF officielle", f"{title} bande annonce"):
+                cs = sorted(((_yt_score(c, title, year), i, c) for i, c in enumerate(_yt_candidates(q))), key=lambda x: (-x[0], x[1]))
+                for sc, _, c in cs:
+                    if sc < 6: break
+                    if _yt_exists(c["id"]): best = (sc, c); break
+                ok = True
+                if best: break
+            if best: res.update(id=best[1]["id"], title=best[1]["title"], ch=best[1]["ch"], score=best[0])
+        except Exception as e: print("yt", fid, e, file=sys.stderr)
+    if ok or res["id"]:
+        with YTL: YT[fid] = res; _yt_save()
+    return res
 
 def films_in_cache():
     res = {}

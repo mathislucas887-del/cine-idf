@@ -7,3 +7,4 @@ users.json.tmp
 mobile/node_modules/
 android/out/
 *.keystore
+yt_cache.json*

@@ -1,10 +1,10 @@
-// v13 : CinéMatch — découverte de films façon swipe, à partir des vraies séances Allociné (Pathé + partenaires CinéPass)
+// v13/v14 : CinéMatch — découverte de films façon swipe, à partir des vraies séances Allociné (Pathé + partenaires CinéPass)
 (function () {
 "use strict";
 const ELIG = c => c && (c.type === "pathe" || c.type === "partner" || c.cinepass);
 const parse = v => { if (Array.isArray(v)) return v; if (typeof v === "string") { try { return JSON.parse(v.replace(/'/g, '"').replace(/\bFalse\b/g, "false").replace(/\bTrue\b/g, "true")); } catch (e) { return []; } } return []; };
 const MS = Object.assign({sw: {}, hist: [], once: {}}, LS.get("match", {}));
-const saveMS = () => LS.set("match", {sw: MS.sw, hist: MS.hist.slice(-30), once: MS.once});
+const saveMS = () => LS.set("match", {sw: MS.sw, hist: MS.hist.slice(-30), once: MS.once, bt: MS.bt || {}});
 const OPT = Object.assign({genre: "", sort: "reco", cines: [], replay: false}, LS.get("matchOpt", {}));
 const CAT = {films: [], at: 0, loading: false, err: "", days: 0};
 window.MATCHCAT = CAT;
@@ -55,7 +55,7 @@ window.MATCH_BADGES = [
   {id: "m10", ic: "🔎", t: "CinéMatch · Curieux", d: "10 films ajoutés", cur: likesN, goal: 10},
   {id: "m25", ic: "🗂️", t: "CinéMatch · Collectionneur", d: "25 films ajoutés", cur: likesN, goal: 25},
   {id: "m50", ic: "🎓", t: "CinéMatch · Cinéphile averti", d: "50 films ajoutés", cur: likesN, goal: 50}];
-const badgeCheck = before => window.MATCH_BADGES.forEach(b => { if (b.cur() >= b.goal && !before.includes(b.id)) toast(`${b.ic} Badge débloqué : ${b.t}`); });
+const badgeCheck = before => window.MATCH_BADGES.forEach(b => { if (b.cur() >= b.goal && !before.includes(b.id) && !(MS.bt ||= {})[b.id]) { MS.bt[b.id] = 1; toast(`${b.ic} Badge débloqué : ${b.t}`); } });
 const earned = () => window.MATCH_BADGES.filter(b => b.cur() >= b.goal).map(b => b.id);
 // ---------- Actions ----------
 const film = id => CAT.films.find(f => f.id === String(id));
@@ -82,14 +82,21 @@ window.matchUndo = async () => { const h = MS.hist.pop(); if (!h) return toast("
   delete MS.sw[h.id]; if (h.added) { LISTS.towatch = LISTS.towatch.filter(x => x.id !== h.id); LS.set("lists", LISTS); sync(); }
   saveMS(); if (TOKEN) post("/api/match", {op: "undo", fid: h.id}).catch(() => {}); FORCE = h.id; toast("Dernière action annulée"); renderMatch(); };
 window.matchRemove = id => { LISTS.towatch = LISTS.towatch.filter(x => x.id !== String(id)); LS.set("lists", LISTS); sync(); toast("Retiré de ta watchlist"); renderMatch(); };
-// ---------- Bande-annonce ----------
-window.matchTrailer = async id => { const f = film(id) || {title: ""};
-  modal(`<div class="mbody mtrail"><h2>▶ ${esc(f.title)}</h2><div class="trailer" id="mtr"><div class="sk" style="height:100%"><div class="im" style="height:100%"></div></div></div><p class="sub" id="mtrm">Chargement de la bande-annonce…</p></div>`);
-  try { const x = await fetch("/film-extra/" + encodeURIComponent(id)).then(j);
-    if (!document.getElementById("mtr")) return;
-    if (x.trailer) { $("#mtr").innerHTML = `<iframe src="${esc(x.trailer)}" title="Bande-annonce de ${esc(f.title)}" allow="fullscreen; picture-in-picture" allowfullscreen loading="lazy"></iframe>`; $("#mtrm").textContent = "Source : Allociné. Lance la lecture depuis le lecteur."; }
-    else { $("#mtr").remove(); $("#mtrm").textContent = "Bande-annonce indisponible pour ce film."; }
-  } catch (e) { const m = $("#mtrm"); if (m) { $("#mtr")?.remove(); m.textContent = "Bande-annonce indisponible pour le moment."; } } };
+// ---------- Bande-annonce (v14 : YouTube rapide, repli Allociné) ----------
+const YTC = new Map();
+const ytFor = f => { if (!f) return Promise.resolve({}); const k = String(f.id); if (!YTC.has(k)) YTC.set(k, fetch(`/yt-trailer/${encodeURIComponent(k)}?t=${encodeURIComponent(f.title || "")}&y=${encodeURIComponent(f.year || "")}`).then(j).catch(() => (YTC.delete(k), {}))); return YTC.get(k); };
+window.matchYT = ytFor;
+window.matchPlay = (vid, t) => { const box = $("#mtr"); if (!box) return; box.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(vid)}?autoplay=1&mute=1&playsinline=1&rel=0&modestbranding=1" title="Bande-annonce de ${esc(t)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`; };
+window.matchTrailer = async id => { const f = film(id) || (LISTS.towatch || []).find(x => x.id === String(id)) || {id, title: ""};
+  modal(`<div class="mbody mtrail"><h2>▶ ${esc(f.title)}</h2><div class="trailer" id="mtr"><div class="sk" style="height:100%"><div class="im" style="height:100%"></div></div></div><p class="sub" id="mtrm">Recherche de la bande-annonce…</p></div>`);
+  const y = await ytFor(f); if (!document.getElementById("mtr")) return;
+  if (y && y.id) { const t = esc(f.title);
+    $("#mtr").innerHTML = `<button class="ytlite" onclick="matchPlay('${esc(y.id)}', this.dataset.t)" data-t="${t}" aria-label="Lire la bande-annonce de ${t} (son coupé au départ)"><img src="https://i.ytimg.com/vi/${esc(y.id)}/hqdefault.jpg" alt="Bande-annonce de ${t}"><span class="ytplay" aria-hidden="true">▶</span></button>`;
+    $("#mtrm").textContent = `YouTube · ${y.ch || ""} · touche pour lire (son coupé, active-le dans le lecteur)`; return; }
+  try { const x = await fetch("/film-extra/" + encodeURIComponent(id)).then(j); if (!document.getElementById("mtr")) return;
+    if (x.trailer) { $("#mtr").innerHTML = `<iframe src="${esc(x.trailer)}" title="Bande-annonce de ${esc(f.title)}" allow="fullscreen; picture-in-picture" allowfullscreen loading="lazy"></iframe>`; $("#mtrm").textContent = "Source : Allociné. Lance la lecture depuis le lecteur."; return; }
+  } catch (e) {}
+  const m = $("#mtrm"); if (m) { $("#mtr")?.remove(); m.textContent = "Bande-annonce indisponible pour ce film."; } };
 // ---------- Fiche & séances (catalogue 7 jours) ----------
 window.matchFilm = id => { const f = film(id); if (!f) { if (FILMS.some(x => String(x.id) === String(id))) return openFilm(id); return toast("Ce film n’a plus de séance à venir"); }
   if (FILMS.some(x => String(x.id) === String(id))) return openFilm(id);
@@ -110,10 +117,11 @@ function cardHTML(f, top) { const g = f.genres.slice(0, 3).join(" · ");
    <p class="syn">${esc(f.synopsis || "")}</p>
    <div class="mcf"><span class="chip on">📍 Disponible dans ${f.cines.length} cinéma${f.cines.length > 1 ? "s" : ""}</span>${top ? `<button class="ghost sm" onclick="matchTrailer('${esc(f.id)}')">▶ Bande-annonce</button><button class="ghost sm" onclick="matchFilm('${esc(f.id)}')">Séances</button>` : ""}</div></div></article>`; }
 function filtersHTML() { const G2 = [...new Set(CAT.films.flatMap(f => f.genres))].sort((a, b) => a.localeCompare(b, "fr")); const CS = [...new Set(CAT.films.flatMap(f => f.cines))].map(byId).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name, "fr"));
-  return `<div class="mfil"><select aria-label="Genre" onchange="matchOpt('genre',this.value)"><option value="">Tous les genres</option>${G2.map(g => `<option ${g === OPT.genre ? "selected" : ""}>${esc(g)}</option>`).join("")}</select>
+  const nf = (OPT.genre ? 1 : 0) + (OPT.sort !== "reco" ? 1 : 0) + (OPT.cines.length ? 1 : 0) + (OPT.replay ? 1 : 0);
+  return `<details class="mfp" ${window.__mfpOpen ? "open" : ""} ontoggle="window.__mfpOpen=this.open"><summary aria-label="Filtres">⚙︎ Filtres${nf ? ` (${nf})` : ""}</summary><div class="mfil"><select aria-label="Genre" onchange="matchOpt('genre',this.value)"><option value="">Tous les genres</option>${G2.map(g => `<option ${g === OPT.genre ? "selected" : ""}>${esc(g)}</option>`).join("")}</select>
   <select aria-label="Trier" onchange="matchOpt('sort',this.value)">${[["reco", "Pour toi"], ["pop", "Popularité"], ["date", "Date de sortie"], ["note", "Note"]].map(([k, l]) => `<option value="${k}" ${k === OPT.sort ? "selected" : ""}>${l}</option>`).join("")}</select>
   <details class="mcin"><summary>${OPT.cines.length ? OPT.cines.length + " cinéma(s)" : "Tous les cinémas"}</summary><div>${CS.map(c => `<label><input type="checkbox" ${OPT.cines.includes(c.id) ? "checked" : ""} onchange="matchCine('${esc(c.id)}',this.checked)"> ${esc(c.name)}</label>`).join("")}${OPT.cines.length ? `<button class="ghost sm" onclick="matchOpt('cines',[])">Réinitialiser</button>` : ""}</div></details>
-  <label class="mrep"><input type="checkbox" ${OPT.replay ? "checked" : ""} onchange="matchOpt('replay',this.checked)"> Revoir les films passés</label></div>`; }
+  <label class="mrep"><input type="checkbox" ${OPT.replay ? "checked" : ""} onchange="matchOpt('replay',this.checked)"> Revoir les films passés</label></div></details>`; }
 window.matchOpt = (k, v) => { OPT[k] = v; LS.set("matchOpt", OPT); FORCE = null; renderMatch(); };
 window.matchCine = (id, on) => { OPT.cines = on ? [...new Set([...OPT.cines, id])] : OPT.cines.filter(x => x !== id); LS.set("matchOpt", OPT); renderMatch(); };
 window.matchTab = t => { TAB = t; renderMatch(); };
@@ -122,13 +130,14 @@ function watchHTML() { const L = (LISTS.towatch || []).slice().reverse();
    <div class="row2"><button class="ghost sm" onclick="matchFilm('${esc(x.id)}')">Fiche</button>${f ? `<button class="primary sm" onclick="matchSeances('${esc(x.id)}')">Voir les séances</button>` : ""}<button class="ghost sm" aria-label="Retirer ${esc(x.title)} de la watchlist" onclick="matchRemove('${esc(x.id)}')">✕ Retirer</button></div></div></div>`; }).join("")}</div>` : `<p class="empty">Ta watchlist est vide. Glisse des films vers la droite pour les ajouter.</p>`; }
 window.renderMatch = function () { const el = $("#v-match"); if (!el) return; if (!CAT.films.length && !CAT.loading && !CAT.err) loadCatalog();
   const L = CAT.films.length ? ranked() : [], c = CUR(), n = c && NEXT();
-  el.innerHTML = `<div class="match"><div class="mhd"><h1>💘 CinéMatch</h1><div class="subnav mtabs" role="tablist"><button role="tab" aria-selected="${TAB === "deck"}" class="${TAB === "deck" ? "on" : ""}" onclick="matchTab('deck')">Découvrir</button><button role="tab" aria-selected="${TAB === "list"}" class="${TAB === "list" ? "on" : ""}" onclick="matchTab('list')">Ma watchlist (${(LISTS.towatch || []).length})</button></div></div>
+  el.innerHTML = `<div class="match${TAB === "deck" ? " mdeck" : ""}"><div class="mhd"><h1>💘 CinéMatch</h1><div class="subnav mtabs" role="tablist"><button role="tab" aria-selected="${TAB === "deck"}" class="${TAB === "deck" ? "on" : ""}" onclick="matchTab('deck')">Découvrir</button><button role="tab" aria-selected="${TAB === "list"}" class="${TAB === "list" ? "on" : ""}" onclick="matchTab('list')">Ma watchlist (${(LISTS.towatch || []).length})</button></div></div>
   ${TAB === "list" ? watchHTML() : `${CAT.films.length ? filtersHTML() : ""}
   <p class="sub mcount" aria-live="polite">${CAT.films.length ? `${CAT.films.length} films à l’affiche dans les Pathé et cinémas partenaires CinéPass${CAT.loading ? " (chargement des prochains jours…)" : ""} · ${L.length} à découvrir` : CAT.err ? esc(CAT.err) : "Chargement des films à l’affiche…"}</p>
   <div class="deck" id="deck">${c ? (n ? cardHTML(n, false) : "") + cardHTML(c, true) : CAT.films.length ? `<div class="mend"><b>Tu as tout vu ✨</b><p class="sub">Plus aucun film à découvrir avec ces filtres.</p><button class="ghost" onclick="matchOpt('replay',true)">Revoir les films passés</button></div>` : CAT.err ? `<div class="mend"><button class="primary" onclick="loadCatalogX()">Réessayer</button></div>` : `<div class="mc top sk"><div class="im" style="height:100%"></div></div>`}</div>
   <div class="mbtns"><button class="mb undo" onclick="matchUndo()" aria-label="Annuler la dernière action" ${MS.hist.length ? "" : "disabled"}>↶</button><button class="mb pass" onclick="matchSwipe('pass')" aria-label="Passer" ${c ? "" : "disabled"}>✕</button><button class="mb like" onclick="matchSwipe('like')" aria-label="Ajouter à ma watchlist" ${c ? "" : "disabled"}>♥</button></div>
   <p class="sub mhint">Glisse ou utilise ← / → · touche la carte pour la bande-annonce</p>`}</div>`;
   if (n && n.poster) { const i = new Image(); i.src = n.poster; } const nn = L[2]; if (nn && nn.poster) { const i = new Image(); i.src = nn.poster; }
+  if (c) ytFor(c); if (n) setTimeout(() => ytFor(n), 800);
   bindDrag(); };
 window.loadCatalogX = () => loadCatalog(true);
 function bindDrag() { const card = $("#mcard"); if (!card) return; let x0 = 0, y0 = 0, dx = 0, dy = 0, on = false, id = null;
