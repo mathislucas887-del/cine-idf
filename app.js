@@ -132,7 +132,7 @@ async function restore() { // session persistante : reconstitue le compte si le 
 async function sync() { saveLocal(); if (!TOKEN) return; try { applyProfile(await post("/api/favs", profileData()), false); }
   catch (e) { if (/Session/.test(e.message) && await restore()) { try { await post("/api/favs", profileData()); } catch (_) {} } } }
 function applyProfile(x, merge) {
-  if (x.restore) LS.set("cineRestore", x.restore);
+  if (x.restore) { LS.set("cineRestore", x.restore); if (x.email) { const m = LS.get("cineRestoreBy", {}) || {}; m[x.email] = x.restore; LS.set("cineRestoreBy", m); LS.set("cineLastEmail", x.email); } }
   if (merge) { (x.favs || []).forEach(f => FAVS.add(f)); const seen = new Set(TICKETS.map(t => t.id)); (x.tickets || []).forEach(t => seen.has(t.id) || TICKETS.push(t));
     for (const k of ["towatch", "seen", "rewatch"]) { const ids = new Set(LISTS[k].map(i => i.id)); ((x.lists || {})[k] || []).forEach(i => ids.has(i.id) || LISTS[k].push(i)); }
     if (x.lb && !LB.user) { LB.user = x.lb; LS.set("lb", LB); loadLB(); } Object.assign(ALERTS, x.alerts || {}); EXTRA = {...(x.extra || {}), ...EXTRA}; LS.set("extra", EXTRA); if (x.game && (x.game.xp || 0) > (GAME.xp || 0)) { GAME = x.game; LS.set("game", GAME); } }
@@ -156,13 +156,14 @@ window.openAcct = msg => {
       <div class="tabs" role="tablist"><button id="tsu" class="primary" onclick="authMode('signup')">Créer un compte</button><button id="tli" class="ghost" onclick="authMode('login')">Se connecter</button></div>
       <form onsubmit="doAuth(event)"><label class="sub" for="aemail">E-mail</label><input id="aemail" type="email" autocomplete="email" required><label class="sub" for="apw">Mot de passe (6 caractères min.)</label><input id="apw" type="password" autocomplete="new-password" required minlength="6">
       <div class="err" id="aerr" role="alert"></div><button class="primary" style="width:100%" id="asub">Créer mon compte</button></form>${lbBlock()}</div>`);
-    AMODE = "signup";
+    AMODE = "signup"; const le = LS.get("cineLastEmail", ""); if (le) { $("#aemail").value = le; authMode("login"); }
   }
 };
 $("#acct").onclick = () => openAcct();
 window.authMode = m => { AMODE = m; $("#tsu").className = m === "signup" ? "primary" : "ghost"; $("#tli").className = m === "login" ? "primary" : "ghost"; $("#asub").textContent = m === "signup" ? "Créer mon compte" : "Se connecter"; $("#apw").autocomplete = m === "signup" ? "new-password" : "current-password"; };
 window.doAuth = async e => { e.preventDefault(); $("#aerr").textContent = "";
-  try { onAuth(await post("/api/" + AMODE, {email: $("#aemail").value, password: $("#apw").value})); if (PENDING) { const f = PENDING; PENDING = null; return f(); } openAcct(); }
+  const em = $("#aemail").value.trim().toLowerCase(); const rb = (LS.get("cineRestoreBy", {}) || {})[em];
+  try { onAuth(await post("/api/" + AMODE, {email: em, password: $("#apw").value, ...(AMODE === "login" && rb ? {restore: rb, data: profileData()} : {})})); if (PENDING) { const f = PENDING; PENDING = null; return f(); } openAcct(); }
   catch (err) { $("#aerr").textContent = err.message; } };
 window.logout = async () => { try { await post("/api/logout"); } catch (e) {} logoutLocal(); LS.set("cineRestore", null); closeModal(); };
 window.toggleFav = id => { FAVS.has(id) ? FAVS.delete(id) : FAVS.add(id); sync(); refreshCines(); openCine(id); };

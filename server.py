@@ -254,10 +254,20 @@ def api_post(h, path):
             if len(pw) < 6: return out(400, {"error": "Mot de passe : 6 caractères minimum."})
             u = d["users"].get(email)
             if path == "/api/signup":
-                if u: return out(409, {"error": "Un compte existe déjà avec cet e-mail."})
+                if u: return out(409, {"error": "Un compte existe déjà avec cet e-mail : utilisez « Se connecter ».", "code": "exists"})
                 salt = secrets.token_hex(16); u = d["users"][email] = {"salt": salt, "hash": pw_hash(pw, salt), "favs": [], "created": int(time.time())}
-            elif not u or not hmac.compare_digest(u["hash"], pw_hash(pw, u["salt"])):
-                return out(401, {"error": "E-mail ou mot de passe incorrect."})
+            else:
+                if not u:
+                    # v16 : le serveur gratuit a pu perdre ses comptes (mise en veille / redéploiement). L'appareil garde
+                    # le sel + hash (jamais le mot de passe) : si le mot de passe saisi correspond, on recrée le compte.
+                    r = body.get("restore") or {}
+                    if re.fullmatch(r"[0-9a-f]{32}", str(r.get("salt", ""))) and re.fullmatch(r"[0-9a-f]{64}", str(r.get("hash", ""))) and hmac.compare_digest(r["hash"], pw_hash(pw, r["salt"])):
+                        u = d["users"][email] = {"salt": r["salt"], "hash": r["hash"], "favs": [], "created": int(time.time()), "restored": True}
+                        clean_profile(u, body.get("data") or {})
+                    else:
+                        return out(401, {"error": "Aucun compte trouvé pour " + email + " sur le serveur (il a peut-être redémarré). Recréez le compte avec « Créer un compte » : vos données de cet appareil seront reprises.", "code": "no_account"})
+                elif not hmac.compare_digest(u["hash"], pw_hash(pw, u["salt"])):
+                    return out(401, {"error": "Mot de passe incorrect pour " + email + ".", "code": "bad_password"})
             tok = secrets.token_urlsafe(32); d["tokens"][tok] = email; db_save(d)
             return out(200, {"token": tok, **prof(email, u)})
         if path == "/api/restore":
