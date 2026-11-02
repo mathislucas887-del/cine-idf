@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="/style.css">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Ciné IDF","url":"https://cine-idf.onrender.com/","inLanguage":"fr-FR","description":"Séances de cinéma en Île-de-France (source Allociné)."}</script>
 <script type="application/ld+json" id="ld-events">[]</script>
+<style>.v16off,#s-liked{display:none!important}</style>
 </head><body>
 <a class="skip" href="#main">Aller au contenu</a>
 <header>
@@ -41,14 +42,14 @@
  </div>
  <div id="fresh" class="fresh" aria-live="polite"></div><div id="alerts" class="alerts" aria-live="polite"></div>
  <div id="home">
-  <section class="fsec" id="s-reco" aria-labelledby="h0" hidden><h2 id="h0">💛 Pour vous</h2><p class="sub">Votre watchlist Letterboxd à l’affiche, et des films proches de vos goûts.</p><div id="c-reco" class="rail" tabindex="0"></div></section>
+  <section class="fsec v16off" id="s-reco" aria-labelledby="h0" hidden><h2 id="h0">💛 Pour vous</h2><p class="sub">Votre watchlist Letterboxd à l’affiche, et des films proches de vos goûts.</p><div id="c-reco" class="rail" tabindex="0"></div></section>
   <section class="fsec" aria-labelledby="h1"><h2 id="h1">🆕 Sorties de la semaine</h2><div id="c-new" class="rail" tabindex="0" aria-label="Sorties de la semaine"></div></section>
-  <section class="fsec" aria-labelledby="h2"><h2 id="h2">✨ Séances spéciales & avant-premières</h2><div id="c-sp" class="rail" tabindex="0"></div></section>
-  <section class="fsec" aria-labelledby="h2b"><h2 id="h2b">🎭 Événements</h2><p class="sub">Concerts, opéras, ballets, retransmissions en direct, ciné-débats.</p><div id="c-ev" class="rail" tabindex="0"></div></section>
-  <section class="fsec" aria-labelledby="h3"><h2 id="h3">🎞️ Séances rétro</h2><p class="sub">Films sortis avant 2026, projetés dans un cinéma hors Pathé.</p><div id="c-retro" class="rail" tabindex="0"></div></section>
+  <section class="fsec v16off" aria-labelledby="h2" hidden><h2 id="h2">✨ Séances spéciales & avant-premières</h2><div id="c-sp" class="rail" tabindex="0"></div></section>
+  <section class="fsec v16off" aria-labelledby="h2b" hidden><h2 id="h2b">🎭 Événements</h2><p class="sub">Concerts, opéras, ballets, retransmissions en direct, ciné-débats.</p><div id="c-ev" class="rail" tabindex="0"></div></section>
+  <section class="fsec v16off" aria-labelledby="h3" hidden><h2 id="h3">🎞️ Séances rétro</h2><p class="sub">Films sortis avant 2026, projetés dans un cinéma hors Pathé.</p><div id="c-retro" class="rail" tabindex="0"></div></section>
   <section class="fsec" aria-labelledby="h4"><h2 id="h4">🍿 Tous les films au cinéma</h2><div id="c-all" class="rail" tabindex="0"></div></section>
  </div>
- <section class="fsec"><div class="shead"><h2>🕒 Toutes les séances</h2><div class="seg" role="group" aria-label="Affichage"><button id="vlist" class="on" aria-pressed="true">☰ Liste</button><button id="vgrid" aria-pressed="false">▦ Affiches</button></div></div><p class="legend sub"><b class="pill">VF</b> version française · <b class="pill vo">VO</b> version originale sous-titrée · <span class="fx">IMAX / 4DX / Dolby / 3D</span> salle · ★ séance spéciale · ♿ accessible · <span class="lbw">Watchlist</span> dans votre watchlist Letterboxd · affiche grisée = déjà vu. Touchez un horaire pour réserver (redirection vers pathe.fr ou le site du cinéma).</p><div id="shows" aria-live="polite"></div></section>
+ <section class="fsec v16off" hidden><div class="shead"><h2>🕒 Toutes les séances</h2><div class="seg" role="group" aria-label="Affichage"><button id="vlist" class="on" aria-pressed="true">☰ Liste</button><button id="vgrid" aria-pressed="false">▦ Affiches</button></div></div><p class="legend sub"><b class="pill">VF</b> version française · <b class="pill vo">VO</b> version originale sous-titrée · <span class="fx">IMAX / 4DX / Dolby / 3D</span> salle · ★ séance spéciale · ♿ accessible · <span class="lbw">Watchlist</span> dans votre watchlist Letterboxd · affiche grisée = déjà vu. Touchez un horaire pour réserver (redirection vers pathe.fr ou le site du cinéma).</p><div id="shows" aria-live="polite"></div></section>
 </section>
 <section id="v-map" class="view" aria-label="Carte des cinémas"><div class="mapbar"><input id="q" type="search" placeholder="Rechercher un cinéma, une ville…" aria-label="Rechercher un cinéma"><select id="ftype" aria-label="Type"><option value="">Tous</option><option value="pathe">Pathé</option><option value="partner">Partenaires CinéPass</option><option value="other">Autres cinémas</option><option value="fav">⭐ Mes favoris</option></select><select id="fdep" aria-label="Département"><option value="">Toute l’IDF</option></select><button id="near" class="ghost" aria-label="Cinémas près de moi">📍 Près de moi</button><span id="count"></span></div><div id="map"></div></section>
 <section id="v-list" class="view" aria-label="Liste des cinémas"><div class="filters"><input id="q2" type="search" placeholder="Rechercher…" aria-label="Rechercher un cinéma"><select id="ftype2" aria-label="Type"><option value="">Tous</option><option value="pathe">Pathé</option><option value="partner">Partenaires CinéPass</option><option value="other">Autres cinémas</option><option value="fav">⭐ Mes favoris</option></select><select id="fdep2" aria-label="Département"><option value="">Toute l’IDF</option></select><button id="near2" class="ghost">📍 Trier par distance</button></div><div id="grid" class="grid"></div></section>

@@ -5,7 +5,7 @@ const ELIG = c => c && (c.type === "pathe" || c.type === "partner" || c.cinepass
 const parse = v => { if (Array.isArray(v)) return v; if (typeof v === "string") { try { return JSON.parse(v.replace(/'/g, '"').replace(/\bFalse\b/g, "false").replace(/\bTrue\b/g, "true")); } catch (e) { return []; } } return []; };
 const MS = Object.assign({sw: {}, hist: [], once: {}}, LS.get("match", {}));
 const saveMS = () => LS.set("match", {sw: MS.sw, hist: MS.hist.slice(-30), once: MS.once, bt: MS.bt || {}});
-const OPT = Object.assign({genre: "", sort: "reco", cines: [], replay: false}, LS.get("matchOpt", {}));
+const OPT = Object.assign({genre: "", sort: "reco", cines: [], replay: false}, LS.get("matchOpt", {})); if (OPT.sort === "date") OPT.sort = "reco";
 const CAT = {films: [], at: 0, loading: false, err: "", days: 0};
 window.MATCHCAT = CAT;
 // ---------- Catalogue : 7 jours de séances, Pathé + partenaires, dédoublonné par ID Allociné ----------
@@ -29,7 +29,9 @@ async function loadCatalog(force) {
   else publish(by);
   if (document.querySelector("#v-match.on")) renderMatch();
 }
-function publish(by) { CAT.films = Object.values(by).map(f => { f.cines = Object.keys(f.by); f.rel = (f.releases.find(r => r.name === "Released") || {}).date || ""; return f; }); CAT.at = Date.now(); window.dispatchEvent(new Event("cinecat")); }
+// v16 : uniquement les sorties de la semaine — même règle que « Sorties de la semaine » (app.js classify : sortie dans les 7 derniers jours, film récent)
+function weekRelease(f) { const D = ymd(new Date()), Y = +D.slice(0, 4), wk = new Date(D + "T12:00"); wk.setDate(wk.getDate() - 7); return !!f.rel && f.rel <= D && f.rel > ymd(wk) && (!f.year || f.year >= Y - 1); }
+function publish(by) { CAT.films = Object.values(by).map(f => { f.cines = Object.keys(f.by); f.rel = f.releases.filter(r => r.name === "Released" && r.date).map(r => r.date).sort()[0] || ""; return f; }).filter(weekRelease); CAT.at = Date.now(); window.dispatchEvent(new Event("cinecat")); }
 setInterval(() => { if (!document.hidden) loadCatalog(true); }, 30 * 6e4);
 // ---------- Classement ----------
 const lbk = t => lbKey(t || "");
@@ -119,7 +121,7 @@ function cardHTML(f, top) { const g = f.genres.slice(0, 3).join(" · "); let L =
 function filtersHTML() { const G2 = [...new Set(CAT.films.flatMap(f => f.genres))].sort((a, b) => a.localeCompare(b, "fr")); const CS = [...new Set(CAT.films.flatMap(f => f.cines))].map(byId).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name, "fr"));
   const nf = (OPT.genre ? 1 : 0) + (OPT.sort !== "reco" ? 1 : 0) + (OPT.cines.length ? 1 : 0) + (OPT.replay ? 1 : 0);
   return `<details class="mfp" ${window.__mfpOpen ? "open" : ""} ontoggle="window.__mfpOpen=this.open"><summary aria-label="Filtres">⚙︎ Filtres${nf ? ` (${nf})` : ""}</summary><div class="mfil"><select aria-label="Genre" onchange="matchOpt('genre',this.value)"><option value="">Tous les genres</option>${G2.map(g => `<option ${g === OPT.genre ? "selected" : ""}>${esc(g)}</option>`).join("")}</select>
-  <select aria-label="Trier" onchange="matchOpt('sort',this.value)">${[["reco", "Pour toi"], ["pop", "Popularité"], ["date", "Date de sortie"], ["note", "Note"]].map(([k, l]) => `<option value="${k}" ${k === OPT.sort ? "selected" : ""}>${l}</option>`).join("")}</select>
+  <select aria-label="Trier" onchange="matchOpt('sort',this.value)">${[["reco", "Pour toi"], ["pop", "Popularité"], ["note", "Note"]].map(([k, l]) => `<option value="${k}" ${k === OPT.sort ? "selected" : ""}>${l}</option>`).join("")}</select>
   <details class="mcin"><summary>${OPT.cines.length ? OPT.cines.length + " cinéma(s)" : "Tous les cinémas"}</summary><div>${CS.map(c => `<label><input type="checkbox" ${OPT.cines.includes(c.id) ? "checked" : ""} onchange="matchCine('${esc(c.id)}',this.checked)"> ${esc(c.name)}</label>`).join("")}${OPT.cines.length ? `<button class="ghost sm" onclick="matchOpt('cines',[])">Réinitialiser</button>` : ""}</div></details>
   <label class="mrep"><input type="checkbox" ${OPT.replay ? "checked" : ""} onchange="matchOpt('replay',this.checked)"> Revoir les films passés</label></div></details>`; }
 window.matchOpt = (k, v) => { OPT[k] = v; LS.set("matchOpt", OPT); FORCE = null; renderMatch(); };
@@ -132,7 +134,7 @@ window.renderMatch = function () { const el = $("#v-match"); if (!el) return; if
   const L = CAT.films.length ? ranked() : [], c = CUR(), n = c && NEXT();
   el.innerHTML = `<div class="match${TAB === "deck" ? " mdeck" : ""}"><div class="mhd"><h1>💘 CinéMatch</h1><div class="subnav mtabs" role="tablist"><button role="tab" aria-selected="${TAB === "deck"}" class="${TAB === "deck" ? "on" : ""}" onclick="matchTab('deck')">Découvrir</button><button role="tab" aria-selected="${TAB === "list"}" class="${TAB === "list" ? "on" : ""}" onclick="matchTab('list')">Ma watchlist (${(LISTS.towatch || []).length})</button></div></div>
   ${TAB === "list" ? watchHTML() : `${CAT.films.length ? filtersHTML() : ""}
-  <p class="sub mcount" aria-live="polite">${CAT.films.length ? `${CAT.films.length} films à l’affiche dans les Pathé et cinémas partenaires CinéPass${CAT.loading ? " (chargement des prochains jours…)" : ""} · ${L.length} à découvrir` : CAT.err ? esc(CAT.err) : "Chargement des films à l’affiche…"}</p>
+  <p class="sub mcount" aria-live="polite">${CAT.films.length ? `${CAT.films.length} sorties de la semaine à l’affiche dans les Pathé et cinémas partenaires CinéPass${CAT.loading ? " (chargement des prochains jours…)" : ""} · ${L.length} à découvrir` : CAT.err ? esc(CAT.err) : "Chargement des films à l’affiche…"}</p>
   <div class="deck" id="deck">${c ? (n ? cardHTML(n, false) : "") + cardHTML(c, true) : CAT.films.length ? `<div class="mend"><b>Tu as tout vu ✨</b><p class="sub">Plus aucun film à découvrir avec ces filtres.</p><button class="ghost" onclick="matchOpt('replay',true)">Revoir les films passés</button></div>` : CAT.err ? `<div class="mend"><button class="primary" onclick="loadCatalogX()">Réessayer</button></div>` : `<div class="mc top sk"><div class="im" style="height:100%"></div></div>`}</div>
   <div class="mbtns"><button class="mb undo" onclick="matchUndo()" aria-label="Annuler la dernière action" ${MS.hist.length ? "" : "disabled"}>↶</button><button class="mb pass" onclick="matchSwipe('pass')" aria-label="Passer" ${c ? "" : "disabled"}>✕</button><button class="mb like" onclick="matchSwipe('like')" aria-label="Ajouter à ma watchlist" ${c ? "" : "disabled"}>♥</button></div>
   <p class="sub mhint">Glisse ou utilise ← / → · touche la carte pour la bande-annonce</p>`}</div>`;
