@@ -133,7 +133,7 @@ def _allo_get(url):
             raise
 def status():
     return {"ok": True, "state": "réveillé", "uptime_s": int(time.time() - START), "cache": len(CACHE), "allocine_last_ok": STAT["ok_at"], "allocine_last_error": STAT["err_at"], "allocine_error": STAT["err"],
-            "allocine_ok": STAT["n_ok"], "allocine_errors": STAT["n_err"], "throttled": time.time() < STAT["backoff_until"], "agenda_at": AGENDA["at"], "backoff_s": STAT["backoff_s"], "snapshot": {k: STAT[k] for k in ("snap_loaded", "snap_push", "snap_err")}, "reports": len(REPORTS), "now": int(time.time()), "storage": {k: DURABLE.get(k) for k in ("backend", "last_push", "last_pull", "error")}}
+            "allocine_ok": STAT["n_ok"], "allocine_errors": STAT["n_err"], "throttled": time.time() < STAT["backoff_until"], "agenda_at": AGENDA["at"], "backoff_s": STAT["backoff_s"], "snapshot": {k: STAT[k] for k in ("snap_loaded", "snap_push", "snap_err")}, "reports": len(REPORTS), "now": int(time.time()), "storage": {k: DURABLE.get(k) for k in ("backend", "last_push", "last_pull", "error")}, "mail": mail_provider() or "aucun"}
 def build_agenda():
     import datetime
     BG.on = True
@@ -285,6 +285,86 @@ def clean_profile(u, body):
     if "alerts" in body and isinstance(body["alerts"], dict): u["alerts"] = {k: bool(v) for k, v in list(body["alerts"].items())[:10]}
 def prof(email, u): return {"email": email, **{k: u.get(k, [] if k in ("favs", "tickets") else ({} if k in ("lists", "alerts", "extra", "game") else "")) for k in PROFILE_KEYS}, "restore": {"salt": u["salt"], "hash": u["hash"]}}
 
+# ---------- v20 : « Mot de passe oublié » (lien à usage unique envoyé par e-mail) ----------
+# Seul le SHA-256 du jeton est stocké, dans la fiche du compte (donc copié dans le Gist et conservé après redémarrage),
+# avec une expiration de 30 min. Réponse toujours identique (pas de révélation des comptes existants), limites par IP et par e-mail.
+# Envoi : BREVO_API_KEY, RESEND_API_KEY (API HTTPS, compatibles Render gratuit) ou SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS ; expéditeur MAIL_FROM.
+import smtplib, ssl
+from email.message import EmailMessage
+from email.utils import parseaddr, formataddr
+APP_URL = (os.environ.get("APP_URL") or os.environ.get("RENDER_EXTERNAL_URL") or "https://cine-idf.onrender.com").rstrip("/")
+RESET_TTL = 30 * 60
+RL, RLL = {}, threading.Lock()
+def rate_ok(key, limit, window):
+    now = time.time()
+    with RLL:
+        q = [t for t in RL.get(key, []) if now - t < window]
+        if len(q) >= limit: RL[key] = q; return False
+        q.append(now); RL[key] = q
+        if len(RL) > 5000:
+            for k in [k for k, v in RL.items() if not v or now - v[-1] > 7200]: RL.pop(k, None)
+        return True
+def client_ip(h):
+    return ((h.headers.get("X-Forwarded-For") or "").split(",")[0].strip() or h.client_address[0])[:64]
+def mask_email(e):
+    a, _, b = e.partition("@"); return (a[:2] + "•••" if len(a) > 2 else a[:1] + "•••") + "@" + b
+def mail_provider():
+    if os.environ.get("BREVO_API_KEY"): return "brevo"
+    if os.environ.get("RESEND_API_KEY"): return "resend"
+    if os.environ.get("SMTP_HOST"): return "smtp"
+    return ""
+def send_mail(to, subject, text, html_body):
+    p = mail_provider(); frm = os.environ.get("MAIL_FROM") or os.environ.get("SMTP_USER") or ""
+    name, addr = parseaddr(frm); name = name or "Ciné IDF"
+    if not p: print("⚠️  Mot de passe oublié : aucun service d'e-mail configuré (BREVO_API_KEY, RESEND_API_KEY ou SMTP_HOST + MAIL_FROM) — e-mail NON envoyé à", mask_email(to), flush=True); return False
+    if not addr: print("⚠️  Mot de passe oublié : MAIL_FROM manquant — e-mail NON envoyé à", mask_email(to), flush=True); return False
+    try:
+        if p == "brevo":
+            r = urllib.request.Request("https://api.brevo.com/v3/smtp/email", method="POST", headers={"api-key": os.environ["BREVO_API_KEY"], "Content-Type": "application/json", "Accept": "application/json"},
+                data=json.dumps({"sender": {"name": name, "email": addr}, "to": [{"email": to}], "subject": subject, "textContent": text, "htmlContent": html_body}).encode())
+            urllib.request.urlopen(r, timeout=20).read()
+        elif p == "resend":
+            r = urllib.request.Request("https://api.resend.com/emails", method="POST", headers={"Authorization": "Bearer " + os.environ["RESEND_API_KEY"], "Content-Type": "application/json", "User-Agent": "cine-idf"},
+                data=json.dumps({"from": formataddr((name, addr)), "to": [to], "subject": subject, "text": text, "html": html_body}).encode())
+            urllib.request.urlopen(r, timeout=20).read()
+        else:
+            m = EmailMessage(); m["From"] = formataddr((name, addr)); m["To"] = to; m["Subject"] = subject
+            m.set_content(text); m.add_alternative(html_body, subtype="html")
+            host, port = os.environ["SMTP_HOST"], int(os.environ.get("SMTP_PORT") or 587); user, pw = os.environ.get("SMTP_USER", ""), os.environ.get("SMTP_PASS", "")
+            if port == 465: s = smtplib.SMTP_SSL(host, port, timeout=20, context=ssl.create_default_context())
+            else:
+                s = smtplib.SMTP(host, port, timeout=20)
+                if os.environ.get("SMTP_TLS", "1") != "0": s.starttls(context=ssl.create_default_context())
+            with s:
+                if user: s.login(user, pw)
+                s.send_message(m)
+        print("Mot de passe oublié : e-mail envoyé (" + p + ") à", mask_email(to), flush=True); return True
+    except urllib.error.HTTPError as e:
+        print("⚠️  Mot de passe oublié : échec d'envoi (" + p + ")", e.code, e.read()[:300].decode("utf-8", "ignore"), flush=True)
+    except Exception as e: print("⚠️  Mot de passe oublié : échec d'envoi (" + p + ")", type(e).__name__, str(e)[:200], flush=True)
+    return False
+def reset_mail(to, tok):
+    link = APP_URL + "/?reset=" + tok
+    text = ("Bonjour,\n\nUne demande de réinitialisation du mot de passe de votre compte Ciné IDF (" + to + ") a été faite.\n\n"
+            "Pour choisir un nouveau mot de passe, ouvrez ce lien (valable 30 minutes, une seule fois) :\n" + link + "\n\n"
+            "Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail : votre mot de passe actuel reste inchangé.\n\n— Ciné IDF")
+    hb = ('<div style="background:#0b0b0b;padding:28px 16px;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#eee">'
+          '<div style="max-width:460px;margin:0 auto;background:#151515;border:1px solid #3a2f12;border-radius:16px;padding:26px">'
+          '<div style="color:#d4af37;font-size:22px;font-weight:700;margin-bottom:6px">Ciné IDF</div>'
+          '<p style="font-size:16px;line-height:1.5">Une demande de réinitialisation du mot de passe a été faite pour <b>' + html.escape(to) + '</b>.</p>'
+          '<p style="text-align:center;margin:26px 0"><a href="' + html.escape(link) + '" style="background:#d4af37;color:#111;text-decoration:none;font-weight:700;padding:14px 22px;border-radius:12px;display:inline-block">Choisir un nouveau mot de passe</a></p>'
+          '<p style="font-size:13px;color:#aaa;line-height:1.5">Lien valable 30 minutes, utilisable une seule fois. Si vous n’êtes pas à l’origine de cette demande, ignorez cet e-mail : votre mot de passe actuel reste inchangé.</p>'
+          '<p style="font-size:12px;color:#777;word-break:break-all">' + html.escape(link) + '</p></div></div>')
+    return send_mail(to, "Ciné IDF – réinitialiser votre mot de passe", text, hb)
+def find_reset(d, tok):
+    hh = hashlib.sha256(tok.encode()).hexdigest(); now = time.time()
+    for em, u in d["users"].items():
+        r = u.get("reset")
+        if isinstance(r, dict) and hmac.compare_digest(str(r.get("h", "")), hh):
+            return (em, u) if r.get("exp", 0) > now else (None, None)
+    return None, None
+GENERIC_FORGOT = "Si un compte existe pour cette adresse, un e-mail avec un lien de réinitialisation vient d’être envoyé. Pensez à regarder dans les indésirables. Le lien est valable 30 minutes."
+
 def api_post(h, path):
     n = int(h.headers.get("Content-Length") or 0)
     if n > 300000: return h.send_json(413, b'{"error":"trop gros"}')
@@ -296,6 +376,34 @@ def api_post(h, path):
         REPORTS.append(r); del REPORTS[:-200]; print("SIGNALEMENT", json.dumps(r, ensure_ascii=False), flush=True)
         return out(200, {"ok": True})
     tok_in = (h.headers.get("Authorization") or "").replace("Bearer ", "")
+    if path == "/api/forgot":
+        email = str(body.get("email", "")).strip().lower()
+        if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email) or len(email) > 120: return out(400, {"error": "Adresse e-mail invalide."})
+        if not rate_ok("fip:" + client_ip(h), 5, 900): return out(429, {"error": "Trop de demandes depuis cet appareil. Réessayez dans 15 minutes."})
+        tok = None
+        if rate_ok("fem:" + email, 3, 3600):  # au-delà : on n'envoie plus, mais la réponse reste identique
+            with DBL:
+                d = db_load(); u = d["users"].get(email)
+                if u:
+                    tok = secrets.token_urlsafe(32)
+                    u["reset"] = {"h": hashlib.sha256(tok.encode()).hexdigest(), "exp": int(time.time()) + RESET_TTL}; db_save(d)
+        if tok: threading.Thread(target=reset_mail, args=(email, tok), daemon=True).start()
+        return out(200, {"ok": True, "message": GENERIC_FORGOT})
+    if path in ("/api/reset/check", "/api/reset"):
+        if not rate_ok("rip:" + client_ip(h), 20, 900): return out(429, {"error": "Trop de tentatives. Réessayez dans 15 minutes."})
+        tok = str(body.get("token", ""))[:200]; pw = str(body.get("password", ""))
+        bad = {"error": "Ce lien n’est plus valable (expiré ou déjà utilisé). Refaites une demande avec « Mot de passe oublié ? ».", "code": "bad_reset"}
+        if not re.fullmatch(r"[A-Za-z0-9_-]{30,100}", tok): return out(400, bad)
+        with DBL:
+            d = db_load(); email, u = find_reset(d, tok)
+            if not u: return out(400, bad)
+            if path == "/api/reset/check": return out(200, {"ok": True, "email": mask_email(email)})
+            if len(pw) < 6: return out(400, {"error": "Mot de passe : 6 caractères minimum."})
+            salt = secrets.token_hex(16); u["salt"] = salt; u["hash"] = pw_hash(pw, salt); u.pop("reset", None); u["pw_changed"] = int(time.time())
+            for k in [k for k, v in d["tokens"].items() if v == email]: d["tokens"].pop(k, None)  # déconnecte toutes les anciennes sessions
+            nt = secrets.token_urlsafe(32); d["tokens"][nt] = email; db_save(d)
+            print("Mot de passe réinitialisé pour", mask_email(email), flush=True)
+            return out(200, {"token": nt, **prof(email, u)})
     with DBL:
         d = db_load()
         if path in ("/api/signup", "/api/login"):
