@@ -156,8 +156,8 @@ function recos() { // recommandations réelles : d'abord celles des amis, puis v
   const S = seenKeys(), out = [], ids = new Set(); const parse = g => { if (typeof g === "string") try { return JSON.parse(g.replace(/'/g, '"')); } catch (e) { return []; } return g || []; };
   (SOC.inbox || []).slice().reverse().forEach(r => { const f = FILMS.find(x => String(x.id) === String(r.id)); if (f && !ids.has(f.id)) { ids.add(f.id); out.push([f, "💌 @" + r.from]); } });
   const GG = G().genres, gs = Object.keys(GG).length; const liked = new Set((LB.liked || []).flatMap(x => x.genres || []));
-  FILMS.filter(f => !ids.has(f.id) && !S.has(lbKey(f.title)) && f.poster).map(f => { const gen = parse(f.genres); const s = gen.reduce((a, x) => a + (GG[x] || 0) * 2 + (liked.has(x) ? 3 : 0), 0) + (+f.rating || 0) * 2 + (+f.press || 0); return [f, s, gen]; })
-    .sort((a, b) => b[1] - a[1]).slice(0, 12).forEach(([f, s, gen]) => out.push([f, gs && gen.some(x => GG[x]) ? "Tes goûts : " + gen.find(x => GG[x]) : (+f.rating ? "★ " + (+f.rating).toFixed(1) + " spectateurs" : "")]));
+  FILMS.filter(f => !ids.has(f.id) && !S.has(lbKey(f.title)) && f.poster).map(f => { const gen = parse(f.genres); const s = gen.reduce((a, x) => a + (GG[x] || 0) * 2 + (liked.has(x) ? 3 : 0), 0) + tmdb(f) * 1.5; return [f, s, gen]; })
+    .sort((a, b) => b[1] - a[1]).slice(0, 12).forEach(([f, s, gen]) => out.push([f, gs && gen.some(x => GG[x]) ? "Tes goûts : " + gen.find(x => GG[x]) : (tmdb(f) ? "TMDB " + tmdbTxt(f) + "/10" : "")]));
   return out.slice(0, 12); }
 function homeRails() { // mêmes données et règles que l'onglet Films (Sorties / Séances spéciales / Tous les films)
   let V = []; try { V = view(); } catch (e) { V = FILMS; }

@@ -30,6 +30,7 @@ class H(http.server.SimpleHTTPRequestHandler):
             with DBL: e = (db_load().get("pub") or {}).get(ps)
             if not e: return s.send_json(404, b'{"error":"profil introuvable"}')
             return s.send_json(200, json.dumps({"pseudo": ps, **{k: e.get(k) for k in ("stats", "collections", "badges", "level", "xp", "at")}}, ensure_ascii=False).encode())
+        if s.path.startswith("/tmdb-ratings"): return s.send_json(200, json.dumps({"on": TMDB_ON, "min_votes": TMDB_MIN_VOTES, "pending": len(TMDBQ), "ratings": tmdb_public()}).encode())
         if s.path.startswith("/agenda"): return s.send_json(200, json.dumps(AGENDA, ensure_ascii=False).encode())
         if s.path.startswith("/allocine/"): return s.allocine()
         if s.path.startswith("/yt-trailer/"):
@@ -74,7 +75,7 @@ class H(http.server.SimpleHTTPRequestHandler):
         if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", d): return s.send_json(400, b'{"error":"bad date"}')
         from concurrent.futures import ThreadPoolExecutor
         def one(c):
-            try: return c["id"], json.loads(allo_fetch(c["allocineId"], d))["films"]
+            try: return c["id"], tmdb_annotate(json.loads(allo_fetch(c["allocineId"], d))["films"])
             except Exception: return c["id"], None
         q = urllib.parse.parse_qs(urllib.parse.urlparse(s.path).query)
         ids = set((q.get("ids") or [""])[0].split(",")) - {""}
@@ -133,7 +134,7 @@ def _allo_get(url):
             raise
 def status():
     return {"ok": True, "state": "réveillé", "uptime_s": int(time.time() - START), "cache": len(CACHE), "allocine_last_ok": STAT["ok_at"], "allocine_last_error": STAT["err_at"], "allocine_error": STAT["err"],
-            "allocine_ok": STAT["n_ok"], "allocine_errors": STAT["n_err"], "throttled": time.time() < STAT["backoff_until"], "agenda_at": AGENDA["at"], "backoff_s": STAT["backoff_s"], "snapshot": {k: STAT[k] for k in ("snap_loaded", "snap_push", "snap_err")}, "reports": len(REPORTS), "now": int(time.time()), "storage": {k: DURABLE.get(k) for k in ("backend", "last_push", "last_pull", "error")}, "mail": mail_provider() or "aucun"}
+            "allocine_ok": STAT["n_ok"], "allocine_errors": STAT["n_err"], "throttled": time.time() < STAT["backoff_until"], "agenda_at": AGENDA["at"], "backoff_s": STAT["backoff_s"], "snapshot": {k: STAT[k] for k in ("snap_loaded", "snap_push", "snap_err")}, "reports": len(REPORTS), "now": int(time.time()), "storage": {k: DURABLE.get(k) for k in ("backend", "last_push", "last_pull", "error")}, "mail": mail_provider() or "aucun", "tmdb": {**TSTAT, "cached": len(TMDB), "queue": len(TMDBQ)}}
 def build_agenda():
     import datetime
     BG.on = True
@@ -196,6 +197,7 @@ def allo_live(cid, date, key):
             body = json.dumps({"source": "allocine", "films": films}, ensure_ascii=False).encode()
             with LOCK: CACHE[key] = (now, body)
             if films: _snap_dirty.set()
+            if films: tmdb_enqueue(films)
             return body
 
 ALLO_CINES = [c for c in json.load(open(os.path.join(ROOT, "data", "cinemas.json"), encoding="utf-8")) if c.get("allocineId")]
@@ -268,6 +270,114 @@ def _snap_loop():
         except Exception as e: STAT["snap_err"] = "push: " + str(e)[:120]; print("Snapshot push KO", e, flush=True); time.sleep(120); _snap_dirty.set()
 if DURABLE["backend"] == "gist":
     threading.Thread(target=snap_pull, daemon=True).start(); threading.Thread(target=_snap_loop, daemon=True).start()
+# ---------- v21 : note moyenne TMDB (API officielle themoviedb.org) à la place des notes Allociné ----------
+# Clé : TMDB_READ_TOKEN (jeton v4 « API Read Access Token », en-tête Bearer) ou TMDB_API_KEY (clé v3).
+# Sans clé : l'appli fonctionne, les notes sont simplement masquées. Correspondance par titre original + année
+# (repli titre français), résultat mis en cache en mémoire et dans le Gist (cine-idf-tmdb.json).
+TMDB_TOKEN = os.environ.get("TMDB_READ_TOKEN", "").strip(); TMDB_KEY = os.environ.get("TMDB_API_KEY", "").strip()
+TMDB_ON = bool(TMDB_TOKEN or TMDB_KEY); TMDB_FILE = "cine-idf-tmdb.json"; TMDB_MIN_VOTES = 10
+TMDB = {}; TMDBL = threading.Lock(); TMDBQ = {}; _tmdb_wake = threading.Event(); _tmdb_dirty = threading.Event()
+TSTAT = {"on": TMDB_ON, "ok": 0, "err": 0, "last_err": "", "matched": 0, "nomatch": 0, "loaded": 0, "push": 0}
+if not TMDB_ON: print("ATTENTION : ni TMDB_READ_TOKEN ni TMDB_API_KEY défini – notes TMDB désactivées (masquées dans l'appli).", flush=True)
+def _tnorm(s):
+    import unicodedata
+    s = unicodedata.normalize("NFD", str(s or "")).encode("ascii", "ignore").decode().lower().replace("&", " and ")
+    return re.sub(r"[^a-z0-9]+", " ", s).strip()
+def tmdb_http(path, params):  # remplacé dans les tests unitaires
+    p = dict(params)
+    if not TMDB_TOKEN: p["api_key"] = TMDB_KEY
+    h = {"Accept": "application/json", "User-Agent": "cine-idf"}
+    if TMDB_TOKEN: h["Authorization"] = "Bearer " + TMDB_TOKEN
+    url = "https://api.themoviedb.org/3" + path + "?" + urllib.parse.urlencode(p)
+    for i in range(4):
+        try: return json.loads(urllib.request.urlopen(urllib.request.Request(url, headers=h), timeout=15).read())
+        except urllib.error.HTTPError as e:
+            if e.code == 429: time.sleep(int(e.headers.get("Retry-After") or 0) or 2 * (i + 1)); continue
+            raise
+    raise RuntimeError("TMDB 429 persistant")
+def _year(r):
+    d = r.get("release_date") or ""; return int(d[:4]) if d[:4].isdigit() else None
+def tmdb_pick(results, titles, year):
+    # Jamais de note « devinée » : titre identique exigé, et année à ±1 an si connue (sinon un seul candidat au titre exact).
+    tn = {_tnorm(t) for t in titles if t}
+    exact = [r for r in results or [] if _tnorm(r.get("title")) in tn or _tnorm(r.get("original_title")) in tn]
+    if year:
+        ok = [r for r in exact if _year(r) and abs(_year(r) - int(year)) <= 1]
+        ok.sort(key=lambda r: (abs(_year(r) - int(year)), -(r.get("vote_count") or 0)))
+        return ok[0] if ok else None
+    return exact[0] if len(exact) == 1 else None
+def tmdb_match(title, otitle, year):
+    titles = [t for t in (otitle, title) if t]
+    tries = []
+    for t in dict.fromkeys(titles):
+        if year: tries += [(t, {"year": year}), (t, {"primary_release_year": int(year) + 1}), (t, {"primary_release_year": int(year) - 1})]
+        else: tries.append((t, {}))
+    for q, extra in tries:
+        d = tmdb_http("/search/movie", {"query": q, "language": "fr-FR", "include_adult": "false", **extra})
+        r = tmdb_pick(d.get("results"), titles, year)
+        if r: return r
+        time.sleep(0.25)
+    return None
+def tmdb_enqueue(films):
+    if not TMDB_ON: return
+    now = time.time(); n = 0
+    with TMDBL:
+        for f in films or []:
+            fid = str(f.get("id") or "")
+            if not fid or fid in TMDBQ: continue
+            e = TMDB.get(fid)
+            if e and now - e.get("at", 0) < (3 * 86400 if e.get("tid") else 86400): continue
+            TMDBQ[fid] = (f.get("title"), f.get("originalTitle"), f.get("year")); n += 1
+    if n: _tmdb_wake.set()
+def tmdb_lookup_one(fid, title, otitle, year):
+    try:
+        r = tmdb_match(title, otitle, year); TSTAT["ok"] += 1
+        e = {"at": int(time.time())}
+        if r: e.update({"tid": r.get("id"), "r": round(float(r.get("vote_average") or 0), 1), "v": int(r.get("vote_count") or 0)}); TSTAT["matched"] += 1
+        else: TSTAT["nomatch"] += 1
+        with TMDBL: TMDB[fid] = e
+        _tmdb_dirty.set(); return e
+    except Exception as ex:
+        TSTAT["err"] += 1; TSTAT["last_err"] = str(ex)[:120]; return None
+def _tmdb_loop():
+    while True:
+        _tmdb_wake.wait(); _tmdb_wake.clear()
+        while True:
+            with TMDBL:
+                if not TMDBQ: break
+                fid, args = next(iter(TMDBQ.items()))
+            tmdb_lookup_one(fid, *args)
+            with TMDBL: TMDBQ.pop(fid, None)
+            time.sleep(0.3)  # ≈3 requêtes/s max, très en dessous de la limite TMDB (~40/s)
+def tmdb_public():
+    # {idAllociné: [moyenne, nb de votes]} – seulement les correspondances avec ≥ 10 votes
+    with TMDBL: return {k: [e["r"], e["v"], e["tid"]] for k, e in TMDB.items() if e.get("tid") and (e.get("v") or 0) >= TMDB_MIN_VOTES}
+def tmdb_annotate(films):
+    if not TMDB_ON or not films: return films
+    tmdb_enqueue(films)
+    with TMDBL:
+        for f in films:
+            e = TMDB.get(str(f.get("id") or ""))
+            if e and e.get("tid") and (e.get("v") or 0) >= TMDB_MIN_VOTES: f["tmdbRating"], f["tmdbVotes"] = e["r"], e["v"]
+    return films
+def _tmdb_gist():
+    try:
+        f = _gh("GET")["files"].get(TMDB_FILE) or {}; txt = f.get("content") or ""
+        if f.get("truncated") and f.get("raw_url"): txt = urllib.request.urlopen(urllib.request.Request(f["raw_url"], headers={"Authorization": "Bearer " + GIST_TOKEN, "User-Agent": "cine-idf"}), timeout=60).read().decode()
+        data = json.loads(txt) if txt.strip() else {}
+        with TMDBL:
+            for k, v in data.items(): TMDB.setdefault(k, v)
+        TSTAT["loaded"] = len(data)
+    except Exception as e: TSTAT["last_err"] = "gist pull: " + str(e)[:100]
+    while True:
+        _tmdb_dirty.wait(); time.sleep(600); _tmdb_dirty.clear()
+        try:
+            with TMDBL: body = json.dumps(TMDB, separators=(",", ":"))
+            _gh("PATCH", {"files": {TMDB_FILE: {"content": body}}}); TSTAT["push"] = int(time.time())
+        except Exception as e: TSTAT["last_err"] = "gist push: " + str(e)[:100]; time.sleep(120); _tmdb_dirty.set()
+if TMDB_ON:
+    threading.Thread(target=_tmdb_loop, daemon=True).start()
+    if DURABLE["backend"] == "gist": threading.Thread(target=_tmdb_gist, daemon=True).start()
 def db_save(d):
     tmp = DB_PATH + ".tmp"; json.dump(d, open(tmp, "w", encoding="utf-8")); os.replace(tmp, DB_PATH)
     if DURABLE["backend"] == "gist": _dirty.set()

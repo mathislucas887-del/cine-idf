@@ -9,6 +9,17 @@ const j = r => { if (!r.ok) throw new Error(r.status); return r.json(); };
 const ymd = d => { const x = new Date(d); x.setMinutes(x.getMinutes() - x.getTimezoneOffset()); return x.toISOString().slice(0,10); };
 const byId = id => CINES.find(c => c.id === id);
 const LS = {get: (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } }, set: (k, v) => localStorage.setItem(k, JSON.stringify(v))};
+// v21 : note moyenne TMDB (remplace les notes Allociné). Masquée si pas de correspondance ou < 10 votes.
+let TMDBR = LS.get("tmdb", {});
+const tmdb = f => { if (!f) return 0; const x = TMDBR[String(f.id)] || (f.tmdbRating != null ? [f.tmdbRating, f.tmdbVotes] : null); return x && +x[1] >= 10 && +x[0] > 0 ? +x[0] : 0; };
+const tmdbTxt = f => tmdb(f).toFixed(1).replace(".", ",");
+const tmdbVotes = f => +((TMDBR[String(f.id)] || [0, f.tmdbVotes])[1] || 0);
+const tmdbId = f => (TMDBR[String(f.id)] || [])[2] || null;
+const tmdbBadge = (f, cls) => tmdb(f) ? `<span class="${cls}" aria-label="Note moyenne TMDB ${tmdbTxt(f)} sur 10"><i class="tm">TMDB</i>${tmdbTxt(f)}</span>` : "";
+let _tmT = 0, _tmN = 0;
+async function loadTMDB() { try { const x = await fetch("/tmdb-ratings").then(j); const before = JSON.stringify(TMDBR); TMDBR = x.ratings || {}; LS.set("tmdb", TMDBR);
+  if (JSON.stringify(TMDBR) !== before && typeof FILMS !== "undefined" && FILMS.length) { lbCache.clear(); renderAll(); }
+  clearTimeout(_tmT); if (x.pending && ++_tmN < 12) _tmT = setTimeout(loadTMDB, 30000); } catch (e) {} }
 const TYPE = {pathe: "Pathé", partner: "Partenaire CinéPass", other: "Cinéma"};
 const rt = r => { const m = String(r||"").match(/(\d+)h\s*(\d+)?/); return m ? +m[1]*60 + +(m[2]||0) : 0; };
 const km = (a, b) => { const R = 6371, d1 = (b.lat-a.lat)*Math.PI/180, d2 = (b.lng-a.lng)*Math.PI/180; const x = Math.sin(d1/2)**2 + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(d2/2)**2; return 2*R*Math.asin(Math.sqrt(x)); };
@@ -79,7 +90,7 @@ function recommend(V) {
   const watch = V.filter(f => lbState(f).watch || inList("towatch", f) || inList("rewatch", f));
   const liked = [...LISTS.seen, ...LISTS.towatch].map(x => FILMS.find(f => String(f.id) === x.id)).filter(Boolean);
   const gs = {}; liked.concat(watch).forEach(f => (f.genres || []).forEach(g => gs[g] = (gs[g] || 0) + 1));
-  const more = Object.keys(gs).length ? V.filter(f => !watch.includes(f) && !lbState(f).seen).map(f => [f, (f.genres || []).reduce((a, g) => a + (gs[g] || 0), 0) + (+f.rating || 0)]).filter(x => x[1] > 3).sort((a, b) => b[1] - a[1]).slice(0, 12).map(x => x[0]) : [];
+  const more = Object.keys(gs).length ? V.filter(f => !watch.includes(f) && !lbState(f).seen).map(f => [f, (f.genres || []).reduce((a, g) => a + (gs[g] || 0), 0) + tmdb(f) / 2]).filter(x => x[1] > 3).sort((a, b) => b[1] - a[1]).slice(0, 12).map(x => x[0]) : [];
   return [...watch, ...more];
 }
 const gcal = (f, c, t) => { const s = new Date(t.time), e = new Date(s.getTime() + ((f.dur || 120) + 15) * 60000), z = d => d.toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
@@ -238,7 +249,7 @@ async function loadData() {
     if (L) { FILMS = L.films.map(f => ({...f, by: f.by.map(b => ({c: byId(b.cid), times: b.times})).filter(b => b.c)})); FETCHED = L.at; ERR = "Hors ligne ou Allociné indisponible : affichage des dernières séances enregistrées."; }
     else { FILMS = []; ERR = "Impossible de charger les séances (serveur en veille ou Allociné indisponible)."; }
   }
-  renderAll(); injectLD();
+  renderAll(); injectLD(); _tmN = 0; loadTMDB();
   if (typeof FILMPATH !== 'undefined' && FILMPATH && !window._fp) { window._fp = 1; openFilm(FILMPATH[1]); }
 }
 function classify(f) {
@@ -271,7 +282,7 @@ function view() {
   const q = norm($("#sfilm").value), age = $("#sage").value, sc = $("#scope").value;
   const g = $("#sgenre").value, du = +$("#sdur").value, ra = +$("#srate").value, lb = $("#slb").value;
   return FILMS.filter(f => (!q || fuzzy(q, [f.title, f.originalTitle, (f.cast||[]).join(" "), f.directors, (f.genres||[]).join(" ")].join(" "))) && (!age || !f.age)
-      && (!g || (f.genres||[]).includes(g)) && (!du || (du === 999 ? f.dur > 135 : f.dur && f.dur <= du)) && (!ra || (+f.rating || 0) >= ra)
+      && (!g || (f.genres||[]).includes(g)) && (!du || (du === 999 ? f.dur > 135 : f.dur && f.dur <= du)) && (!ra || tmdb(f) >= ra)
       && (!lb || (lb === "unseen" ? !lbState(f).seen : lbState(f).watch)))
     .map(f => { const by = f.by.filter(b => sc === "pathe" ? b.c.type === "pathe" : sc === "partner" ? b.c.type === "partner" : true).map(b => ({c: b.c, times: b.times.filter(t => timeOk(t, f))})).filter(b => b.times.length);
       return {...f, vby: by, n: by.reduce((a, b) => a + b.times.length, 0)}; })
@@ -280,7 +291,7 @@ function view() {
 function posterCard(f, extra) {
   const t = [f.cl.ap && `<span class="tag g">Avant-première</span>`, f.cl.special[0] && `<span class="tag g">${esc(f.cl.special[0])}</span>`, f.cl.fresh && `<span class="tag">Nouveau</span>`, f.year && f.year < 2026 && f.cl.retro && `<span class="tag">Rétro ${f.year}</span>`].filter(Boolean).join("");
   const L = lbState(f), my = myList(f);
-  return `<button class="poster${L.seen ? " seen" : ""}" onclick="openFilm('${f.id}')" aria-label="${esc(f.title)}${L.seen ? " (déjà vu)" : ""}${L.watch ? " (dans ma watchlist)" : ""}">${L.watch ? `<span class="lbw" title="Dans votre watchlist Letterboxd">Watchlist</span>` : ""}${L.seen ? `<span class="lbs">✓ Vu</span>` : my ? `<span class="lbs">${my}</span>` : ""}<div class="im">${f.poster ? `<img src="${esc(f.poster)}" alt="Affiche de ${esc(f.title)}" loading="lazy" decoding="async">` : ""}</div><div class="tags">${t}</div>${f.rating ? `<span class="rating" aria-label="Note spectateurs">★ ${(+f.rating).toFixed(1)}</span>` : ""}<h3>${esc(f.title)}</h3><small>${extra || `${f.vby.length} cinéma${f.vby.length>1?"s":""} · ${f.n} séance${f.n>1?"s":""}`}</small></button>`;
+  return `<button class="poster${L.seen ? " seen" : ""}" onclick="openFilm('${f.id}')" aria-label="${esc(f.title)}${L.seen ? " (déjà vu)" : ""}${L.watch ? " (dans ma watchlist)" : ""}">${L.watch ? `<span class="lbw" title="Dans votre watchlist Letterboxd">Watchlist</span>` : ""}${L.seen ? `<span class="lbs">✓ Vu</span>` : my ? `<span class="lbs">${my}</span>` : ""}<div class="im">${f.poster ? `<img src="${esc(f.poster)}" alt="Affiche de ${esc(f.title)}" loading="lazy" decoding="async">` : ""}</div><div class="tags">${t}</div>${tmdbBadge(f, "rating")}<h3>${esc(f.title)}</h3><small>${extra || `${f.vby.length} cinéma${f.vby.length>1?"s":""} · ${f.n} séance${f.n>1?"s":""}`}</small></button>`;
 }
 function renderAll() {
   const V = view(), none = `<div class="empty">Aucun film pour ces critères.</div>`;
@@ -307,7 +318,7 @@ function renderShows(V) {
   $("#shows").innerHTML = (html || `<div class="empty">${esc(ERR || "Aucune séance pour ces critères.")}</div>`) + (V.length > SHOWN ? `<div class="pad"><button class="ghost" onclick="SHOWN+=25;renderShows()">Afficher plus de films (${V.length - SHOWN})</button></div>` : "");
 }
 window.renderShows = renderShows;
-const meta = f => [f.cl.ap && "✨ Avant-première", f.year && f.year < 2026 ? "Film de " + f.year : "", (f.genres||[]).slice(0,3).join(", "), f.runtime, f.age, f.rating && `★ ${(+f.rating).toFixed(1)} spectateurs`, f.press && `${(+f.press).toFixed(1)} presse`].filter(Boolean).map(esc).join(" · ");
+const meta = f => [f.cl.ap && "✨ Avant-première", f.year && f.year < 2026 ? "Film de " + f.year : "", (f.genres||[]).slice(0,3).join(", "), f.runtime, f.age, tmdb(f) && `TMDB ${tmdbTxt(f)}/10`].filter(Boolean).map(esc).join(" · ");
 const TB = {};
 window.cCard = (c, pills, pre) => `<div class="cc17"><div class="cch"><div><b>${pre || ""}${esc(c.name)}</b>${(c.city || dist(c) != null) ? `<small>${[c.city, dist(c) != null ? dist(c).toFixed(1) + " km" : ""].filter(Boolean).map(esc).join(" · ")}</small>` : ""}</div>${c.type === "pathe" ? `<span class="bdg p">Pathé</span>` : c.type === "partner" || c.cinepass ? `<span class="bdg">Partenaire</span>` : ""}</div><div class="tps">${pills}</div></div>`;
 function timeBtn(f, c, t, now) {
@@ -462,7 +473,7 @@ $("#infos").innerHTML = `<h1>✨ CinéPass & infos</h1>
 <p>Les formules, prix et conditions évoluent : consultez la page officielle <a href="https://www.pathe.fr/cinepass" target="_blank" rel="noopener">pathe.fr/cinepass</a>.</p>
 <h2>Cinémas partenaires CinéPass en Île-de-France</h2><div class="cards">${CINES.filter(c => c.type === "partner").sort((a,b)=>a.name.localeCompare(b.name)).map(c => `<button class="box" style="text-align:left;color:inherit;cursor:pointer" onclick="openCine('${c.id}')"><b>${esc(c.name)}</b><br><span class="sub">${esc(c.zip)} ${esc(c.city)}</span></button>`).join("")}</div>
 <h2>📲 Télécharger l’application</h2><p>Android : <a href="/download/cine-idf.apk" download>APK Ciné IDF</a> · iPhone : Safari → Partager → « Sur l’écran d’accueil ». <a href="#" onclick="openInstall();return false">Mode d’emploi</a></p><h2>À propos</h2><p>Ciné IDF regroupe les séances de ${CINES.length} cinémas d’Île-de-France : ${CINES.filter(c=>c.type==="pathe").length} Pathé/Gaumont, ${CINES.filter(c=>c.type==="partner").length} partenaires CinéPass et ${CINES.filter(c=>c.type==="other").length} autres salles.</p>
-<h2>Sources & mentions légales</h2><p>Horaires, affiches, notes et synopsis : <b>Allociné</b> (méthode de la bibliothèque open source <a href="https://github.com/lefevre-dev/AllocineAPI" target="_blank" rel="noopener">AllocineAPI</a>). Cartographie © OpenStreetMap. Photos : Pathé et Wikimedia Commons (crédits sur chaque fiche).</p>
+<h2>Sources & mentions légales</h2><p>Horaires, affiches et synopsis : <b>Allociné</b>. Notes moyennes : <b><a href="https://www.themoviedb.org/" target="_blank" rel="noopener">TMDB</a></b> (« This product uses the TMDB API but is not endorsed or certified by TMDB ») (méthode de la bibliothèque open source <a href="https://github.com/lefevre-dev/AllocineAPI" target="_blank" rel="noopener">AllocineAPI</a>). Cartographie © OpenStreetMap. Photos : Pathé et Wikimedia Commons (crédits sur chaque fiche).</p>
 <p><b>Site non officiel, non affilié à Pathé, Gaumont ni Allociné.</b> Les réservations se font sur le site de chaque cinéma ; vérifiez toujours l’horaire avant de vous déplacer. Les comptes ne stockent qu’une adresse e-mail, un mot de passe chiffré, vos favoris et vos billets enregistrés.</p>
 <h2>Contact</h2><p>Une erreur, une suggestion ? Ouvrez un ticket sur <a href="https://github.com/mathislucas887-del/cine-idf/issues" target="_blank" rel="noopener">GitHub</a>.</p>
 <p class="sub">État du serveur : <a href="/health" target="_blank" rel="noopener">/health</a>. Hébergement gratuit : le premier chargement peut prendre ~50 s après une période d’inactivité.</p>`;

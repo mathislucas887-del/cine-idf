@@ -8,3 +8,5 @@ services:
     envVars:
       - key: HOST
         value: 0.0.0.0
+      - key: TMDB_READ_TOKEN  # v21 : jeton « API Read Access Token » TMDB (ou TMDB_API_KEY, clé v3)
+        sync: false

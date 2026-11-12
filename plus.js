@@ -41,7 +41,7 @@ window.openFilm = id => {
     .sort((a, b) => a.t.time.localeCompare(b.t.time) || (a.tt || 0) - (b.tt || 0)).slice(0, 8);
   const L = (LB.seen || []).find(x => lbKey(x.n) === lbKey(f.title) || lbKey(x.n) === lbKey(f.originalTitle || ""));
   const box = document.createElement("div");
-  box.innerHTML = `<div class="ratings">${f.rating ? `<div><b>★ ${(+f.rating).toFixed(1)}</b><small>Spectateurs Allociné</small></div>` : ""}${f.press ? `<div><b>${(+f.press).toFixed(1)}</b><small>Presse</small></div>` : ""}${L && L.r ? `<div><b>${L.r}</b><small>Votre note Letterboxd</small></div>` : ""}<a class="ghost" href="https://www.allocine.fr/film/fichefilm-${esc(f.id)}/critiques/spectateurs/" target="_blank" rel="noopener">Lire les avis spectateurs →</a></div>
+  box.innerHTML = `<div class="ratings">${tmdb(f) ? `<div><b>${tmdbTxt(f)}<small class="of">/10</small></b><small>Moyenne TMDB · ${tmdbVotes(f).toLocaleString("fr-FR")} votes</small></div>` : ""}${L && L.r ? `<div><b>${L.r}</b><small>Votre note Letterboxd</small></div>` : ""}${tmdbId(f) ? `<a class="ghost" href="https://www.themoviedb.org/movie/${+tmdbId(f)}" target="_blank" rel="noopener">Voir sur TMDB →</a>` : ""}<a class="ghost" href="https://www.allocine.fr/film/fichefilm-${esc(f.id)}/critiques/spectateurs/" target="_blank" rel="noopener">Lire les avis spectateurs →</a></div>
    ${SELDATES[0] === TODAY() && rows.length ? `<h3 style="color:var(--gold2)">📍 Où le voir ce soir ?</h3><p class="sub">${GEO ? "Prochaine séance atteignable par cinéma, avec trajet estimé." : "Activez « Près de moi » pour les distances."}</p>
    ${rows.map(({c, t, tt}) => { const k = Math.random().toString(36).slice(2, 9); TB[k] = {f, c, t}; return `<div class="nrow" role="button" tabindex="0" onclick="openTime('${k}')"><div><b>${t.time.slice(11, 16)}</b> · ${esc(c.name)} <small class="pill${t.version === "vo" ? " vo" : ""}">${t.version === "vo" ? "VOST" : "VF"}</small>${tt != null ? `<br><small>${dist(c).toFixed(1)} km · ${travelTxt(dist(c))} · partir vers ${hm(new Date(t.time) - (tt + 10) * 6e4)}</small>` : ""}</div></div>`; }).join("")}` : ""}`;
   const syn = $("#mcontent .syn"); syn && syn.after(box);
@@ -124,7 +124,7 @@ function likedRails() {
   let s = $("#s-liked"); if (!s) { s = document.createElement("div"); s.id = "s-liked"; $("#home").prepend(s); }
   const V = view(); const out = (LB.liked || []).slice(0, 3).map(x => { const gs = (x.genres || []).map(g => norm(GMAP[g] || "")).filter(Boolean);
     const m = V.filter(f => !lbState(f).seen && (x.dir && norm(f.directors || "").includes(norm(x.dir)) || (f.cast || []).some(a => (x.cast || []).map(norm).includes(norm(a))) || (f.genres || []).filter(g => gs.includes(norm(g))).length >= Math.min(2, gs.length || 9)))
-      .sort((a, b) => (+b.rating || 0) - (+a.rating || 0)).slice(0, 12);
+      .sort((a, b) => tmdb(b) - tmdb(a)).slice(0, 12);
     return m.length ? `<section class="fsec"><h2>❤️ Si tu as aimé « ${esc(x.n)} » <small class="sub">(${x.r}★ sur Letterboxd)</small></h2><div class="rail">${m.map(f => posterCard(f)).join("")}</div></section>` : ""; }).join("");
   s.innerHTML = out;
 }
