@@ -8,30 +8,37 @@ const saveMS = () => LS.set("match", {sw: MS.sw, hist: MS.hist.slice(-30), once:
 const OPT = Object.assign({genre: "", sort: "reco", cines: [], replay: false}, LS.get("matchOpt", {})); if (OPT.sort === "date") OPT.sort = "reco";
 const CAT = {films: [], at: 0, loading: false, err: "", days: 0};
 window.MATCHCAT = CAT;
-// ---------- Catalogue : 7 jours de séances, Pathé + partenaires, dédoublonné par ID Allociné ----------
+// ---------- Catalogue : 7 à 28 jours de séances, Pathé + partenaires, dédoublonné par ID Allociné ----------
 async function loadCatalog(force) {
   if (CAT.loading || (!force && CAT.films.length && Date.now() - CAT.at < 20 * 6e4)) return;
   CAT.loading = true; CAT.err = "";
-  const days = [...Array(7)].map((_, i) => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + i); return ymd(d); });
-  const by = {}; let ok = 0, got = 0; const now = new Date().toISOString().slice(0, 16);
-  for (const d of days) {
+  // v19 : au moins 7 jours (jusqu’au mardi suivant inclus), puis on continue tant qu’Allociné annonce de vraies séances (max 28 jours, arrêt après 3 jours vides)
+  const MIN = 7, MAX = 28, day = i => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + i); return ymd(d); };
+  const by = {}, dates = []; let ok = 0, got = 0, empty = 0; const now = new Date().toISOString().slice(0, 16);
+  for (let i = 0; i < MAX; i++) {
+    const d = day(i); let n = 0;
     try { const x = await fetch("/allocine-all/" + d).then(j); ok++;
       Object.entries(x.cinemas || {}).forEach(([cid, films]) => { const c = byId(cid); if (!ELIG(c) || !films) return; got++;
-        films.forEach(f => { const times = (f.times || []).filter(t => (t.time || "") >= now); if (!times.length) return;
+        films.forEach(f => { const times = (f.times || []).filter(t => (t.time || "") >= now); if (!times.length) return; n += times.length;
           const k = f.id ? "id:" + f.id : "t:" + norm(f.title) + "|" + (f.year || "");
           const F = by[k] ||= {id: String(f.id || k), title: f.title, poster: f.poster, year: f.year, runtime: f.runtime, genres: parse(f.genres), directors: f.directors, rating: +f.rating || 0, press: +f.press || 0, synopsis: f.synopsis || "", releases: parse(f.releases), cast: parse(f.cast), age: f.age, by: {}, n: 0};
-          (F.by[cid] ||= []).push(...times); F.n += times.length; }); });
-      if (ok === 1 || d === days[days.length - 1]) { publish(by); if (document.querySelector("#v-match.on")) renderMatch(); }
+          const B = F.by[cid] ||= [], kt = t => t.time + "|" + (t.version || "") + "|" + (t.url || ""), have = new Set(B.map(kt)); times.forEach(t => { if (!have.has(kt(t))) { have.add(kt(t)); B.push(t); F.n++; } }); }); }); // v19 : une séance de minuit apparaît dans deux jours Allociné → dédoublonnée
+      if (n) dates.push(d); CAT.dates = dates.slice(); CAT.last = dates[dates.length - 1] || "";
+      if (ok === 1 || i === MIN - 1 || (i >= MIN && n)) { publish(by); if (document.querySelector("#v-match.on")) renderMatch(); }
     } catch (e) {}
+    empty = n ? 0 : empty + 1;
+    if (i >= MIN - 1 && empty >= 3) break;
   }
   CAT.loading = false; CAT.days = ok; window.dispatchEvent(new Event("cinecat"));
   if (!ok || !got) { CAT.err = "Allociné ne répond pas pour le moment. Nouvel essai automatique dans 1 minute…"; setTimeout(() => loadCatalog(true), 60000); }
   else publish(by);
   if (document.querySelector("#v-match.on")) renderMatch();
 }
+// v19 : séances de tous les films du catalogue (pas seulement les sorties de la semaine), pour la barre des jours des fiches
+window.catBy = id => { const F = CAT.all && CAT.all["id:" + id]; return F ? F.by : null; };
 // v16 : uniquement les sorties de la semaine — même règle que « Sorties de la semaine » (app.js classify : sortie dans les 7 derniers jours, film récent)
 function weekRelease(f) { const D = ymd(new Date()), Y = +D.slice(0, 4), wk = new Date(D + "T12:00"); wk.setDate(wk.getDate() - 7); return !!f.rel && f.rel <= D && f.rel > ymd(wk) && (!f.year || f.year >= Y - 1); }
-function publish(by) { CAT.films = Object.values(by).map(f => { f.cines = Object.keys(f.by); f.rel = f.releases.filter(r => r.name === "Released" && r.date).map(r => r.date).sort()[0] || ""; return f; }).filter(weekRelease); CAT.at = Date.now(); window.dispatchEvent(new Event("cinecat")); }
+function publish(by) { CAT.all = by; CAT.films = Object.values(by).map(f => { f.cines = Object.keys(f.by); f.rel = f.releases.filter(r => r.name === "Released" && r.date).map(r => r.date).sort()[0] || ""; return f; }).filter(weekRelease); CAT.at = Date.now(); window.dispatchEvent(new Event("cinecat")); }
 setInterval(() => { if (!document.hidden) loadCatalog(true); }, 30 * 6e4);
 // ---------- Classement ----------
 const lbk = t => lbKey(t || "");

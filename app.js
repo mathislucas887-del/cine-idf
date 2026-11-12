@@ -178,7 +178,7 @@ $("#sheet").onclick = e => { if (e.target.id === "sheet") closeSheet(); };
 addEventListener("keydown", e => { if (e.key === "Escape") { if (!$("#sheet").classList.contains("hidden")) closeSheet(); else closeModal(); $("#gres").classList.add("hidden"); } });
 
 // ---------- Jours ----------
-const DAYS = [...Array(14)].map((_, i) => { const d = new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate() + i); return d; });
+const DAYS = [...Array(28)].map((_, i) => { const d = new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate() + i); return d; });
 let SELDATES = [ymd(DAYS[0])], APONLY = false, TONIGHT = false, GRID = LS.get("grid", false);
 const fmtDay = d => new Date(d + "T12:00").toLocaleDateString("fr-FR", {weekday: "long", day: "numeric", month: "long"});
 function renderDates() {
@@ -351,7 +351,12 @@ window.rmTicket = id => { TICKETS = TICKETS.filter(t => t.id !== id); sync(); re
 window.openFilm = id => {
   const f = FILMS.find(x => String(x.id) === String(id)); if (!f) return;
   const V = view().find(x => String(x.id) === String(id)) || {...f, vby: f.by}; const now = new Date();
-  const lines = window.s18 ? s18(f, f.by, SELDATES[0]) : "";
+  // v19 : la barre des jours de la fiche réunit les séances du jour choisi et celles des jours suivants déjà annoncés (catalogue 7 à 28 jours)
+  let fby = f.by; try { const x = window.catBy && catBy(f.id); if (x) { const ids = scopeIds(), m = new Map(f.by.map(b => [b.c.id, {c: b.c, times: [...b.times]}]));
+    Object.entries(x).forEach(([cid, ts]) => { if (ids && !ids.includes(cid)) return; const c = byId(cid); if (!c) return; const e = m.get(cid) || m.set(cid, {c, times: []}).get(cid), seen = new Set(e.times.map(t => t.time + "|" + (t.url || "") + "|" + (t.version || "")));
+      ts.forEach(t => { const k = t.time + "|" + (t.url || "") + "|" + (t.version || ""); if (!seen.has(k)) { seen.add(k); e.times.push(t); } }); });
+    fby = [...m.values()]; } } catch (e) {}
+  const lines = window.s18 ? s18(f, fby, SELDATES[0]) : "";
   const labs = [f.cl.ap && "Avant-première", ...f.cl.special, f.cl.fresh && "Sortie de la semaine", f.cl.retro && f.year < 2026 && "Séance rétro"].filter(Boolean);
   const sim = FILMS.filter(x => x !== f && (x.genres||[]).some(g => (f.genres||[]).includes(g))).slice(0, 10).map(x => ({...x, vby: x.by, n: x.times.length}));
   const yt = "https://www.youtube.com/results?search_query=" + encodeURIComponent(f.title + " bande annonce " + (f.year || ""));
@@ -473,7 +478,7 @@ renderDates(); updAcct(); renderMap(); renderGrid(); loadData(); loadLB();
 const setGrid = g => { GRID = g; LS.set("grid", g); $("#vgrid").classList.toggle("on", g); $("#vlist").classList.toggle("on", !g); $("#vgrid").setAttribute("aria-pressed", g); $("#vlist").setAttribute("aria-pressed", !g); renderShows(); };
 $("#vgrid").onclick = () => setGrid(true); $("#vlist").onclick = () => setGrid(false); setGrid(GRID);
 const pchg = () => { const a = $("#pfrom").value, b = $("#pto").value || a; if (!a) return; const out = []; for (let d = new Date(a + "T12:00"); ymd(d) <= b && out.length < 7; d.setDate(d.getDate() + 1)) out.push(ymd(d)); SELDATES = out; renderDates(); loadData(); };
-$("#pfrom").min = $("#pto").min = ymd(DAYS[0]); $("#pfrom").max = $("#pto").max = ymd(DAYS[13]); $("#pfrom").onchange = $("#pto").onchange = pchg;
+$("#pfrom").min = $("#pto").min = ymd(DAYS[0]); $("#pfrom").max = $("#pto").max = ymd(DAYS[DAYS.length - 1]); $("#pfrom").onchange = $("#pto").onchange = pchg;
 // géolocalisation automatique si déjà autorisée
 if (navigator.permissions) navigator.permissions.query({name: "geolocation"}).then(p => { if (p.state === "granted") locate().then(() => { renderGrid(); renderMap(); }).catch(() => {}); }).catch(() => {});
 if (TOKEN) post("/api/me").then(onAuth).catch(async e => { if (/Session/.test(e.message)) { if (await restore()) sync(); } }); // on ne déconnecte jamais sans « Se déconnecter »

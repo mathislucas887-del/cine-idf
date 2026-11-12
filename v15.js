@@ -2,7 +2,9 @@
 (function () {
 "use strict";
 const ST = Object.assign({day: "all", q: ""}, LS.get("homeDay", {}));
-const days = () => [...Array(7)].map((_, i) => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + i); return {k: ymd(d), l: i === 0 ? "Aujourd’hui" : i === 1 ? "Demain" : d.toLocaleDateString("fr-FR", {weekday: "long", day: "numeric"}).replace(/^./, c => c.toUpperCase())}; });
+// v19 : jours = tous ceux où le catalogue a de vraies séances (au moins les 7 prochains jours, davantage si déjà annoncés)
+const nDays = () => { const L = (window.MATCHCAT || {}).last; if (!L) return 7; const t = new Date(); t.setHours(12, 0, 0, 0); return Math.max(7, Math.min(28, Math.round((new Date(L + "T12:00") - t) / 864e5) + 1)); };
+const days = () => [...Array(nDays())].map((_, i) => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + i); return {k: ymd(d), l: i === 0 ? "Aujourd’hui" : i === 1 ? "Demain" : d.toLocaleDateString("fr-FR", {weekday: "long", day: "numeric"}).replace(/^./, c => c.toUpperCase())}; });
 if (ST.day !== "all" && !days().some(d => d.k === ST.day)) ST.day = "all";
 const C = () => (window.MATCHCAT || {films: []});
 const onDay = (f, d) => d === "all" ? f.by : Object.fromEntries(Object.entries(f.by).map(([c, ts]) => [c, ts.filter(t => t.time.slice(0, 10) === d)]).filter(([, ts]) => ts.length));

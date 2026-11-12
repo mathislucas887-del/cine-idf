@@ -91,6 +91,7 @@ def allo_fetch(cid, date):
             if key not in REFRESHING:
                 REFRESHING.add(key)
                 def bg():
+                    BG.on = True
                     try: allo_live(cid, date, key)
                     except Exception: pass
                     finally: REFRESHING.discard(key)
@@ -104,8 +105,19 @@ REFRESHING = set()
 ASEM = threading.BoundedSemaphore(1); STAT = {"ok_at": 0, "err_at": 0, "err": "", "backoff_until": 0, "n_ok": 0, "n_err": 0, "backoff_s": 0, "last_req": 0, "snap_loaded": 0, "snap_push": 0, "snap_err": ""}
 REPORTS = []; AGENDA = {"at": 0, "films": []}
 _snap_dirty = threading.Event(); ALLO_GAP = 1.5  # v17 : 1 requête Allociné à la fois, espacées de 1,5 s; REPORTS = []; AGENDA = {"at": 0, "films": []}
+BG = threading.local(); WAITQ = [0]; WQL = threading.Lock()  # v19 : priorité aux requêtes des visiteurs sur le préchargement en arrière-plan
 def allo_get(url):
     if time.time() < STAT["backoff_until"]: raise RuntimeError("Allociné ralentit : file d’attente, réessai sous peu")
+    bg = getattr(BG, "on", False)
+    if bg:
+        while WAITQ[0] > 0: time.sleep(0.3)
+    else:
+        with WQL: WAITQ[0] += 1
+    try: return _allo_get(url)
+    finally:
+        if not bg:
+            with WQL: WAITQ[0] -= 1
+def _allo_get(url):
     with ASEM:
         w = STAT["last_req"] + ALLO_GAP - time.time()
         if w > 0: time.sleep(w)
@@ -124,6 +136,7 @@ def status():
             "allocine_ok": STAT["n_ok"], "allocine_errors": STAT["n_err"], "throttled": time.time() < STAT["backoff_until"], "agenda_at": AGENDA["at"], "backoff_s": STAT["backoff_s"], "snapshot": {k: STAT[k] for k in ("snap_loaded", "snap_push", "snap_err")}, "reports": len(REPORTS), "now": int(time.time()), "storage": {k: DURABLE.get(k) for k in ("backend", "last_push", "last_pull", "error")}}
 def build_agenda():
     import datetime
+    BG.on = True
     big = [c for c in ALLO_CINES if c.get("type") == "pathe" and c.get("allocineId")][:12]
     while True:
         out = {}
@@ -602,16 +615,29 @@ if __name__ == "__main__":
     print("Ctrl+C pour arrêter")
     def warm():
         import datetime
+        BG.on = True
         from concurrent.futures import ThreadPoolExecutor
         def one(c, dd):
             try: allo_fetch(c["allocineId"], dd)
             except Exception: pass
+        # v19 : aujourd'hui + demain rafraîchis à chaque tour ; puis les jours suivants (au moins jusqu'au mardi d'après, 7 jours)
+        # et au-delà tant qu'Allociné annonce de vraies séances (max 28 jours, arrêt après 3 jours vides), rafraîchis toutes les 3 h.
+        # Mêmes requêtes qu'avant : file unique espacée de 1,5 s + backoff 429 (allo_get).
+        def has_shows(c, dd):
+            with LOCK: hit = CACHE.get("allo:" + c["allocineId"] + dd)
+            return bool(hit) and b'"films": []' not in hit[1]
         while True:
-            for k in range(2):
+            cines = [c for c in ALLO_CINES if c.get("type") in ("pathe", "partner")]; empty = 0
+            for k in range(28):
                 dd = (datetime.date.today() + datetime.timedelta(days=k)).isoformat()
-                for c in [c for c in ALLO_CINES if c.get("type") in ("pathe", "partner")]:
+                for c in cines:
+                    if k >= 2:
+                        with LOCK: hit = CACHE.get("allo:" + c["allocineId"] + dd)
+                        if hit and time.time() - hit[0] < 3 * 3600: continue
                     while time.time() < STAT["backoff_until"]: time.sleep(15)
                     one(c, dd)
+                empty = 0 if any(has_shows(c, dd) for c in cines) else empty + 1
+                if k >= 6 and empty >= 3: break
             time.sleep(900)
     threading.Thread(target=warm, daemon=True).start()
     threading.Thread(target=build_agenda, daemon=True).start()
