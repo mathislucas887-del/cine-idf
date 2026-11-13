@@ -12,7 +12,7 @@ async function nearest(n, pred) {
   return CINES.filter(c => c.allocineId && c.lat != null && (!pred || pred(c))).sort((a, b) => dist(a) - dist(b)).slice(0, n);
 }
 async function fetchDay(d, cines) {
-  const x = await fetch("/allocine-all/" + d + "?ids=" + encodeURIComponent(cines.map(c => c.id).join(","))).then(j);
+  const x = await (window.fetchDayShows ? fetchDayShows(d, "?ids=" + encodeURIComponent(cines.map(c => c.id).join(","))) : fetch("/allocine-all/" + d + "?ids=" + encodeURIComponent(cines.map(c => c.id).join(","))).then(j));
   const out = []; Object.entries(x.cinemas || {}).forEach(([cid, films]) => { const c = byId(cid); (films || []).forEach(f => out.push({c, f})); }); return out;
 }
 const loading = t => modal(`<div class="mbody"><h2>${t}</h2><p class="sub">Chargement…</p></div>`);

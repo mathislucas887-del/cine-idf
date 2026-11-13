@@ -6,6 +6,19 @@ const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAl
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const norm = s => String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
 const j = r => { if (!r.ok) throw new Error(r.status); return r.json(); };
+// v22 : un seul fetch /allocine-all/{date} partagé entre Accueil, CinéMatch et la semaine (TTL 8 min)
+const DAY_TTL = 8 * 60 * 1000, MEM_DAY_CACHE = new Map();
+window.MEM_DAY_CACHE = MEM_DAY_CACHE;
+window.fetchDayShows = function (d, q, force) {
+  const k = d + (q || "");
+  const hit = MEM_DAY_CACHE.get(k);
+  if (!force && hit && hit.data && Date.now() - hit.at < DAY_TTL) return Promise.resolve(hit.data);
+  if (!force && hit && hit.p) return hit.p;
+  const p = fetch("/allocine-all/" + d + (q || "")).then(j).then(x => { MEM_DAY_CACHE.set(k, {at: Date.now(), data: x}); return x; })
+    .catch(e => { const cur = MEM_DAY_CACHE.get(k); if (cur && cur.p === p) MEM_DAY_CACHE.delete(k); throw e; });
+  MEM_DAY_CACHE.set(k, {at: Date.now(), data: hit && hit.data, p});
+  return p;
+};
 const ymd = d => { const x = new Date(d); x.setMinutes(x.getMinutes() - x.getTimezoneOffset()); return x.toISOString().slice(0,10); };
 const byId = id => CINES.find(c => c.id === id);
 const LS = {get: (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } }, set: (k, v) => localStorage.setItem(k, JSON.stringify(v))};
@@ -235,7 +248,7 @@ async function loadData() {
   if (ids && !ids.length) { FILMS = []; ERR = $("#scope").value === "fav" ? "Aucun cinéma en favori : ajoutez-en depuis la fiche d’un cinéma (⭐)." : "Aucun cinéma trouvé."; return renderAll(); }
   const q = ids ? "?ids=" + encodeURIComponent(ids.join(",")) : "";
   try {
-    const res = await Promise.all(SELDATES.map(d => fetch("/allocine-all/" + d + q).then(j).then(x => ({d, c: x.cinemas}))));
+    const res = await Promise.all(SELDATES.map(d => fetchDayShows(d, q).then(x => ({d, c: x.cinemas}))));
     if (my !== LOADING) return;
     const by = {}; let failed = 0;
     res.forEach(({d, c}) => Object.entries(c).forEach(([cid, films]) => { const cine = byId(cid); if (!films) { failed++; return; } if (!cine) return;

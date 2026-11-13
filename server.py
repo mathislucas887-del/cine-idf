@@ -3,50 +3,153 @@ import html
 """Ciné IDF – serveur local : sert l'appli + relais (proxy) vers l'API publique de pathe.fr.
 Usage : python3 server.py   puis ouvrir http://localhost:8765
 """
-import json, re, urllib.parse, http.server, socketserver, urllib.request, urllib.error, time, os, sys, threading
+import json, re, urllib.parse, http.server, socketserver, urllib.request, urllib.error, time, os, sys, threading, gzip, base64, hashlib
 PORT = int(os.environ.get("PORT", sys.argv[1] if len(sys.argv) > 1 else 8765))
 START = time.time()
 ROOT = os.path.dirname(os.path.abspath(__file__))
 CACHE, TTL, LOCK = {}, 1200, threading.Lock()
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36"
 
+# ---------- v22 : compression gzip, ETag / 304, chemins internes masqués ----------
+GZIP_MIN = 500
+TEXT_EXT = {".html", ".js", ".css", ".json", ".webmanifest", ".svg", ".xml", ".txt", ".map", ".csv"}
+CC_ALLO = "public, max-age=120, stale-while-revalidate=300"
+CC_API_SHORT = "public, max-age=60, stale-while-revalidate=180"
+CC_REVALIDATE = "no-cache"
+BLOCK_PREFIXES = (".git/", "tests/", "android/", "mobile/", "old/", ".github/", "__pycache__/", "screenshots/")
+BLOCK_FILES = {"users.json", "server.py", "fix.py", "build_data.py", "deploy_github.sh", "dockerfile", "procfile", "render.yaml", "cine-idf.apk.idsig", "readme.md", ".gitignore"}
+
+def etag_for(body):
+    return '"' + hashlib.sha256(body).hexdigest()[:16] + '"'
+
+def etag_match(inm, etag):
+    if not inm or not etag: return False
+    if inm.strip() == "*": return True
+    want = etag.strip().strip('"')
+    for p in inm.split(","):
+        p = p.strip()
+        if p.startswith("W/"): p = p[2:].strip()
+        if p.strip('"') == want: return True
+    return False
+
+def accepts_gzip(handler):
+    return "gzip" in (handler.headers.get("Accept-Encoding") or "").lower()
+
+def blocked_rel(rel):
+    rel = rel.replace("\\", "/").lstrip("/")
+    low = rel.lower()
+    if any(low == p.rstrip("/") or low.startswith(p) for p in BLOCK_PREFIXES): return True
+    base = os.path.basename(low)
+    if base in BLOCK_FILES or "yt_cache" in low or low.endswith(".tmp") or low.endswith(".py"): return True
+    if base == "cine-idf.apk" and not low.startswith("download/"): return True
+    return False
+
+def times_slim(times):
+    out = []
+    for t in times or []:
+        s = {"time": t.get("time"), "version": t.get("version"), "url": t.get("url")}
+        if t.get("fmt"): s["fmt"] = t["fmt"]
+        if t.get("events"): s["events"] = t["events"]
+        if t.get("preview"): s["preview"] = True
+        if t.get("acc"): s["acc"] = True
+        out.append(s)
+    return out
+
+def slim_public_films(films):
+    # synopsis conservé (fiches film / CinéMatch). rating/press Allociné inutilisés depuis la note TMDB.
+    out = []
+    for f in films or []:
+        g = {k: v for k, v in f.items() if k not in ("rating", "press")}
+        g["times"] = times_slim(f.get("times"))
+        out.append(g)
+    return out
+
 class H(http.server.SimpleHTTPRequestHandler):
     extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map, ".webmanifest": "application/manifest+json", ".js": "application/javascript; charset=utf-8", ".json": "application/json", ".svg": "image/svg+xml", ".xml": "application/xml", ".apk": "application/vnd.android.package-archive", ".zip": "application/zip"}
     def end_headers(s):
-        p = s.path.split("?")[0]
-        if p.endswith((".js", ".css", ".html", "/")) or p.endswith("sw.js"): s.send_header("Cache-Control", "no-cache")
-        elif p.endswith((".png", ".svg")): s.send_header("Cache-Control", "public, max-age=86400")
+        if not getattr(s, "_cc_set", False):
+            p = s.path.split("?")[0]
+            if p.endswith((".js", ".css", ".html", "/")) or p.endswith("sw.js"): s.send_header("Cache-Control", "no-cache")
+            elif p.endswith((".png", ".svg", ".jpg", ".jpeg", ".ico", ".webp")): s.send_header("Cache-Control", "public, max-age=86400")
         super().end_headers()
     def __init__(s, *a, **k): super().__init__(*a, directory=ROOT, **k)
     def log_message(s, *a): pass
-    def send_json(s, code, body):
-        s.send_response(code); s.send_header("Content-Type", "application/json; charset=utf-8")
-        s.send_header("Content-Length", str(len(body))); s.end_headers(); s.wfile.write(body)
+    def list_directory(s, path):
+        s.send_json(404, b'{"error":"not found"}'); return None
+    def send_bytes(s, code, body, content_type, cache_control=None, etag=None):
+        if body is None: body = b""
+        if isinstance(body, str): body = body.encode()
+        if etag and code == 200 and etag_match(s.headers.get("If-None-Match"), etag):
+            s.send_response(304)
+            s.send_header("ETag", etag)
+            if cache_control: s.send_header("Cache-Control", cache_control)
+            s.send_header("Vary", "Accept-Encoding"); s._cc_set = True
+            s.end_headers(); return
+        enc = None
+        ext = os.path.splitext(s.path.split("?")[0])[1].lower()
+        textish = content_type.startswith(("application/json", "text/", "application/javascript", "application/xml", "application/manifest+json", "image/svg+xml")) or ext in TEXT_EXT
+        if code == 200 and textish and accepts_gzip(s) and len(body) >= GZIP_MIN:
+            gz = gzip.compress(body, 6)
+            if len(gz) < len(body): body, enc = gz, "gzip"
+        s.send_response(code)
+        s.send_header("Content-Type", content_type)
+        s.send_header("Content-Length", str(len(body)))
+        if enc: s.send_header("Content-Encoding", enc)
+        if textish or enc: s.send_header("Vary", "Accept-Encoding")
+        if etag: s.send_header("ETag", etag)
+        if cache_control: s.send_header("Cache-Control", cache_control)
+        s._cc_set = True
+        s.end_headers()
+        if code != 204 and code != 304: s.wfile.write(body)
+    def send_json(s, code, body, cache_control=None, etag=True):
+        if isinstance(body, str): body = body.encode()
+        s.send_bytes(code, body, "application/json; charset=utf-8",
+                     cache_control=cache_control, etag=etag_for(body) if (etag and code == 200) else None)
+    def serve_static(s):
+        path = s.translate_path(s.path.split("?")[0])
+        try: rel = os.path.relpath(path, ROOT)
+        except Exception: return s.send_json(404, b'{"error":"not found"}')
+        if rel.startswith("..") or blocked_rel(rel): return s.send_json(404, b'{"error":"not found"}')
+        if os.path.isdir(path):
+            for index in ("index.html", "index.htm"):
+                cand = os.path.join(path, index)
+                if os.path.isfile(cand) and not blocked_rel(os.path.relpath(cand, ROOT)):
+                    path = cand; break
+            else:
+                return s.send_json(404, b'{"error":"not found"}')
+        if not os.path.isfile(path): return s.send_json(404, b'{"error":"not found"}')
+        body = open(path, "rb").read()
+        ctype = s.guess_type(path)
+        ext = os.path.splitext(path)[1].lower()
+        if ext in {".js", ".css", ".html", ".webmanifest"} or path.endswith("sw.js"): cc = CC_REVALIDATE
+        elif ext in {".png", ".svg", ".jpg", ".jpeg", ".ico", ".webp"}: cc = "public, max-age=86400"
+        elif ext == ".apk": cc = "public, max-age=3600"
+        else: cc = CC_REVALIDATE
+        s.send_bytes(200, body, ctype, cache_control=cc, etag=etag_for(body))
     def do_GET(s):
         if s.path.startswith("/allocine-all/"): return s.allo_all()
-        if s.path in ("/health", "/status.json"): return s.send_json(200, json.dumps(status()).encode())
+        if s.path in ("/health", "/status.json"): return s.send_json(200, json.dumps(status()).encode(), cache_control=CC_REVALIDATE)
         if s.path.startswith("/u/"):
             ps = re.sub(r"[^a-z0-9_.-]", "", s.path[3:].split("?")[0].replace(".json", "").lower())[:24]
             with DBL: e = (db_load().get("pub") or {}).get(ps)
             if not e: return s.send_json(404, b'{"error":"profil introuvable"}')
-            return s.send_json(200, json.dumps({"pseudo": ps, **{k: e.get(k) for k in ("stats", "collections", "badges", "level", "xp", "at")}}, ensure_ascii=False).encode())
-        if s.path.startswith("/tmdb-ratings"): return s.send_json(200, json.dumps({"on": TMDB_ON, "min_votes": TMDB_MIN_VOTES, "pending": len(TMDBQ), "ratings": tmdb_public()}).encode())
-        if s.path.startswith("/agenda"): return s.send_json(200, json.dumps(AGENDA, ensure_ascii=False).encode())
+            return s.send_json(200, json.dumps({"pseudo": ps, **{k: e.get(k) for k in ("stats", "collections", "badges", "level", "xp", "at")}}, ensure_ascii=False).encode(), cache_control=CC_REVALIDATE)
+        if s.path.startswith("/tmdb-ratings"): return s.send_json(200, json.dumps({"on": TMDB_ON, "min_votes": TMDB_MIN_VOTES, "pending": len(TMDBQ), "ratings": tmdb_public()}).encode(), cache_control=CC_API_SHORT)
+        if s.path.startswith("/agenda"): return s.send_json(200, json.dumps(AGENDA, ensure_ascii=False).encode(), cache_control=CC_API_SHORT)
         if s.path.startswith("/allocine/"): return s.allocine()
         if s.path.startswith("/yt-trailer/"):
             qs = urllib.parse.parse_qs(urllib.parse.urlparse(s.path).query); r = yt_trailer(s.path.split("/")[2].split("?")[0], (qs.get("t") or [""])[0][:120], (qs.get("y") or [""])[0][:4])
-            return s.send_json(200, json.dumps({k: r.get(k) for k in ("id", "title", "ch")}, ensure_ascii=False).encode())
-        if s.path.startswith("/film-extra/"): return s.send_json(200, film_extra(s.path.split("/")[2]))
+            return s.send_json(200, json.dumps({k: r.get(k) for k in ("id", "title", "ch")}, ensure_ascii=False).encode(), cache_control=CC_API_SHORT)
+        if s.path.startswith("/film-extra/"): return s.send_json(200, film_extra(s.path.split("/")[2]), cache_control="public, max-age=300")
         if s.path.startswith("/film/"):
-            b = film_page(s.path.split("/")[2].split("?")[0]); s.send_response(200); s.send_header("Content-Type", "text/html; charset=utf-8"); s.send_header("Content-Length", str(len(b))); s.end_headers(); return s.wfile.write(b)
+            b = film_page(s.path.split("/")[2].split("?")[0]); return s.send_bytes(200, b, "text/html; charset=utf-8", cache_control=CC_REVALIDATE, etag=etag_for(b))
         if s.path == "/sitemap.xml":
-            b = sitemap(); s.send_response(200); s.send_header("Content-Type", "application/xml"); s.send_header("Content-Length", str(len(b))); s.end_headers(); return s.wfile.write(b)
+            b = sitemap(); return s.send_bytes(200, b, "application/xml", cache_control="public, max-age=3600", etag=etag_for(b))
         if s.path.startswith("/letterboxd/"):
-            try: r = letterboxd(s.path.split("/")[2].split("?")[0]); return s.send_json((503 if r.get("retry") else 404) if "error" in r else 200, json.dumps(r, ensure_ascii=False).encode())
+            try: r = letterboxd(s.path.split("/")[2].split("?")[0]); return s.send_json((503 if r.get("retry") else 404) if "error" in r else 200, json.dumps(r, ensure_ascii=False).encode(), cache_control=CC_REVALIDATE)
             except Exception as e:
                 import traceback; traceback.print_exc(); return s.send_json(502, json.dumps({"error": "Letterboxd ne répond pas, réessayez."}).encode())
-        if any(x in s.path for x in ("users.json", "yt_cache", ".git", "server.py", ".tmp")): return s.send_json(404, b'{"error":"not found"}')
-        if not s.path.startswith("/pathe/"): return super().do_GET()
+        if not s.path.startswith("/pathe/"): return s.serve_static()
         path = s.path[len("/pathe/"):]
         url = "https://www.pathe.fr/api/" + path + ("&" if "?" in path else "?") + "language=fr"
         now = time.time()
@@ -59,8 +162,7 @@ class H(http.server.SimpleHTTPRequestHandler):
                 with LOCK: CACHE[url] = (now, body)
             except urllib.error.HTTPError as e: code, body = e.code, e.read() or b'{"error":"http"}'
             except Exception as e: code, body = 502, ('{"error":"%s"}' % str(e).replace('"', "'")).encode()
-        s.send_response(code); s.send_header("Content-Type", "application/json; charset=utf-8")
-        s.send_header("Content-Length", str(len(body))); s.end_headers(); s.wfile.write(body)
+        s.send_json(code, body, cache_control=CC_API_SHORT, etag=(code == 200))
 
     def allocine(s):
         # /allocine/<idCinema>/<YYYY-MM-DD>  (méthode de github.com/lefevre-dev/AllocineAPI)
@@ -75,13 +177,13 @@ class H(http.server.SimpleHTTPRequestHandler):
         if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", d): return s.send_json(400, b'{"error":"bad date"}')
         from concurrent.futures import ThreadPoolExecutor
         def one(c):
-            try: return c["id"], tmdb_annotate(json.loads(allo_fetch(c["allocineId"], d))["films"])
+            try: return c["id"], slim_public_films(tmdb_annotate(json.loads(allo_fetch(c["allocineId"], d))["films"]))
             except Exception: return c["id"], None
         q = urllib.parse.parse_qs(urllib.parse.urlparse(s.path).query)
         ids = set((q.get("ids") or [""])[0].split(",")) - {""}
         sel = [c for c in ALLO_CINES if c["id"] in ids][:80] if ids else [c for c in ALLO_CINES if c.get("type") in ("pathe", "partner")]
         with ThreadPoolExecutor(4) as ex: res = dict(ex.map(one, sel))
-        s.send_json(200, json.dumps({"date": d, "cinemas": res}, ensure_ascii=False).encode())
+        s.send_json(200, json.dumps({"date": d, "cinemas": res}, ensure_ascii=False).encode(), cache_control=CC_ALLO)
 
 def allo_fetch(cid, date):
         parts = [None, cid, date]
@@ -134,7 +236,7 @@ def _allo_get(url):
             raise
 def status():
     return {"ok": True, "state": "réveillé", "uptime_s": int(time.time() - START), "cache": len(CACHE), "allocine_last_ok": STAT["ok_at"], "allocine_last_error": STAT["err_at"], "allocine_error": STAT["err"],
-            "allocine_ok": STAT["n_ok"], "allocine_errors": STAT["n_err"], "throttled": time.time() < STAT["backoff_until"], "agenda_at": AGENDA["at"], "backoff_s": STAT["backoff_s"], "snapshot": {k: STAT[k] for k in ("snap_loaded", "snap_push", "snap_err")}, "reports": len(REPORTS), "now": int(time.time()), "storage": {k: DURABLE.get(k) for k in ("backend", "last_push", "last_pull", "error")}, "mail": mail_provider() or "aucun", "tmdb": {**TSTAT, "cached": len(TMDB), "queue": len(TMDBQ)}}
+            "allocine_ok": STAT["n_ok"], "allocine_errors": STAT["n_err"], "throttled": time.time() < STAT["backoff_until"], "agenda_at": AGENDA["at"], "backoff_s": STAT["backoff_s"], "snapshot": {k: STAT[k] for k in ("snap_loaded", "snap_push", "snap_err", "snap_bytes") if k in STAT}, "reports": len(REPORTS), "now": int(time.time()), "storage": {k: DURABLE.get(k) for k in ("backend", "last_push", "last_pull", "error")}, "mail": mail_provider() or "aucun", "tmdb": {**TSTAT, "cached": len(TMDB), "queue": len(TMDBQ)}}
 def build_agenda():
     import datetime
     BG.on = True
@@ -203,7 +305,7 @@ def allo_live(cid, date, key):
 ALLO_CINES = [c for c in json.load(open(os.path.join(ROOT, "data", "cinemas.json"), encoding="utf-8")) if c.get("allocineId")]
 
 # ---------- Comptes & favoris (stockage JSON) ----------
-import hashlib, secrets, hmac
+import secrets, hmac
 DB_PATH = os.environ.get("DB_PATH", os.path.join(ROOT, "users.json")); DBL = threading.Lock()
 def db_load():
     try: return json.load(open(DB_PATH, encoding="utf-8"))
@@ -241,9 +343,77 @@ def _gist_loop():
         except Exception as e: DURABLE["error"] = "push: " + str(e)[:120]; print("Gist push KO", e, flush=True); time.sleep(30); _dirty.set()
 if DURABLE["backend"] == "gist":
     gist_pull(); threading.Thread(target=_gist_loop, daemon=True).start()
-# ---------- v17 : instantané des séances dans un 2e fichier du même Gist ----------
+# ---------- v17/v22 : instantané des séances dans un 2e fichier du même Gist ----------
 # Au démarrage, le dernier cache valide est rechargé et servi tout de suite (même si Allociné répond 429).
+# v22 : format compact gzip+base64 (v:2), dédup sha256, intervalle min. 15 min, backoff exponentiel, plafond de taille.
 SNAP_FILE = "cine-idf-showtimes.json"
+SNAP_MIN_INTERVAL = 15 * 60
+SNAP_MAX_BYTES = 1_500_000
+SNAP_BACKOFF = (5 * 60, 15 * 60, 30 * 60, 60 * 60)
+SNAP_STATE = {"hash": "", "push": 0, "err_n": 0, "backoff_until": 0}
+
+def _film_meta(f):
+    return {k: v for k, v in f.items() if k not in ("times", "rating", "press") and v not in (None, "", [], {})}
+
+def snap_pack(cache, today=None):
+    """Construit l'enveloppe v2 (films uniques + horaires par cinéma-jour, gzip+base64). Retourne (texte, sha256, taille)."""
+    import datetime
+    if today is None: today = datetime.date.today().isoformat()
+    films, days = {}, {}
+    for k, (ts, body) in cache.items():
+        if not k.startswith("allo:") or len(k) < 10 or k[-10:] < today: continue
+        try: fl = json.loads(body).get("films") or []
+        except Exception: continue
+        if not fl: continue
+        entry = {}
+        for f in fl:
+            fid = str(f.get("id") or "") or ("t:" + (f.get("title") or ""))
+            if fid not in films: films[fid] = _film_meta(f)
+            entry[fid] = times_slim(f.get("times"))
+        days[k] = [ts, entry]
+    inner = json.dumps({"films": films, "days": days}, ensure_ascii=False, separators=(",", ":")).encode()
+    env = {"v": 2, "gzip_b64": base64.b64encode(gzip.compress(inner, 6)).decode("ascii")}
+    text = json.dumps(env, separators=(",", ":"))
+    digest = hashlib.sha256(text.encode()).hexdigest()
+    return text, digest, len(text)
+
+def snap_unpack(text):
+    """Lit un instantané v2 (gzip+base64) ou l'ancien format {clé: [ts, json]} — pour recharger un Gist existant."""
+    data = json.loads(text) if isinstance(text, (str, bytes, bytearray)) else text
+    if not data: return {}
+    if isinstance(data, dict) and data.get("v") == 2 and data.get("gzip_b64"):
+        inner = json.loads(gzip.decompress(base64.b64decode(data["gzip_b64"])))
+        films = inner.get("films") or {}
+        out = {}
+        for k, pair in (inner.get("days") or {}).items():
+            ts, entry = pair[0], pair[1] if len(pair) > 1 else {}
+            fl = []
+            for fid, times in (entry or {}).items():
+                meta = dict(films.get(fid) or {})
+                if "id" not in meta and not str(fid).startswith("t:"):
+                    meta["id"] = int(fid) if str(fid).isdigit() else fid
+                meta["times"] = times
+                fl.append(meta)
+            out[k] = (ts, json.dumps({"source": "allocine", "films": fl}, ensure_ascii=False).encode())
+        return out
+    out = {}
+    for k, pair in data.items():
+        if not isinstance(pair, (list, tuple)) or len(pair) < 2: continue
+        ts, body = pair[0], pair[1]
+        if isinstance(body, dict): body = json.dumps(body, ensure_ascii=False).encode()
+        elif isinstance(body, str): body = body.encode()
+        out[k] = (ts, body)
+    return out
+
+def gist_backoff_delay(err_n):
+    return SNAP_BACKOFF[min(max(0, err_n), len(SNAP_BACKOFF) - 1)]
+
+def _snap_backoff():
+    delay = gist_backoff_delay(SNAP_STATE["err_n"])
+    SNAP_STATE["err_n"] += 1
+    SNAP_STATE["backoff_until"] = time.time() + delay
+    return delay
+
 def snap_pull():
     if DURABLE["backend"] != "gist": return
     try:
@@ -251,23 +421,53 @@ def snap_pull():
         f = _gh("GET")["files"].get(SNAP_FILE) or {}
         txt = f.get("content") or ""
         if f.get("truncated") and f.get("raw_url"): txt = urllib.request.urlopen(urllib.request.Request(f["raw_url"], headers={"Authorization": "Bearer " + GIST_TOKEN, "User-Agent": "cine-idf"}), timeout=60).read().decode()
-        data = json.loads(txt) if txt.strip() else {}
+        packed = snap_unpack(txt) if txt.strip() else {}
         today = datetime.date.today().isoformat(); n = 0
         with LOCK:
-            for k, (ts, body) in data.items():
-                if k[-10:] >= today and k not in CACHE: CACHE[k] = (ts, body.encode()); n += 1
+            for k, (ts, body) in packed.items():
+                if k[-10:] >= today and k not in CACHE: CACHE[k] = (ts, body); n += 1
+        try:
+            _, digest, size = snap_pack(packed, today)
+            SNAP_STATE["hash"] = digest; STAT["snap_bytes"] = size
+        except Exception: pass
         STAT["snap_loaded"] = n; print("Instantané séances rechargé :", n, flush=True)
     except Exception as e: STAT["snap_err"] = "pull: " + str(e)[:120]; print("Snapshot pull KO", e, flush=True)
 def _snap_loop():
     import datetime
     while True:
-        _snap_dirty.wait(); time.sleep(300); _snap_dirty.clear()
+        _snap_dirty.wait()
+        while True:
+            now = time.time(); wait = 0
+            if SNAP_STATE["backoff_until"] > now: wait = SNAP_STATE["backoff_until"] - now
+            elif SNAP_STATE["push"] and now - SNAP_STATE["push"] < SNAP_MIN_INTERVAL:
+                wait = SNAP_MIN_INTERVAL - (now - SNAP_STATE["push"])
+            elif not SNAP_STATE["push"]:
+                wait = min(180, SNAP_MIN_INTERVAL)  # 1er envoi : 3 min, ensuite 15 min
+                if now - START < wait: wait = wait - (now - START)
+                else: wait = 0
+            if wait <= 0: break
+            time.sleep(min(wait, 30))
+        _snap_dirty.clear()
         try:
             today = datetime.date.today().isoformat()
-            with LOCK: data = {k: (v[0], v[1].decode()) for k, v in CACHE.items() if k.startswith("allo:") and k[-10:] >= today and b'"films": []' not in v[1]}
+            with LOCK: data = {k: v for k, v in CACHE.items() if k.startswith("allo:") and k[-10:] >= today and b'"films": []' not in v[1]}
             if not data: continue
-            _gh("PATCH", {"files": {SNAP_FILE: {"content": json.dumps(data, ensure_ascii=False, separators=(",", ":"))}}}); STAT["snap_push"] = int(time.time()); STAT["snap_err"] = ""
-        except Exception as e: STAT["snap_err"] = "push: " + str(e)[:120]; print("Snapshot push KO", e, flush=True); time.sleep(120); _snap_dirty.set()
+            text, digest, size = snap_pack(data, today)
+            STAT["snap_bytes"] = size
+            if digest == SNAP_STATE["hash"]:
+                continue
+            if size > SNAP_MAX_BYTES:
+                STAT["snap_err"] = "snapshot trop volumineux (%d octets), envoi annulé" % size
+                print("Snapshot trop gros, envoi annulé :", size, flush=True)
+                _snap_backoff(); continue
+            _gh("PATCH", {"files": {SNAP_FILE: {"content": text}}})
+            SNAP_STATE["hash"] = digest; SNAP_STATE["push"] = int(time.time()); SNAP_STATE["err_n"] = 0; SNAP_STATE["backoff_until"] = 0
+            STAT["snap_push"] = SNAP_STATE["push"]; STAT["snap_err"] = ""
+            print("Instantané séances envoyé :", size, "octets", flush=True)
+        except Exception as e:
+            STAT["snap_err"] = "push: " + str(e)[:120]; d = _snap_backoff()
+            print("Snapshot push KO", e, "backoff", int(d), "s", flush=True)
+            _snap_dirty.set()
 if DURABLE["backend"] == "gist":
     threading.Thread(target=snap_pull, daemon=True).start(); threading.Thread(target=_snap_loop, daemon=True).start()
 # ---------- v21 : note moyenne TMDB (API officielle themoviedb.org) à la place des notes Allociné ----------
@@ -278,6 +478,7 @@ TMDB_TOKEN = os.environ.get("TMDB_READ_TOKEN", "").strip(); TMDB_KEY = os.enviro
 TMDB_ON = bool(TMDB_TOKEN or TMDB_KEY); TMDB_FILE = "cine-idf-tmdb.json"; TMDB_MIN_VOTES = 10
 TMDB = {}; TMDBL = threading.Lock(); TMDBQ = {}; _tmdb_wake = threading.Event(); _tmdb_dirty = threading.Event()
 TSTAT = {"on": TMDB_ON, "ok": 0, "err": 0, "last_err": "", "matched": 0, "nomatch": 0, "loaded": 0, "push": 0}
+TMDB_GIST_STATE = {"hash": "", "err_n": 0, "backoff_until": 0}
 if not TMDB_ON: print("ATTENTION : ni TMDB_READ_TOKEN ni TMDB_API_KEY défini – notes TMDB désactivées (masquées dans l'appli).", flush=True)
 def _tnorm(s):
     import unicodedata
@@ -368,13 +569,26 @@ def _tmdb_gist():
         with TMDBL:
             for k, v in data.items(): TMDB.setdefault(k, v)
         TSTAT["loaded"] = len(data)
+        TMDB_GIST_STATE["hash"] = hashlib.sha256(json.dumps(data, separators=(",", ":")).encode()).hexdigest()
     except Exception as e: TSTAT["last_err"] = "gist pull: " + str(e)[:100]
     while True:
-        _tmdb_dirty.wait(); time.sleep(600); _tmdb_dirty.clear()
+        _tmdb_dirty.wait()
+        while TMDB_GIST_STATE["backoff_until"] > time.time():
+            time.sleep(min(30, TMDB_GIST_STATE["backoff_until"] - time.time()))
+        time.sleep(600); _tmdb_dirty.clear()
         try:
             with TMDBL: body = json.dumps(TMDB, separators=(",", ":"))
-            _gh("PATCH", {"files": {TMDB_FILE: {"content": body}}}); TSTAT["push"] = int(time.time())
-        except Exception as e: TSTAT["last_err"] = "gist push: " + str(e)[:100]; time.sleep(120); _tmdb_dirty.set()
+            digest = hashlib.sha256(body.encode()).hexdigest()
+            if digest == TMDB_GIST_STATE["hash"]: continue
+            _gh("PATCH", {"files": {TMDB_FILE: {"content": body}}})
+            TMDB_GIST_STATE["hash"] = digest; TMDB_GIST_STATE["err_n"] = 0; TMDB_GIST_STATE["backoff_until"] = 0
+            TSTAT["push"] = int(time.time())
+        except Exception as e:
+            TSTAT["last_err"] = "gist push: " + str(e)[:100]
+            d = gist_backoff_delay(TMDB_GIST_STATE["err_n"]); TMDB_GIST_STATE["err_n"] += 1
+            TMDB_GIST_STATE["backoff_until"] = time.time() + d
+            print("TMDB gist push KO", e, "backoff", int(d), "s", flush=True)
+            _tmdb_dirty.set()
 if TMDB_ON:
     threading.Thread(target=_tmdb_loop, daemon=True).start()
     if DURABLE["backend"] == "gist": threading.Thread(target=_tmdb_gist, daemon=True).start()

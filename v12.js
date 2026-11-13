@@ -17,14 +17,18 @@ const oLD = loadData; loadData = async function () { const r = await oLD.apply(t
 // fenêtre de 7 jours chargée en arrière-plan, pour l'Accueil
 const WEEKF = {films: [], at: 0, err: ""};
 window.WEEKF = WEEKF;
-async function loadWeek() {
-  const days = [...Array(7)].map((_, i) => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + i); return ymd(d); });
+async function loadWeek(auto) {
+  const day = i => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + i); return ymd(d); };
+  const days = (auto ? [0, 1] : [...Array(7).keys()]).map(day);
   const ids = scopeIds(), q = ids && ids.length ? "?ids=" + encodeURIComponent(ids.join(",")) : "";
-  const by = {}; let ok = 0;
-  for (const d of days) { try { const x = await fetch("/allocine-all/" + d + q).then(j); ok++;
+  const by = {};
+  if (auto && WEEKF.films.length) WEEKF.films.forEach(f => { by[f.id || norm(f.title)] = f; });
+  if (auto) { const drop = new Set(days); Object.values(by).forEach(F => { (F.by || []).forEach(b => { b.times = (b.times || []).filter(t => !drop.has((t.time || "").slice(0, 10))); }); F.times = (F.by || []).flatMap(b => b.times); }); }
+  let ok = 0;
+  for (const d of days) { try { const x = await (window.fetchDayShows ? fetchDayShows(d, q) : fetch("/allocine-all/" + d + q).then(j)); ok++;
       Object.entries(x.cinemas || {}).forEach(([cid, films]) => { const c = byId(cid); if (!c || !films) return;
         films.forEach(f => { const k = f.id || norm(f.title); const F = by[k] ||= {...f, times: [], by: []}; F.times.push(...f.times); const ex = F.by.find(b => b.c === c); ex ? ex.times.push(...f.times) : F.by.push({c, times: [...f.times]}); }); }); } catch (e) {} }
-  if (!ok) { WEEKF.err = "Allociné indisponible pour le moment : nouvelles séances bientôt."; return; }
+  if (!ok) { if (!auto) WEEKF.err = "Allociné indisponible pour le moment : nouvelles séances bientôt."; return; }
   WEEKF.films = Object.values(by).map(classify); WEEKF.at = Date.now(); WEEKF.err = ""; track(WEEKF.films);
   if (document.querySelector("#v-home.on") && window.cineRefresh) cineRefresh();
 }
@@ -34,6 +38,6 @@ setTimeout(loadWeek, 15000);
 // rafraîchissement auto : toutes les 30 min quand l'app est visible, et au changement de jour (nouveaux jours)
 let DAY0 = ymd(new Date()), LAST = Date.now();
 function tick() { if (document.hidden) return; if (ymd(new Date()) !== DAY0) { location.reload(); return; }
-  if (Date.now() - LAST > 30 * 6e4) { LAST = Date.now(); loadData(); loadWeek(); } }
+  if (Date.now() - LAST > 30 * 6e4) { LAST = Date.now(); loadData(); loadWeek(true); } }
 setInterval(tick, 6e4); document.addEventListener("visibilitychange", tick);
 })();

@@ -9,20 +9,40 @@ const OPT = Object.assign({genre: "", sort: "reco", cines: [], replay: false}, L
 const CAT = {films: [], at: 0, loading: false, err: "", days: 0};
 window.MATCHCAT = CAT;
 // ---------- Catalogue : 7 à 28 jours de séances, Pathé + partenaires, dédoublonné par ID Allociné ----------
+function ingestDay(by, x, now) {
+  let n = 0;
+  Object.entries((x && x.cinemas) || {}).forEach(([cid, films]) => { const c = byId(cid); if (!ELIG(c) || !films) return;
+    films.forEach(f => { const times = (f.times || []).filter(t => (t.time || "") >= now); if (!times.length) return; n += times.length;
+      const k = f.id ? "id:" + f.id : "t:" + norm(f.title) + "|" + (f.year || "");
+      const F = by[k] ||= {id: String(f.id || k), title: f.title, poster: f.poster, year: f.year, runtime: f.runtime, genres: parse(f.genres), directors: f.directors, tmdbRating: f.tmdbRating, tmdbVotes: f.tmdbVotes, synopsis: f.synopsis || "", releases: parse(f.releases), cast: parse(f.cast), age: f.age, by: {}, n: 0};
+      const B = F.by[cid] ||= [], kt = t => t.time + "|" + (t.version || "") + "|" + (t.url || ""), have = new Set(B.map(kt)); times.forEach(t => { if (!have.has(kt(t))) { have.add(kt(t)); B.push(t); F.n++; } }); }); });
+  return n;
+}
 async function loadCatalog(force) {
+  const auto = force === "auto";
   if (CAT.loading || (!force && CAT.films.length && Date.now() - CAT.at < 20 * 6e4)) return;
+  // v22 : le rafraîchissement auto (30 min) ne reprend que aujourd’hui + demain ; la fenêtre 7–28 jours est chargée au premier passage, au bouton Réessayer, ou si CinéMatch s’ouvre sur un catalogue périmé.
+  if (auto && !(CAT.all || CAT.films.length)) force = true;
   CAT.loading = true; CAT.err = "";
-  // v19 : au moins 7 jours (jusqu’au mardi suivant inclus), puis on continue tant qu’Allociné annonce de vraies séances (max 28 jours, arrêt après 3 jours vides)
   const MIN = 7, MAX = 28, day = i => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + i); return ymd(d); };
-  const by = {}, dates = []; let ok = 0, got = 0, empty = 0; const now = new Date().toISOString().slice(0, 16);
+  const now = new Date().toISOString().slice(0, 16);
+  const fetchDay = d => window.fetchDayShows ? fetchDayShows(d) : fetch("/allocine-all/" + d).then(j);
+  if (auto && (CAT.all || CAT.films.length)) {
+    const today = day(0), tomorrow = day(1), drop = new Set([today, tomorrow]);
+    const by = CAT.all || {};
+    Object.values(by).forEach(F => { Object.keys(F.by || {}).forEach(cid => { F.by[cid] = (F.by[cid] || []).filter(t => !drop.has((t.time || "").slice(0, 10))); F.n = Object.values(F.by).reduce((a, ts) => a + ts.length, 0); }); });
+    let ok = 0, got = 0;
+    for (const d of [today, tomorrow]) {
+      try { const x = await fetchDay(d); ok++; if (ingestDay(by, x, now)) got++; } catch (e) {}
+    }
+    CAT.loading = false;
+    if (ok) { publish(by); if (document.querySelector("#v-match.on")) renderMatch(); }
+    return;
+  }
+  const by = {}, dates = []; let ok = 0, got = 0, empty = 0;
   for (let i = 0; i < MAX; i++) {
     const d = day(i); let n = 0;
-    try { const x = await fetch("/allocine-all/" + d).then(j); ok++;
-      Object.entries(x.cinemas || {}).forEach(([cid, films]) => { const c = byId(cid); if (!ELIG(c) || !films) return; got++;
-        films.forEach(f => { const times = (f.times || []).filter(t => (t.time || "") >= now); if (!times.length) return; n += times.length;
-          const k = f.id ? "id:" + f.id : "t:" + norm(f.title) + "|" + (f.year || "");
-          const F = by[k] ||= {id: String(f.id || k), title: f.title, poster: f.poster, year: f.year, runtime: f.runtime, genres: parse(f.genres), directors: f.directors, rating: +f.rating || 0, press: +f.press || 0, tmdbRating: f.tmdbRating, tmdbVotes: f.tmdbVotes, synopsis: f.synopsis || "", releases: parse(f.releases), cast: parse(f.cast), age: f.age, by: {}, n: 0};
-          const B = F.by[cid] ||= [], kt = t => t.time + "|" + (t.version || "") + "|" + (t.url || ""), have = new Set(B.map(kt)); times.forEach(t => { if (!have.has(kt(t))) { have.add(kt(t)); B.push(t); F.n++; } }); }); }); // v19 : une séance de minuit apparaît dans deux jours Allociné → dédoublonnée
+    try { const x = await fetchDay(d); ok++; n = ingestDay(by, x, now); if (n) got++;
       if (n) dates.push(d); CAT.dates = dates.slice(); CAT.last = dates[dates.length - 1] || "";
       if (ok === 1 || i === MIN - 1 || (i >= MIN && n)) { publish(by); if (document.querySelector("#v-match.on")) renderMatch(); }
     } catch (e) {}
@@ -39,7 +59,7 @@ window.catBy = id => { const F = CAT.all && CAT.all["id:" + id]; return F ? F.by
 // v16 : uniquement les sorties de la semaine — même règle que « Sorties de la semaine » (app.js classify : sortie dans les 7 derniers jours, film récent)
 function weekRelease(f) { const D = ymd(new Date()), Y = +D.slice(0, 4), wk = new Date(D + "T12:00"); wk.setDate(wk.getDate() - 7); return !!f.rel && f.rel <= D && f.rel > ymd(wk) && (!f.year || f.year >= Y - 1); }
 function publish(by) { CAT.all = by; CAT.films = Object.values(by).map(f => { f.cines = Object.keys(f.by); f.rel = f.releases.filter(r => r.name === "Released" && r.date).map(r => r.date).sort()[0] || ""; return f; }).filter(weekRelease); CAT.at = Date.now(); window.dispatchEvent(new Event("cinecat")); }
-setInterval(() => { if (!document.hidden) loadCatalog(true); }, 30 * 6e4);
+setInterval(() => { if (!document.hidden) loadCatalog("auto"); }, 30 * 6e4);
 // ---------- Classement ----------
 const lbk = t => lbKey(t || "");
 function ranked() {
@@ -137,6 +157,7 @@ function watchHTML() { const L = (LISTS.towatch || []).slice().reverse();
   return L.length ? `<div class="mwl">${L.map(x => { const f = film(x.id); let L = {}; try { L = lbState(x); } catch (e) {} return `<div class="mwi${L.seen ? " seen" : ""}">${L.watch ? `<span class="lbw">LB</span>` : ""}${x.poster ? `<img src="${esc(x.poster)}" alt="Affiche de ${esc(x.title)}" loading="lazy">` : `<div class="noimg">🎬</div>`}<div><b>${esc(x.title)}</b><span class="sub">${esc(x.year || "")}${f ? ` · ${f.cines.length} cinéma${f.cines.length > 1 ? "s" : ""}` : " · pas de séance cette semaine"}</span>
    <div class="row2"><button class="ghost sm" onclick="matchFilm('${esc(x.id)}')">Fiche</button>${f ? `<button class="primary sm" onclick="matchSeances('${esc(x.id)}')">Voir les séances</button>` : ""}<button class="ghost sm" aria-label="Retirer ${esc(x.title)} de la watchlist" onclick="matchRemove('${esc(x.id)}')">✕ Retirer</button></div></div></div>`; }).join("")}</div>` : `<p class="empty">Ta watchlist est vide. Glisse des films vers la droite pour les ajouter.</p>`; }
 window.renderMatch = function () { const el = $("#v-match"); if (!el) return; if (!CAT.films.length && !CAT.loading && !CAT.err) loadCatalog();
+  else if (!CAT.loading && CAT.films.length && Date.now() - CAT.at > 30 * 6e4) loadCatalog(true);
   const L = CAT.films.length ? ranked() : [], c = CUR(), n = c && NEXT();
   el.innerHTML = `<div class="match${TAB === "deck" ? " mdeck" : ""}"><div class="mhd"><h1>💘 CinéMatch</h1><div class="subnav mtabs" role="tablist"><button role="tab" aria-selected="${TAB === "deck"}" class="${TAB === "deck" ? "on" : ""}" onclick="matchTab('deck')">Découvrir</button><button role="tab" aria-selected="${TAB === "list"}" class="${TAB === "list" ? "on" : ""}" onclick="matchTab('list')">Ma watchlist (${(LISTS.towatch || []).length})</button></div></div>
   ${TAB === "list" ? watchHTML() : `${CAT.films.length ? filtersHTML() : ""}
