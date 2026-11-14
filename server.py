@@ -64,6 +64,117 @@ def slim_public_films(films):
         out.append(g)
     return out
 
+
+# ---------- v25 : itinéraires transports (proxy IDFM PRIM / Navitia) ----------
+IDFM_JOURNEYS = "https://prim.iledefrance-mobilites.fr/marketplace/v2/navitia/journeys"
+IDFM_CACHE, IDFM_TTL, IDFML = {}, 60, threading.Lock()
+
+def idfm_key():
+    return (os.environ.get("IDFM_API_KEY") or "").strip()
+
+def parse_latlng(val):
+    if not val or "," not in val: return None
+    try:
+        lat_s, lng_s = val.split(",", 1)
+        lat, lng = float(lat_s.strip()), float(lng_s.strip())
+    except Exception:
+        return None
+    if not (-90 <= lat <= 90 and -180 <= lng <= 180): return None
+    return lat, lng
+
+def navitia_dt(s):
+    s = str(s or "")
+    if len(s) >= 15 and s[8] == "T":
+        return "%s-%s-%sT%s:%s:%s" % (s[0:4], s[4:6], s[6:8], s[9:11], s[11:13], s[13:15])
+    return s
+
+def place_name(p):
+    if not isinstance(p, dict): return ""
+    sp = p.get("stop_point") if isinstance(p.get("stop_point"), dict) else {}
+    ad = p.get("address") if isinstance(p.get("address"), dict) else {}
+    return (p.get("name") or sp.get("name") or ad.get("label") or ad.get("name") or "").strip()
+
+def section_mode(sec):
+    t = (sec.get("type") or "")
+    mode = (sec.get("mode") or "").lower()
+    di = sec.get("display_informations") or {}
+    cm = (di.get("commercial_mode") or di.get("physical_mode") or "").lower()
+    if t == "waiting": return "waiting"
+    if t == "transfer": return "transfer"
+    if t in ("street_network", "crow_fly", "park", "bss_rent", "bss_put_back"):
+        if "bike" in mode or "bicycle" in mode or "bss" in t: return "bike"
+        return "walking"
+    if "metro" in cm or "métro" in cm: return "metro"
+    if "rer" in cm: return "rer"
+    if "tram" in cm: return "tram"
+    if "bus" in cm or "noctilien" in cm: return "bus"
+    if "train" in cm or "transilien" in cm: return "train"
+    if t == "public_transport": return "transit"
+    return t or "transit"
+
+def slim_transit_journeys(data):
+    out = []
+    for j in (data.get("journeys") or [])[:3]:
+        sections = []
+        for sec in j.get("sections") or []:
+            di = sec.get("display_informations") or {}
+            color = di.get("color")
+            if color and not str(color).startswith("#"): color = "#" + str(color)
+            geo = sec.get("geojson")
+            if isinstance(geo, dict) and geo.get("type") == "Feature":
+                geo = geo.get("geometry")
+            if not (isinstance(geo, dict) and geo.get("coordinates")): geo = None
+            sections.append({
+                "mode": section_mode(sec),
+                "duration": int(sec.get("duration") or 0),
+                "line": (str(di.get("code") or di.get("label") or "").strip() or None),
+                "color": color or None,
+                "from": place_name(sec.get("from") or {}),
+                "to": place_name(sec.get("to") or {}),
+                "geojson": geo,
+            })
+        out.append({
+            "duration": int(j.get("duration") or 0),
+            "departure": navitia_dt(j.get("departure_date_time") or ""),
+            "arrival": navitia_dt(j.get("arrival_date_time") or ""),
+            "transfers": int(j.get("nb_transfers") or 0),
+            "sections": sections,
+        })
+    return {"journeys": out}
+
+def idfm_fetch(olon, olat, dlon, dlat):
+    q = urllib.parse.urlencode({"from": "%s;%s" % (olon, olat), "to": "%s;%s" % (dlon, dlat), "count": 3})
+    url = IDFM_JOURNEYS + "?" + q
+    req = urllib.request.Request(url, headers={
+        "apikey": idfm_key(), "Accept": "application/json",
+        "User-Agent": "cine-idf-patheco",
+    })
+    with urllib.request.urlopen(req, timeout=15) as r:
+        return json.loads(r.read().decode())
+
+def transit_get(handler):
+    q = urllib.parse.parse_qs(urllib.parse.urlparse(handler.path).query)
+    frm, to = parse_latlng((q.get("from") or [""])[0]), parse_latlng((q.get("to") or [""])[0])
+    if not frm or not to:
+        return handler.send_json(400, b'{"error":"bad_coords"}', cache_control=CC_REVALIDATE, etag=False)
+    if not idfm_key():
+        return handler.send_json(503, b'{"error":"no_key"}', cache_control=CC_REVALIDATE, etag=False)
+    key = "%.4f,%.4f:%.4f,%.4f" % (frm[0], frm[1], to[0], to[1])
+    now = time.time()
+    with IDFML:
+        hit = IDFM_CACHE.get(key)
+        if hit and now - hit[0] < IDFM_TTL:
+            return handler.send_json(200, hit[1], cache_control=CC_API_SHORT)
+    try:
+        raw = idfm_fetch(frm[1], frm[0], to[1], to[0])
+        body = json.dumps(slim_transit_journeys(raw), ensure_ascii=False).encode()
+    except urllib.error.HTTPError as e:
+        return handler.send_json(502, b'{"error":"transit_upstream"}', cache_control=CC_REVALIDATE, etag=False)
+    except Exception:
+        return handler.send_json(502, b'{"error":"transit_upstream"}', cache_control=CC_REVALIDATE, etag=False)
+    with IDFML: IDFM_CACHE[key] = (now, body)
+    return handler.send_json(200, body, cache_control=CC_API_SHORT)
+
 class H(http.server.SimpleHTTPRequestHandler):
     extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map, ".webmanifest": "application/manifest+json", ".js": "application/javascript; charset=utf-8", ".json": "application/json", ".svg": "image/svg+xml", ".xml": "application/xml", ".apk": "application/vnd.android.package-archive", ".zip": "application/zip"}
     def end_headers(s):
@@ -149,6 +260,7 @@ class H(http.server.SimpleHTTPRequestHandler):
             try: r = letterboxd(s.path.split("/")[2].split("?")[0]); return s.send_json((503 if r.get("retry") else 404) if "error" in r else 200, json.dumps(r, ensure_ascii=False).encode(), cache_control=CC_REVALIDATE)
             except Exception as e:
                 import traceback; traceback.print_exc(); return s.send_json(502, json.dumps({"error": "Letterboxd ne répond pas, réessayez."}).encode())
+        if s.path.startswith("/api/transit"): return s.transit()
         if not s.path.startswith("/pathe/"): return s.serve_static()
         path = s.path[len("/pathe/"):]
         url = "https://www.pathe.fr/api/" + path + ("&" if "?" in path else "?") + "language=fr"
@@ -184,6 +296,9 @@ class H(http.server.SimpleHTTPRequestHandler):
         sel = [c for c in ALLO_CINES if c["id"] in ids][:80] if ids else [c for c in ALLO_CINES if c.get("type") in ("pathe", "partner")]
         with ThreadPoolExecutor(4) as ex: res = dict(ex.map(one, sel))
         s.send_json(200, json.dumps({"date": d, "cinemas": res}, ensure_ascii=False).encode(), cache_control=CC_ALLO)
+
+    def transit(s):
+        return transit_get(s)
 
 def allo_fetch(cid, date):
         parts = [None, cid, date]

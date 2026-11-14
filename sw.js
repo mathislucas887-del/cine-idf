@@ -1,5 +1,5 @@
-const V = "cine-idf-v24", DATA = "cine-idf-data", FRESH = 8 * 60 * 1000,
-  STATIC = ["/", "/index.html", "/style.css", "/app.js", "/data/cinemas.js", "/manifest.webmanifest", "/icon.svg", "/apple-touch-icon.png", "/icon-192.png", "/plus.js", "/pathe.js", "/v11.js", "/v12.js", "/v13.js", "/v15.js", "/v18.js", "/reset.js", "/durable.js", "/logo-96.png"];
+const V = "cine-idf-v25", DATA = "cine-idf-data", FRESH = 8 * 60 * 1000,
+  STATIC = ["/", "/index.html", "/style.css", "/app.js", "/itineraire.js", "/data/cinemas.js", "/manifest.webmanifest", "/icon.svg", "/apple-touch-icon.png", "/icon-192.png", "/plus.js", "/pathe.js", "/v11.js", "/v12.js", "/v13.js", "/v15.js", "/v18.js", "/reset.js", "/durable.js", "/logo-96.png"];
 self.addEventListener("install", e => {
   e.waitUntil((async () => {
     const keys = await caches.keys(), old = keys.find(k => k.startsWith("cine-idf-v") && k !== V);
@@ -12,7 +12,7 @@ self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(k => Pro
 const ageMs = r => { const d = r && r.headers.get("date"); return d ? Date.now() - new Date(d).getTime() : Infinity; };
 self.addEventListener("fetch", e => {
   const u = new URL(e.request.url);
-  if (e.request.method !== "GET" || u.origin !== location.origin || u.pathname.startsWith("/api/") || u.pathname === "/sw.js") return;
+  if (e.request.method !== "GET" || u.origin !== location.origin || u.pathname.startsWith("/api/") || u.pathname === "/sw.js") return; // pas de cache pour /api/transit, OSRM, Nominatim
   if (u.pathname.startsWith("/allocine-all/")) {
     e.respondWith((async () => {
       const cache = await caches.open(DATA);

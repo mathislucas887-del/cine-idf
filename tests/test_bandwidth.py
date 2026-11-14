@@ -160,7 +160,7 @@ def test_http_allocine_all_gzip_etag_and_slim(monkeypatch=None):
 def test_frontend_and_sw_markers():
     root = pathlib.Path(__file__).resolve().parents[1]
     sw = (root / "sw.js").read_text()
-    assert 'cine-idf-v24' in sw and "If-None-Match" in sw and "addAll" in sw
+    assert 'cine-idf-v25' in sw and "If-None-Match" in sw and "addAll" in sw
     assert "/sw.js" in sw  # excluded from intercept
     app = (root / "app.js").read_text()
     assert "fetchDayShows" in app and "MEM_DAY_CACHE" in app
@@ -174,6 +174,15 @@ def test_frontend_and_sw_markers():
     assert "fetchDayShows" in plus
     # le bouton APK de l'app pointe toujours vers /download/
     assert "/download/cine-idf.apk" in app
+    itin = (root / "itineraire.js").read_text()
+    index = (root / "index.html").read_text()
+    assert "/itineraire.js" in sw and "/itineraire.js" in index
+    assert "openRoute" in app and "openRoute" in itin
+    assert "routing.openstreetmap.de/routed-foot" in itin and "routing.openstreetmap.de/routed-bike" in itin
+    assert "/api/transit" in itin
+    assert "maps.google" not in itin and "google.com/maps" not in itin
+    assert "maps.apple.com" not in itin and "citymapper.com" not in itin
+    assert "Itinéraires en transports indisponibles pour le moment" in itin
 
 if __name__ == "__main__":
     for n, f in list(globals().items()):
