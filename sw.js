@@ -1,4 +1,4 @@
-const V = "cine-idf-v23", DATA = "cine-idf-data", FRESH = 8 * 60 * 1000,
+const V = "cine-idf-v24", DATA = "cine-idf-data", FRESH = 8 * 60 * 1000,
   STATIC = ["/", "/index.html", "/style.css", "/app.js", "/data/cinemas.js", "/manifest.webmanifest", "/icon.svg", "/apple-touch-icon.png", "/icon-192.png", "/plus.js", "/pathe.js", "/v11.js", "/v12.js", "/v13.js", "/v15.js", "/v18.js", "/reset.js", "/durable.js", "/logo-96.png"];
 self.addEventListener("install", e => {
   e.waitUntil((async () => {
