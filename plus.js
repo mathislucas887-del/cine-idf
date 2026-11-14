@@ -1,5 +1,5 @@
 "use strict";
-/* Ciné IDF – fonctionnalités v8 : ce soir près de moi, comparateur, plan de soirée, filtres enregistrés, CinéPass,
+/* Pathé & co – fonctionnalités v8 : ce soir près de moi, comparateur, plan de soirée, filtres enregistrés, CinéPass,
    agenda avant-premières, rétro du week-end, watchlist commune, rappels, billets enrichis, statut serveur. */
 const hm = d => new Date(d).toLocaleTimeString("fr-FR", {hour: "2-digit", minute: "2-digit"});
 const trav = d => d == null ? null : d < 1.2 ? Math.round(d * 13) : Math.round(10 + d * 3.6); // marche ~4,5 km/h sinon transports ~17 km/h + 10 min
@@ -113,7 +113,7 @@ window.doCommon = async () => { const u = $("#fruser").value.trim(); if (!u) ret
     $("#common").innerHTML = `<p><b>${both.length}</b> film(s) en commun${showing.length ? `, dont <b>${showing.length}</b> à l’affiche` : ""}.</p>${showing.length ? `<div class="rail" style="padding-left:0">${showing.map(f => posterCard(f)).join("")}</div>` : ""}<p class="sub">${both.slice(0, 60).map(i => esc(i.n) + (i.y ? ` (${i.y})` : "")).join(" · ")}</p>`;
   } catch (e) { $("#common").innerHTML = `<p>⚠️ ${esc(e.message)}</p>`; } };
 window.shareToWatch = async () => { const data = btoa(unescape(encodeURIComponent(JSON.stringify(LISTS.towatch.map(i => [i.id, i.title, i.year]))))).replace(/=+$/, "");
-  const url = location.origin + "/?liste=" + data; try { if (navigator.share) await navigator.share({title: "Ma liste Ciné IDF", url}); else { await navigator.clipboard.writeText(url); toast("Lien copié"); } } catch (e) {} };
+  const url = location.origin + "/?liste=" + data; try { if (navigator.share) await navigator.share({title: "Ma liste Pathé & co", url}); else { await navigator.clipboard.writeText(url); toast("Lien copié"); } } catch (e) {} };
 function openSharedList(s) { try { const L = JSON.parse(decodeURIComponent(escape(atob(s)))); modal(`<div class="mbody"><h2>📌 Liste partagée (${L.length} films)</h2>${L.map(([id, t, y]) => `<p>${esc(t)} ${y ? `<small>(${esc(y)})</small>` : ""} ${FILMS.some(f => f.id == id) ? `<a href="#" onclick="openFilm('${esc(id)}');return false">· à l’affiche →</a>` : ""}</p>`).join("")}
   <button class="primary" onclick='importShared(${JSON.stringify(JSON.stringify(L))})'>Ajouter à ma liste « À voir »</button></div>`); } catch (e) { toast("Lien de liste invalide"); } }
 window.importShared = s => { const L = JSON.parse(s), ids = new Set(LISTS.towatch.map(i => i.id)); L.forEach(([id, title, year]) => ids.has(String(id)) || LISTS.towatch.push({id: String(id), title, poster: "", year: String(year || ""), at: TODAY()})); LS.set("lists", LISTS); sync(); closeModal(); toast("Liste importée"); };
@@ -157,7 +157,7 @@ function renderInfosPlus() { const i = $("#infos"); if (!i) return; $("#cpbox")?
 // ---------- 12. Rappels et alertes ----------
 function reminders() { const done = LS.get("reminded", {}), now = Date.now();
   TICKETS.forEach(t => { const dt = new Date(t.time) - now; if (dt > 0 && dt <= 3600000 && !done[t.id]) { done[t.id] = 1; const m = `⏰ Ta séance dans ${Math.round(dt / 60000)} min : ${t.title} au ${t.cinema} (${t.time.slice(11, 16)})`;
-    toast(m); try { if (Notification.permission === "granted") navigator.serviceWorker?.ready.then(r => r.showNotification("Ciné IDF", {body: m, icon: "/icon-192.png", tag: t.id})).catch(() => new Notification("Ciné IDF", {body: m})); } catch (e) {} } });
+    toast(m); try { if (Notification.permission === "granted") navigator.serviceWorker?.ready.then(r => r.showNotification("Pathé & co", {body: m, icon: "/icon-192.png", tag: t.id})).catch(() => new Notification("Pathé & co", {body: m})); } catch (e) {} } });
   LS.set("reminded", done);
   const wk = "retro" + ymd(new Date()).slice(0, 8) + Math.floor(new Date().getDate() / 7);
   if (EXTRA.retroSub && !done[wk] && new Date().getDay() >= 4) { done[wk] = 1; LS.set("reminded", done); toast("🎞️ Le programme rétro du week-end est en ligne : bouton « Rétro ce week-end »"); }

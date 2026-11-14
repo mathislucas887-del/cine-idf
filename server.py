@@ -1,9 +1,9 @@
 import html
 #!/usr/bin/env python3
-"""Ciné IDF – serveur local : sert l'appli + relais (proxy) vers l'API publique de pathe.fr.
+"""Pathé & co – serveur local : sert l'appli + relais (proxy) vers l'API publique de pathe.fr.
 Usage : python3 server.py   puis ouvrir http://localhost:8765
 """
-import json, re, urllib.parse, http.server, socketserver, urllib.request, urllib.error, time, os, sys, threading, gzip, base64, hashlib
+import json, re, urllib.parse, http.server, socketserver, urllib.request, urllib.error, time, os, sys, threading, gzip, base64, hashlib, socket
 PORT = int(os.environ.get("PORT", sys.argv[1] if len(sys.argv) > 1 else 8765))
 START = time.time()
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -616,7 +616,7 @@ def prof(email, u): return {"email": email, **{k: u.get(k, [] if k in ("favs", "
 import smtplib, ssl
 from email.message import EmailMessage
 from email.utils import parseaddr, formataddr
-APP_URL = (os.environ.get("APP_URL") or os.environ.get("RENDER_EXTERNAL_URL") or "https://cine-idf.onrender.com").rstrip("/")
+APP_URL = (os.environ.get("APP_URL") or os.environ.get("RENDER_EXTERNAL_URL") or "https://patheco.alwaysdata.net").rstrip("/")
 RESET_TTL = 30 * 60
 RL, RLL = {}, threading.Lock()
 def rate_ok(key, limit, window):
@@ -639,7 +639,7 @@ def mail_provider():
     return ""
 def send_mail(to, subject, text, html_body):
     p = mail_provider(); frm = os.environ.get("MAIL_FROM") or os.environ.get("SMTP_USER") or ""
-    name, addr = parseaddr(frm); name = name or "Ciné IDF"
+    name, addr = parseaddr(frm); name = name or "Pathé & co"
     if not p: print("⚠️  Mot de passe oublié : aucun service d'e-mail configuré (BREVO_API_KEY, RESEND_API_KEY ou SMTP_HOST + MAIL_FROM) — e-mail NON envoyé à", mask_email(to), flush=True); return False
     if not addr: print("⚠️  Mot de passe oublié : MAIL_FROM manquant — e-mail NON envoyé à", mask_email(to), flush=True); return False
     try:
@@ -669,17 +669,17 @@ def send_mail(to, subject, text, html_body):
     return False
 def reset_mail(to, tok):
     link = APP_URL + "/?reset=" + tok
-    text = ("Bonjour,\n\nUne demande de réinitialisation du mot de passe de votre compte Ciné IDF (" + to + ") a été faite.\n\n"
+    text = ("Bonjour,\n\nUne demande de réinitialisation du mot de passe de votre compte Pathé & co (" + to + ") a été faite.\n\n"
             "Pour choisir un nouveau mot de passe, ouvrez ce lien (valable 30 minutes, une seule fois) :\n" + link + "\n\n"
-            "Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail : votre mot de passe actuel reste inchangé.\n\n— Ciné IDF")
+            "Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail : votre mot de passe actuel reste inchangé.\n\n— Pathé & co")
     hb = ('<div style="background:#0b0b0b;padding:28px 16px;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#eee">'
           '<div style="max-width:460px;margin:0 auto;background:#151515;border:1px solid #3a2f12;border-radius:16px;padding:26px">'
-          '<div style="color:#d4af37;font-size:22px;font-weight:700;margin-bottom:6px">Ciné IDF</div>'
+          '<div style="color:#d4af37;font-size:22px;font-weight:700;margin-bottom:6px">Pathé &amp; co</div>'
           '<p style="font-size:16px;line-height:1.5">Une demande de réinitialisation du mot de passe a été faite pour <b>' + html.escape(to) + '</b>.</p>'
           '<p style="text-align:center;margin:26px 0"><a href="' + html.escape(link) + '" style="background:#d4af37;color:#111;text-decoration:none;font-weight:700;padding:14px 22px;border-radius:12px;display:inline-block">Choisir un nouveau mot de passe</a></p>'
           '<p style="font-size:13px;color:#aaa;line-height:1.5">Lien valable 30 minutes, utilisable une seule fois. Si vous n’êtes pas à l’origine de cette demande, ignorez cet e-mail : votre mot de passe actuel reste inchangé.</p>'
           '<p style="font-size:12px;color:#777;word-break:break-all">' + html.escape(link) + '</p></div></div>')
-    return send_mail(to, "Ciné IDF – réinitialiser votre mot de passe", text, hb)
+    return send_mail(to, "Pathé & co – réinitialiser votre mot de passe", text, hb)
 def find_reset(d, tok):
     hh = hashlib.sha256(tok.encode()).hexdigest(); now = time.time()
     for em, u in d["users"].items():
@@ -952,18 +952,18 @@ def film_page(fid):
     page = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
     if not f: return page.encode()
     e = lambda x: html.escape(str(x or ""), quote=True)
-    title = f"{e(f['title'])} – séances en Île-de-France | Ciné IDF"; desc = e((f.get("synopsis") or "")[:200]) or f"Toutes les séances de {e(f['title'])} à Paris et en Île-de-France."
+    title = f"{e(f['title'])} – séances en Île-de-France | Pathé &amp; co"; desc = e((f.get("synopsis") or "")[:200]) or f"Toutes les séances de {e(f['title'])} à Paris et en Île-de-France."
     page = re.sub(r"<title>.*?</title>", f"<title>{title}</title>", page, flags=re.S)
     page = re.sub(r'<meta name="description" content="[^"]*">', f'<meta name="description" content="{desc}">', page)
     page = re.sub(r'<meta property="og:title" content="[^"]*">', f'<meta property="og:title" content="{title}">', page)
     page = re.sub(r'<meta property="og:description" content="[^"]*">', f'<meta property="og:description" content="{desc}">', page)
     page = re.sub(r'<meta property="og:image" content="[^"]*">', f'<meta property="og:image" content="{e(f.get("poster"))}">', page)
-    page = page.replace('<link rel="canonical" href="https://cine-idf.onrender.com/">', f'<link rel="canonical" href="https://cine-idf.onrender.com/film/{e(f["id"])}">')
+    page = re.sub(r'<link rel="canonical" href="[^"]*">', f'<link rel="canonical" href="{APP_URL}/film/{e(f["id"])}">', page)
     ld = {"@context": "https://schema.org", "@type": "Movie", "name": f["title"], "image": f.get("poster"), "description": f.get("synopsis"), "director": f.get("directors"), "genre": f.get("genres"), "actor": [{"@type": "Person", "name": a} for a in f.get("cast") or []]}
     page = page.replace("</head>", f'<script type="application/ld+json">{json.dumps(ld, ensure_ascii=False).replace("</", "<\\/")}</script>\n</head>', 1)
     return page.encode()
 def sitemap():
-    urls = ["https://cine-idf.onrender.com/"] + ["https://cine-idf.onrender.com/" + p for p in ("comment-ca-marche.html", "confidentialite.html", "statut.html")] + [f"https://cine-idf.onrender.com/film/{i}" for i in list(films_in_cache())[:500]]
+    urls = [APP_URL + "/"] + [APP_URL + "/" + p for p in ("comment-ca-marche.html", "confidentialite.html", "statut.html")] + [f"{APP_URL}/film/{i}" for i in list(films_in_cache())[:500]]
     return ('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + "".join(f"<url><loc>{u}</loc><changefreq>daily</changefreq></url>" for u in urls) + "</urlset>").encode()
 
 # ---------- Letterboxd (pages publiques : vus + watchlist) ----------
@@ -1036,15 +1036,18 @@ def letterboxd(user):
 H.do_POST = lambda h: api_post(h, h.path.split("?")[0]) if h.path.startswith("/api/") else h.send_json(404, b'{}')
 
 class TS(socketserver.ThreadingMixIn, http.server.HTTPServer): daemon_threads = True
+class TS6(TS):
+    address_family = socket.AF_INET6
 if __name__ == "__main__":
-    import socket
-    HOST = os.environ.get("HOST", "0.0.0.0")
+    HOST = (os.environ.get("HOST") or os.environ.get("IP") or "0.0.0.0").strip()
+    if HOST.startswith("[") and HOST.endswith("]"):
+        HOST = HOST[1:-1]
     try:
         k = socket.socket(socket.AF_INET, socket.SOCK_DGRAM); k.connect(("8.8.8.8", 80)); ip = k.getsockname()[0]; k.close()
     except Exception: ip = "IP-de-cet-ordinateur"
-    print(f"Ciné IDF → sur cet ordinateur : http://localhost:{PORT}")
-    print(f"           sur votre téléphone (même Wi-Fi) : http://{ip}:{PORT}")
-    print("Ctrl+C pour arrêter")
+    print(f"Pathé & co → sur cet ordinateur : http://localhost:{PORT}", flush=True)
+    print(f"           sur votre téléphone (même Wi-Fi) : http://{ip}:{PORT}", flush=True)
+    print("Ctrl+C pour arrêter", flush=True)
     def warm():
         import datetime
         BG.on = True
@@ -1080,4 +1083,5 @@ if __name__ == "__main__":
             try: urllib.request.urlopen(u + "/health", timeout=30).read()
             except Exception: pass
     threading.Thread(target=keepalive, daemon=True).start()
-    TS((HOST, PORT), H).serve_forever()
+    Server = TS6 if ":" in HOST else TS
+    Server((HOST, PORT), H).serve_forever()

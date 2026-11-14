@@ -1,7 +1,7 @@
 {
  "id": "/",
- "name": "Ciné IDF – séances Île-de-France",
- "short_name": "Ciné IDF",
+ "name": "Pathé & co – séances Île-de-France",
+ "short_name": "Pathé & co",
  "description": "Séances de 362 cinémas d’Île-de-France : Pathé, partenaires CinéPass et salles indépendantes.",
  "start_url": "/?source=app",
  "scope": "/",

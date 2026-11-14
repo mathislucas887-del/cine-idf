@@ -1,4 +1,4 @@
-# Ciné IDF – Pathé & partenaires CinéPass en Île-de-France
+# Pathé & co – séances Pathé, CinéPass et cinémas d’Île-de-France
 
 Carte, annuaire avec photos et séances en direct des 69 cinémas CinéPass d'Île-de-France
 (25 Pathé/Gaumont, dont La Géode et Les 7 Batignolles, et 44 cinémas partenaires).
@@ -56,22 +56,22 @@ Le lien fonctionne tant que l'ordinateur et les deux terminaux restent ouverts. 
 ## 📲 Télécharger l'application
 
 ### Android (APK)
-1. Sur votre téléphone, ouvrez **https://cine-idf.onrender.com/download/cine-idf.apk** (ou bouton 📲 du site → « Télécharger l'APK »).
+1. Sur votre téléphone, ouvrez **https://patheco.alwaysdata.net/download/cine-idf.apk** (ou bouton 📲 du site → « Télécharger l'APK »).
 2. Ouvrez le fichier `cine-idf.apk` téléchargé.
 3. Si Android affiche « Pour votre sécurité, l'installation d'applis inconnues est bloquée » : **Paramètres** → autorisez **« Installer des applis inconnues »** pour Chrome (ou votre navigateur / gestionnaire de fichiers), puis revenez.
-4. Touchez **Installer**, puis **Ouvrir**. L'icône Ciné IDF noir et or apparaît sur l'écran d'accueil.
+4. Touchez **Installer**, puis **Ouvrir**. L'icône Pathé & co noir et or apparaît sur l'écran d'accueil.
    - Play Protect peut avertir « appli inconnue » (elle n'est pas sur le Play Store) : touchez « Installer quand même ».
 
 Alternative sans APK : dans Chrome, menu **⋮ → Installer l'application** (PWA).
 
 ### iPhone / iPad (sans App Store)
-1. Ouvrez **https://cine-idf.onrender.com** dans **Safari**.
+1. Ouvrez **https://patheco.alwaysdata.net** dans **Safari**.
 2. Touchez **Partager** (carré avec flèche ⬆︎).
 3. Choisissez **« Sur l'écran d'accueil »**, puis **Ajouter**.
-4. Lancez Ciné IDF depuis l'icône : plein écran, favoris/billets disponibles hors ligne.
+4. Lancez Pathé & co depuis l'icône : plein écran, favoris/billets disponibles hors ligne.
 
 ### Publier sur les stores (comptes développeur requis)
-- **Google Play** (compte 25 $ une fois) : reconstruire un AAB signé (`android/build.sh` produit l'APK ; pour un AAB : `npx @bubblewrap/cli init --manifest https://cine-idf.onrender.com/manifest.webmanifest` puis `bubblewrap build`), publier `/.well-known/assetlinks.json` avec l'empreinte SHA-256 de la clé, puis importer l'AAB dans la Play Console.
+- **Google Play** (compte 25 $ une fois) : reconstruire un AAB signé (`android/build.sh` produit l'APK ; pour un AAB : `npx @bubblewrap/cli init --manifest https://patheco.alwaysdata.net/manifest.webmanifest` puis `bubblewrap build`), publier `/.well-known/assetlinks.json` avec l'empreinte SHA-256 de la clé, puis importer l'AAB dans la Play Console.
 - **App Store / TestFlight** (Apple Developer 99 $/an + un Mac avec Xcode) : `cd mobile && npm install && npx cap sync ios && npx cap open ios`, choisir l'équipe de signature, **Product → Archive → Distribute → App Store Connect**, puis inviter les testeurs dans TestFlight. Apple peut refuser une app qui n'est qu'un site web : prévoir d'ajouter des fonctions natives (notifications, widgets).
 
 ### Construire l'APK soi-même

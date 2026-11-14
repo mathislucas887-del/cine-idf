@@ -567,7 +567,7 @@
   "allocineId": "B0151",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -578,7 +578,7 @@
   "patheSlug": null,
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "81 ter avenue du Bac 94210 Saint-Maur-des-Fossés",
@@ -817,7 +817,7 @@
   "city": "Boulogne-Billancourt",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "28 avenue André Morizet 92100 Boulogne-Billancourt",
@@ -1009,7 +1009,7 @@
   "allocineId": "B0127",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -1053,7 +1053,7 @@
   "allocineId": "B0203",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -1086,7 +1086,7 @@
   "patheSlug": null,
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "1 place de la Concorde 75008 Paris",
@@ -1137,7 +1137,7 @@
   "city": "Paris",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "53 rue Notre-Dame-des-Champs 75006 Paris",
@@ -1209,7 +1209,7 @@
   "allocineId": "C0005",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -1613,7 +1613,7 @@
   "dep": "Essonne",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -1628,7 +1628,7 @@
   "city": "Ris-Orangis",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "15, place Jacques-Brel 91130 Ris-Orangis",
@@ -1648,7 +1648,7 @@
   "city": "Mennecy",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "5 rue Charles Peguy 91540 Mennecy",
@@ -1668,7 +1668,7 @@
   "city": "Les Ulis",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "5 Avenue de l'Aubrac 91940 Les Ulis",
@@ -1708,7 +1708,7 @@
   "city": "Brétigny-sur-Orge",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "5 rue Michèle Morgan Les Promenades de Brétigny - ZAC de la Maison Neuve 91220 Brétigny-sur-Orge",
@@ -1748,7 +1748,7 @@
   "city": "Milly-la-Forêt",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "13 Rue du Camp Romain 91490 Milly-la-Forêt",
@@ -1808,7 +1808,7 @@
   "city": "Ballancourt-sur-Essonne",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "Espace Daniel Salvi - 2, rue des Colombes - ZAC de l'Aunaie 91610 Ballancourt-sur-Essonne",
@@ -1828,7 +1828,7 @@
   "city": "Bouray-sur-Juine",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "Maison Valentine, Place de l'Orme St Marc 91850 Bouray-sur-Juine",
@@ -1888,7 +1888,7 @@
   "city": "Longjumeau",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "20 av du Général De Gaulle 91160 Longjumeau",
@@ -1908,7 +1908,7 @@
   "city": "Marcoussis",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "Parc des Célestins (1 Rue Gambetta) 91460 Marcoussis",
@@ -1948,7 +1948,7 @@
   "city": "Paray-Vieille-Poste",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "78-80 avenue d'Alsace Lorraine 91550 Paray-Vieille-Poste",
@@ -1968,7 +1968,7 @@
   "city": "Yerres",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "2 rue Marc-Sangnier 91330 Yerres",
@@ -2028,7 +2028,7 @@
   "city": "Verrières-le-Buisson",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "3 voie de l'Aulne 91370 Verrières-le-Buisson",
@@ -2073,7 +2073,7 @@
   "dep": "Essonne",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -2093,7 +2093,7 @@
   "dep": "Essonne",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -2113,7 +2113,7 @@
   "dep": "Essonne",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -2188,7 +2188,7 @@
   "city": "Boussy-Saint-Antoine",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "Centre commercial du Val-d'Yerres-2 91800 Boussy-Saint-Antoine",
@@ -2248,7 +2248,7 @@
   "city": "Nanterre",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "49, rue Maurice-Thorez 92000 Nanterre",
@@ -2268,7 +2268,7 @@
   "city": "Nanterre",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "7 avenue Pablo Picasso 92000 Nanterre",
@@ -2308,7 +2308,7 @@
   "city": "Courbevoie",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "15, bd. Aristide-Briand 92400 Courbevoie",
@@ -2353,7 +2353,7 @@
   "dep": "Hauts-de-Seine",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -2413,7 +2413,7 @@
   "dep": "Hauts-de-Seine",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -2468,7 +2468,7 @@
   "city": "Puteaux",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "136 rue de la République 92800 Puteaux",
@@ -2488,7 +2488,7 @@
   "city": "Villeneuve-la-Garenne",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "44 Avenue de la Longue Bertrane 92390 Villeneuve-la-Garenne",
@@ -2508,7 +2508,7 @@
   "city": "Villeneuve-la-Garenne",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "29, av. de Verdun 92390 Villeneuve-la-Garenne",
@@ -2568,7 +2568,7 @@
   "city": "Bois-Colombes",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "7, villa des Aubépines 92270 Bois-Colombes",
@@ -2588,7 +2588,7 @@
   "city": "Bourg-la-Reine",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "11-13 boulevard Carnot 92340 Bourg-la-Reine",
@@ -2648,7 +2648,7 @@
   "city": "Clamart",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "22, rue paul vaillant couturier 92140 Clamart",
@@ -2688,7 +2688,7 @@
   "city": "Fontenay-aux-Roses",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "8, av. Jeanne-et-Maurice-Dolivet 92260 Fontenay-aux-Roses",
@@ -2748,7 +2748,7 @@
   "city": "Montrouge",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "88, rue Racine 92120 Montrouge",
@@ -2828,7 +2828,7 @@
   "city": "Ville-d'Avray",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "Passage de l'Écume des jours 92410 Ville-d'Avray",
@@ -2848,7 +2848,7 @@
   "city": "MEUDON LA FORET",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "16 avenue du Maréchal de Lattre de Tassigny 92360 MEUDON LA FORET",
@@ -2868,7 +2868,7 @@
   "city": "Châtenay-Malabry",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "364, av. de la Division-Leclerc 92290 Châtenay-Malabry",
@@ -2908,7 +2908,7 @@
   "city": "Gennevilliers",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "1, rue Pierre-et-Marie-Curie 92230 Gennevilliers",
@@ -2988,7 +2988,7 @@
   "city": "Antony",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "10, avenue de la Division Leclerc 92160 Antony",
@@ -3008,7 +3008,7 @@
   "city": "Asnières-sur-Seine",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "1, rue de la Station 92600 Asnières-sur-Seine",
@@ -3028,7 +3028,7 @@
   "city": "Fontainebleau",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "10 avenue du Maréchal de Villars 77300 Fontainebleau",
@@ -3048,7 +3048,7 @@
   "city": "Fontainebleau",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "6, rue de France 77300 Fontainebleau",
@@ -3068,7 +3068,7 @@
   "city": "Chessy",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "31, Place d’Ariane 77700 Chessy",
@@ -3088,7 +3088,7 @@
   "city": "Bray-sur-Seine",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "12, rue de l'eglise 77480 Bray-sur-Seine",
@@ -3108,7 +3108,7 @@
   "city": "Brie-Comte-Robert",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "80 avenue du general leclerc 77170 Brie-Comte-Robert",
@@ -3128,7 +3128,7 @@
   "city": "Champagne-sur-Seine",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "Rue Pierre de Courbetin 77430 Champagne-sur-Seine",
@@ -3148,7 +3148,7 @@
   "city": "Combs-la-Ville",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "rue Jean-Francois-Millet 77380 Combs-la-Ville",
@@ -3168,7 +3168,7 @@
   "city": "Mitry-Mory",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "4, av. des Bosquets 77290 Mitry-Mory",
@@ -3188,7 +3188,7 @@
   "city": "Moissy-Cramayel",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "place du 14-Juillet 1789 77550 Moissy-Cramayel",
@@ -3213,7 +3213,7 @@
   "dep": "Seine-et-Marne",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -3228,7 +3228,7 @@
   "city": "Ozoir-la-Ferrière",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "103, av. du General-de-Gaulle 77330 Ozoir-la-Ferrière",
@@ -3248,7 +3248,7 @@
   "city": "Roissy-en-Brie",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "Pôle Culturel de la ferme d'Ayau - Ave Maurice de Vlaminck 77680 Roissy-en-Brie",
@@ -3293,7 +3293,7 @@
   "dep": "Seine-et-Marne",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -3308,7 +3308,7 @@
   "city": "Savigny-le-Temple",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "Plessis-le-Roi 77176 Savigny-le-Temple",
@@ -3348,7 +3348,7 @@
   "city": "Vaux-le-Pénil",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "La Ferme des Jeux - rue Ambroise Pro 77000 Vaux-le-Pénil",
@@ -3373,7 +3373,7 @@
   "dep": "Seine-et-Marne",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -3408,7 +3408,7 @@
   "city": "Pontault-Combault",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "62, av. de la Republique 77340 Pontault-Combault",
@@ -3428,7 +3428,7 @@
   "city": "Claye-Souilly",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "Route Nationale 3 Lieu dit Les Masures 77410 Claye-Souilly",
@@ -3448,7 +3448,7 @@
   "city": "Nemours",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "9, rue Bezout 77140 Nemours",
@@ -3468,7 +3468,7 @@
   "city": "Lagny-sur-Marne",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "5, rue Delambre 77400 Lagny-sur-Marne",
@@ -3488,7 +3488,7 @@
   "city": "Melun",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "4. rue, de l'éperon 77000 Melun",
@@ -3508,7 +3508,7 @@
   "city": "Provins",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "33 rue du Général Delort 77160 Provins",
@@ -3568,7 +3568,7 @@
   "city": "Varennes-sur-Seine",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "Espace commercial du Bréau - RD 606 77130 Varennes-sur-Seine",
@@ -3613,7 +3613,7 @@
   "dep": "Seine-Saint-Denis",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -3628,7 +3628,7 @@
   "city": "Bobigny",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "1, place de la Libération 93000 Bobigny",
@@ -3708,7 +3708,7 @@
   "city": "Bobigny",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "35 Rue de Vienne 93000 Bobigny",
@@ -3728,7 +3728,7 @@
   "city": "Bobigny",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "1 Rue de Chablis 93000 Bobigny",
@@ -3753,7 +3753,7 @@
   "dep": "Seine-Saint-Denis",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -3768,7 +3768,7 @@
   "city": "Saint-Denis",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "20 Rue Ampère 93200 Saint-Denis",
@@ -3848,7 +3848,7 @@
   "city": "Pantin",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "11 Av. Aimé Césaire 93500 Pantin",
@@ -3868,7 +3868,7 @@
   "city": "Montreuil",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "12, place Jean-Jaurès 93100 Montreuil",
@@ -3888,7 +3888,7 @@
   "city": "Montreuil",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "9 bis rue Dombasle 93100 Montreuil",
@@ -3913,7 +3913,7 @@
   "dep": "Seine-Saint-Denis",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -3953,7 +3953,7 @@
   "dep": "Seine-Saint-Denis",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -3968,7 +3968,7 @@
   "city": "Aulnay-sous-Bois",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "134 avenue Anatole-France 93600 Aulnay-sous-Bois",
@@ -4033,7 +4033,7 @@
   "dep": "Seine-Saint-Denis",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -4053,7 +4053,7 @@
   "dep": "Seine-Saint-Denis",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -4088,7 +4088,7 @@
   "city": "Clichy-sous-Bois",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "4 allée Françoise Nguyen 93390 Clichy-sous-Bois",
@@ -4108,7 +4108,7 @@
   "city": "La Courneuve",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "1, allee du Progres 93120 La Courneuve",
@@ -4188,7 +4188,7 @@
   "city": "Livry-Gargan",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "36, rue Eugene-Masse 93190 Livry-Gargan",
@@ -4228,7 +4228,7 @@
   "city": "Les Pavillons-sous-Bois",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "144 avenue Jean Jaurès 93320 Les Pavillons-sous-Bois",
@@ -4288,7 +4288,7 @@
   "city": "Le Blanc-Mesnil",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "16, mail Debre Berhan - Place Gabriel Péri 93150 Le Blanc-Mesnil",
@@ -4328,7 +4328,7 @@
   "city": "Épinay-sur-Seine",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "5 Avenue Joffre 93800 Épinay-sur-Seine",
@@ -4348,7 +4348,7 @@
   "city": "Argenteuil",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "16-18 Rue Grégoire Collas 95100 Argenteuil",
@@ -4393,7 +4393,7 @@
   "dep": "Val-d'Oise",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -4413,7 +4413,7 @@
   "dep": "Val-d'Oise",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -4428,7 +4428,7 @@
   "city": "Cormeilles-en-Parisis",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "1 Bd du Parisis 95240 Cormeilles-en-Parisis",
@@ -4448,7 +4448,7 @@
   "city": "Cormeilles-en-Parisis",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "123 Rue de Saint Germain 95240 Cormeilles-en-Parisis",
@@ -4468,7 +4468,7 @@
   "city": "Montigny-lès-Cormeilles",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "82 boulevard Victor Bordier 95370 Montigny-lès-Cormeilles",
@@ -4488,7 +4488,7 @@
   "city": "Montigny-lès-Cormeilles",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "rue Guy-de-Maupassant 95370 Montigny-lès-Cormeilles",
@@ -4568,7 +4568,7 @@
   "city": "Ermont",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "3, rue Saint-Flaive prolongée 95120 Ermont",
@@ -4608,7 +4608,7 @@
   "city": "Garges-lès-Gonesse",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "40 Avenue du Général De Gaulle 95140 Garges-lès-Gonesse",
@@ -4628,7 +4628,7 @@
   "city": "Gonesse",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "Place Aimé Césaire - La Fauconnière 95500 Gonesse",
@@ -4648,7 +4648,7 @@
   "city": "Goussainville",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "82, boulevard Paul Vaillant Couturier 95190 Goussainville",
@@ -4668,7 +4668,7 @@
   "city": "Jouy-le-Moutier",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "96 avenue des Bruzacques 95280 Jouy-le-Moutier",
@@ -4688,7 +4688,7 @@
   "city": "Méry-sur-Oise",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "1, Route de Pontoise 95540 Méry-sur-Oise",
@@ -4713,7 +4713,7 @@
   "dep": "Val-d'Oise",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -4728,7 +4728,7 @@
   "city": "Bezons",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "162, rue Maurice-Berteaux 95870 Bezons",
@@ -4748,7 +4748,7 @@
   "city": "Franconville",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "32 bis rue de la Station 95130 Franconville",
@@ -4768,7 +4768,7 @@
   "city": "Montmorency",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "5 bis rue de Pontoise 95160 Montmorency",
@@ -4808,7 +4808,7 @@
   "city": "Saint-Gratien",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "place Francois-Truffaut 95210 Saint-Gratien",
@@ -4833,7 +4833,7 @@
   "dep": "Val-d'Oise",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -4873,7 +4873,7 @@
   "dep": "Val-d'Oise",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -4888,7 +4888,7 @@
   "city": "Sarcelles",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "2, contre-allée Henri Dunant 95200 Sarcelles",
@@ -4928,7 +4928,7 @@
   "city": "Ivry-sur-Seine",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "77, av. Georges-Gosnat 94200 Ivry-sur-Seine",
@@ -5048,7 +5048,7 @@
   "city": "Arcueil",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "1, rue Paul Signac 94110 Arcueil",
@@ -5088,7 +5088,7 @@
   "city": "Alfortville",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "82, rue Marcel Bourdarias 94140 Alfortville",
@@ -5128,7 +5128,7 @@
   "city": "Bonneuil-sur-Marne",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "2, av. Pablo-Neruda 94380 Bonneuil-sur-Marne",
@@ -5208,7 +5208,7 @@
   "city": "Fresnes",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "2 avenue du Parc des Sports 94260 Fresnes",
@@ -5228,7 +5228,7 @@
   "city": "Gentilly",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "Rue de Freiberg 94250 Gentilly",
@@ -5253,7 +5253,7 @@
   "dep": "Val-de-Marne",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -5268,7 +5268,7 @@
   "city": "Joinville-le-Pont",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "23, rue de Paris 94340 Joinville-le-Pont",
@@ -5308,7 +5308,7 @@
   "city": "Maisons-Alfort",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "116 avenue du Général de Gaulle 94700 Maisons-Alfort",
@@ -5348,7 +5348,7 @@
   "city": "Ormesson-sur-Marne",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "14-22 avenue Wladimir d'Ormesson 94490 Ormesson-sur-Marne",
@@ -5388,7 +5388,7 @@
   "city": "Le Plessis-Trévise",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "72-74 av. Ardouin 94420 Le Plessis-Trévise",
@@ -5408,7 +5408,7 @@
   "city": "Sucy-en-Brie",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "1 esplanade du 18 juin 1940 94370 Sucy-en-Brie",
@@ -5433,7 +5433,7 @@
   "dep": "Val-de-Marne",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -5448,7 +5448,7 @@
   "city": "Villeneuve-Saint-Georges",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "Théâtre Municipal - 21 avenue Carnot 94190 Villeneuve-Saint-Georges",
@@ -5508,7 +5508,7 @@
   "city": "Champigny-sur-Marne",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "66, rue Jean-Jaures 94500 Champigny-sur-Marne",
@@ -5548,7 +5548,7 @@
   "city": "Chennevières-sur-Marne",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "Centre Commercial Pince-Vent 94430 Chennevières-sur-Marne",
@@ -5588,7 +5588,7 @@
   "city": "Mantes-la-Jolie",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "3 rue Jean Mermoz 78200 Mantes-la-Jolie",
@@ -5688,7 +5688,7 @@
   "city": "Aubergenville",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "1, av. de la Division-Leclerc 78410 Aubergenville",
@@ -5708,7 +5708,7 @@
   "city": "Beynes",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "place du 8 Mai 1945 78650 Beynes",
@@ -5728,7 +5728,7 @@
   "city": "Bois-d'Arcy",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "Ferme de la Tremblaye - Rue du Parc 78390 Bois-d'Arcy",
@@ -5808,7 +5808,7 @@
   "city": "Maule",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "Place Henri Dunant (place des fetes) 78580 Maule",
@@ -5848,7 +5848,7 @@
   "city": "Rambouillet",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "2 Rue de la Légion d'Honneur 78120 Rambouillet",
@@ -5868,7 +5868,7 @@
   "city": "Saint-Arnoult-en-Yvelines",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "place Jean-Moulin 78730 Saint-Arnoult-en-Yvelines",
@@ -5908,7 +5908,7 @@
   "city": "Verneuil-sur-Seine",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "3 boulevard André Malraux 78480 Verneuil-sur-Seine",
@@ -5948,7 +5948,7 @@
   "city": "Chatou",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "3 RUE MAURICE BERTEAUX 78400 Chatou",
@@ -5968,7 +5968,7 @@
   "city": "Les Clayes-sous-Bois",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "Place Charles de Gaulle 78340 Les Clayes-sous-Bois",
@@ -5993,7 +5993,7 @@
   "dep": "Yvelines",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -6008,7 +6008,7 @@
   "city": "Les Mureaux",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "77, rue Paul Doumer - 56, Boulevard Victor Hugo 78130 Les Mureaux",
@@ -6033,7 +6033,7 @@
   "dep": "Yvelines",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -6048,7 +6048,7 @@
   "city": "Achères",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "6, allee Simone-Signoret (place du marche) 78260 Achères",
@@ -6068,7 +6068,7 @@
   "city": "Élancourt",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "centre commercial des Sept-Mares 78990 Élancourt",
@@ -6133,7 +6133,7 @@
   "dep": "Yvelines",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -6153,7 +6153,7 @@
   "dep": "Yvelines",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -6173,7 +6173,7 @@
   "dep": "Yvelines",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -6193,7 +6193,7 @@
   "dep": "Yvelines",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -6573,7 +6573,7 @@
   "dep": "Paris",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   }
  },
@@ -6788,7 +6788,7 @@
   "city": "Paris",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "51 rue de Bercy 75012 Paris",
@@ -6828,7 +6828,7 @@
   "city": "Paris",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "A l'intérieur du Grand Palais: à l'angle du Cours de la Reine et de l'Avenue Winston-Churchill / Entrée par les marches de la Rotonde Alexandre 3, à côté du restaurant Mini Palais. 75008 Paris",
@@ -6868,7 +6868,7 @@
   "city": "Paris",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "128-162 Av. de France accès en face de l’entrée principale de la Bibliothèque Nationale Francois Mitterrand 75013 Paris",
@@ -6908,7 +6908,7 @@
   "city": "Paris",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "5, rue des Vignes 75016 Paris",
@@ -6988,7 +6988,7 @@
   "city": "Paris",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "37 rue volta 75003 Paris",
@@ -7008,7 +7008,7 @@
   "city": "Paris Paris 15e Arrondissement",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "101 bis Quai Jacques Chirac 75015 Paris Paris 15e Arrondissement",
@@ -7108,7 +7108,7 @@
   "city": "Paris",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "1 Rue des Fossés Saint-Bernard 75005 Paris",
@@ -7168,7 +7168,7 @@
   "city": "Paris",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "7, avenue Albert de Mun 75116 Paris",
@@ -7208,7 +7208,7 @@
   "city": "Paris",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "113 rue de Turenne 75003 Paris",
@@ -7228,7 +7228,7 @@
   "city": "Paris",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "293 avenue Daumesnil 75012 Paris",
@@ -7308,7 +7308,7 @@
   "city": "Paris",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "37 quai Branly 75007 Paris",
@@ -7328,7 +7328,7 @@
   "city": "Paris",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "38 rue des Francs-Bourgeois 75003 Paris",
@@ -7348,7 +7348,7 @@
   "city": "Paris",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "126-128 Bd Ney 75018 Paris",
@@ -7368,7 +7368,7 @@
   "city": "Paris",
   "photo": {
    "url": "/img/cine-placeholder.jpg",
-   "credit": "Illustration Ciné IDF · photo de la salle à venir",
+   "credit": "Illustration Pathé & co · photo de la salle à venir",
    "placeholder": true
   },
   "fullAddress": "6 Pl. d'Iéna 75116 Paris",

@@ -1,7 +1,7 @@
 package fr.cineidf.app;
 import android.app.Activity; import android.content.Intent; import android.net.Uri; import android.os.Bundle; import android.webkit.*; import android.view.View; import android.graphics.Color;
 public class Main extends Activity {
-  static final String HOME = "https://cine-idf.onrender.com/";
+  static final String HOME = "https://patheco.alwaysdata.net/";
   WebView w; GeolocationPermissions.Callback gcb; String gorigin;
   @Override protected void onCreate(Bundle b) {
     super.onCreate(b); w = new WebView(this); w.setBackgroundColor(Color.parseColor("#050505")); setContentView(w);
@@ -9,10 +9,10 @@ public class Main extends Activity {
     s.setUserAgentString(s.getUserAgentString() + " CineIDFApp/1.0");
     w.setWebViewClient(new WebViewClient() {
       @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
-        Uri u = r.getUrl(); if ("cine-idf.onrender.com".equals(u.getHost())) return false;
+        Uri u = r.getUrl(); if ("patheco.alwaysdata.net".equals(u.getHost())) return false;
         try { startActivity(new Intent(Intent.ACTION_VIEW, u)); } catch (Exception e) {} return true; }
       @Override public void onReceivedError(WebView v, WebResourceRequest r, WebResourceError e) {
-        if (r.isForMainFrame()) v.loadData("<body style='background:#050505;color:#e8d9a8;font-family:sans-serif;text-align:center;padding-top:40%'><h2 style='color:#c9a227'>CINÉ IDF</h2><p>Pas de connexion ou serveur en démarrage (≈50 s).</p><button style='background:#c9a227;border:0;padding:12px 20px;border-radius:10px;font-weight:bold' onclick=\"location.href='" + HOME + "'\">Réessayer</button></body>", "text/html; charset=utf-8", "UTF-8"); }
+        if (r.isForMainFrame()) v.loadData("<body style='background:#050505;color:#e8d9a8;font-family:sans-serif;text-align:center;padding-top:40%'><h2 style='color:#c9a227'>Pathé &amp; co</h2><p>Pas de connexion ou serveur en démarrage (≈50 s).</p><button style='background:#c9a227;border:0;padding:12px 20px;border-radius:10px;font-weight:bold' onclick=\"location.href='" + HOME + "'\">Réessayer</button></body>", "text/html; charset=utf-8", "UTF-8"); }
     });
     w.setWebChromeClient(new WebChromeClient() {
       @Override public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback cb) {

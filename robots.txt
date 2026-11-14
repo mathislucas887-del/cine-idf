@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 Disallow: /api/
-Sitemap: https://cine-idf.onrender.com/sitemap.xml
+Sitemap: https://patheco.alwaysdata.net/sitemap.xml

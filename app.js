@@ -1,5 +1,5 @@
 "use strict";
-/* Ciné IDF – séances via la méthode AllocineAPI (proxy /allocine*) */
+/* Pathé & co – séances via la méthode AllocineAPI (proxy /allocine*) */
 const CINES = (window.CINEMAS || []).map(c => ({...c, dep: c.dep || depOf(c.zip)}));
 function depOf(z) { return ({"75":"Paris","77":"Seine-et-Marne","78":"Yvelines","91":"Essonne","92":"Hauts-de-Seine","93":"Seine-Saint-Denis","94":"Val-de-Marne","95":"Val-d'Oise"})[String(z||"").slice(0,2)] || ""; }
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
@@ -97,7 +97,7 @@ function renderLists() {
   $("#lists").innerHTML = Object.entries(names).map(([k, n]) => `<h3 style="color:var(--gold2)">${n} (${LISTS[k].length}) ${LISTS[k].length ? `<button class="ghost" style="padding:3px 10px;font-size:12px" onclick="shareList('${k}')">Partager</button>` : ""}</h3>
     <div class="rail" style="padding-left:0">${LISTS[k].slice().reverse().map(x => `<div class="poster${k === "seen" ? " seen" : ""}" style="cursor:default"><div class="im">${x.poster ? `<img src="${esc(x.poster)}" alt="Affiche de ${esc(x.title)}" loading="lazy">` : ""}</div><h3>${esc(x.title)}</h3><small>${esc(x.year)} · ajouté le ${esc(x.at)}</small> <button class="ghost" style="padding:2px 8px;font-size:11px" aria-label="Retirer ${esc(x.title)}" onclick="LISTS['${k}']=LISTS['${k}'].filter(y=>y.id!=='${esc(x.id)}');LS.set('lists',LISTS);sync();renderLists()">✕</button></div>`).join("") || `<p class="sub">Vide.</p>`}</div>`).join("");
 }
-window.shareList = async k => { const txt = `Ma liste Ciné IDF « ${{towatch: "À voir", seen: "Vu", rewatch: "À revoir"}[k]} » :\n` + LISTS[k].map(x => `• ${x.title}${x.year ? " (" + x.year + ")" : ""}`).join("\n") + "\nhttps://cine-idf.onrender.com";
+window.shareList = async k => { const txt = `Ma liste Pathé & co « ${{towatch: "À voir", seen: "Vu", rewatch: "À revoir"}[k]} » :\n` + LISTS[k].map(x => `• ${x.title}${x.year ? " (" + x.year + ")" : ""}`).join("\n") + "\n" + location.origin;
   try { if (navigator.share) await navigator.share({text: txt}); else { await navigator.clipboard.writeText(txt); toast("Liste copiée"); } } catch (e) {} };
 function recommend(V) {
   const watch = V.filter(f => lbState(f).watch || inList("towatch", f) || inList("rewatch", f));
@@ -121,7 +121,7 @@ function checkAlerts() {
   if (ALERTS.fav && GEO) FILMS.filter(f => f.cl.fresh && f.by.some(b => (dist(b.c) ?? 99) < 5)).slice(0, 3).forEach(f => out.push(`🆕 ${f.title} : nouveauté à moins de 5 km`));
   const uniq = [...new Set(out)].slice(0, 6);
   $("#alerts").innerHTML = uniq.length ? `<details class="alertbox"><summary>🔔 ${uniq.length} alerte(s) pour vous</summary><ul>${uniq.map(a => `<li>${esc(a)}</li>`).join("")}</ul></details>` : "";
-  const fresh = uniq.filter(a => !seenKey[a]); if (fresh.length && "Notification" in window && Notification.permission === "granted") { try { new Notification("Ciné IDF", {body: fresh.slice(0, 3).join("\n"), icon: "icon-192.png"}); } catch (e) {} }
+  const fresh = uniq.filter(a => !seenKey[a]); if (fresh.length && "Notification" in window && Notification.permission === "granted") { try { new Notification("Pathé & co", {body: fresh.slice(0, 3).join("\n"), icon: "icon-192.png"}); } catch (e) {} }
   fresh.forEach(a => seenKey[a] = today); LS.set("alertSeen", seenKey);
 }
 
@@ -176,7 +176,7 @@ window.openAcct = msg => {
       ${lbBlock()}${alertBlock()}
       <div class="row"><button class="primary" onclick="favSeances()">Séances de mes favoris</button><button class="ghost" onclick="logout()">Se déconnecter</button></div><p class="sub">Vous restez connecté sur cet appareil jusqu’à « Se déconnecter ».</p></div>`);
   } else {
-    modal(`<div class="auth"><h2>Mon compte Ciné IDF</h2><p class="sub">${esc(msg || "Créez un compte pour synchroniser vos cinémas favoris et vos billets sur tous vos appareils. Sans compte, ils restent enregistrés sur cet appareil.")}</p>
+    modal(`<div class="auth"><h2>Mon compte Pathé &amp; co</h2><p class="sub">${esc(msg || "Créez un compte pour synchroniser vos cinémas favoris et vos billets sur tous vos appareils. Sans compte, ils restent enregistrés sur cet appareil.")}</p>
       <div class="tabs" role="tablist"><button id="tsu" class="primary" onclick="authMode('signup')">Créer un compte</button><button id="tli" class="ghost" onclick="authMode('login')">Se connecter</button></div>
       <form onsubmit="doAuth(event)"><label class="sub" for="aemail">E-mail</label><input id="aemail" type="email" autocomplete="email" required><label class="sub" for="apw">Mot de passe (6 caractères min.)</label><input id="apw" type="password" autocomplete="new-password" required minlength="6">
       <div class="err" id="aerr" role="alert"></div><button class="primary" style="width:100%" id="asub">Créer mon compte</button></form>${lbBlock()}</div>`);
@@ -485,7 +485,7 @@ $("#infos").innerHTML = `<h1>✨ CinéPass & infos</h1>
 <h2>Le CinéPass Pathé</h2><p>Le <b>CinéPass</b> est l’abonnement cinéma de Pathé : des séances en illimité dans les cinémas Pathé (et Gaumont), et dans un réseau de <b>cinémas partenaires</b> indépendants. Plusieurs formules existent (solo, duo, jeunes…), avec ou sans accès aux salles premium (IMAX, 4DX, Dolby Cinema…) selon l’offre.</p>
 <p>Les formules, prix et conditions évoluent : consultez la page officielle <a href="https://www.pathe.fr/cinepass" target="_blank" rel="noopener">pathe.fr/cinepass</a>.</p>
 <h2>Cinémas partenaires CinéPass en Île-de-France</h2><div class="cards">${CINES.filter(c => c.type === "partner").sort((a,b)=>a.name.localeCompare(b.name)).map(c => `<button class="box" style="text-align:left;color:inherit;cursor:pointer" onclick="openCine('${c.id}')"><b>${esc(c.name)}</b><br><span class="sub">${esc(c.zip)} ${esc(c.city)}</span></button>`).join("")}</div>
-<h2>📲 Télécharger l’application</h2><p>Android : <a href="/download/cine-idf.apk" download>APK Ciné IDF</a> · iPhone : Safari → Partager → « Sur l’écran d’accueil ». <a href="#" onclick="openInstall();return false">Mode d’emploi</a></p><h2>À propos</h2><p>Ciné IDF regroupe les séances de ${CINES.length} cinémas d’Île-de-France : ${CINES.filter(c=>c.type==="pathe").length} Pathé/Gaumont, ${CINES.filter(c=>c.type==="partner").length} partenaires CinéPass et ${CINES.filter(c=>c.type==="other").length} autres salles.</p>
+<h2>📲 Télécharger l’application</h2><p>Android : <a href="/download/cine-idf.apk" download>APK Pathé &amp; co</a> · iPhone : Safari → Partager → « Sur l’écran d’accueil ». <a href="#" onclick="openInstall();return false">Mode d’emploi</a></p><h2>À propos</h2><p>Pathé &amp; co regroupe les séances de ${CINES.length} cinémas d’Île-de-France : ${CINES.filter(c=>c.type==="pathe").length} Pathé/Gaumont, ${CINES.filter(c=>c.type==="partner").length} partenaires CinéPass et ${CINES.filter(c=>c.type==="other").length} autres salles.</p>
 <h2>Sources & mentions légales</h2><p>Horaires, affiches et synopsis : <b>Allociné</b>. Notes moyennes : <b><a href="https://www.themoviedb.org/" target="_blank" rel="noopener">TMDB</a></b> (« This product uses the TMDB API but is not endorsed or certified by TMDB ») (méthode de la bibliothèque open source <a href="https://github.com/lefevre-dev/AllocineAPI" target="_blank" rel="noopener">AllocineAPI</a>). Cartographie © OpenStreetMap. Photos : Pathé et Wikimedia Commons (crédits sur chaque fiche).</p>
 <p><b>Site non officiel, non affilié à Pathé, Gaumont ni Allociné.</b> Les réservations se font sur le site de chaque cinéma ; vérifiez toujours l’horaire avant de vous déplacer. Les comptes ne stockent qu’une adresse e-mail, un mot de passe chiffré, vos favoris et vos billets enregistrés.</p>
 <h2>Contact</h2><p>Une erreur, une suggestion ? Ouvrez un ticket sur <a href="https://github.com/mathislucas887-del/cine-idf/issues" target="_blank" rel="noopener">GitHub</a>.</p>
@@ -513,15 +513,15 @@ const FILMPATH = location.pathname.match(/^\/film\/(\d+)/);
 // ---------- Installation de l'application ----------
 let DEFERRED = null;
 addEventListener("beforeinstallprompt", e => { e.preventDefault(); DEFERRED = e; });
-addEventListener("appinstalled", () => toast("Ciné IDF est installée ✅"));
+addEventListener("appinstalled", () => toast("Pathé & co est installée ✅"));
 const STANDALONE = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
 if (STANDALONE || /CineIDFApp/.test(navigator.userAgent)) $("#install").style.display = "none";
 window.openInstall = () => {
   const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  modal(`<div class="mbody prose"><h2>📲 Installer Ciné IDF</h2>
+  modal(`<div class="mbody prose"><h2>📲 Installer Pathé &amp; co</h2>
    ${DEFERRED ? `<p><button class="primary" onclick="doInstall()">Installer maintenant</button></p>` : ""}
    <h3 style="color:var(--gold2)">Android</h3><ol><li><a style="display:inline-block;padding:10px 16px;border-radius:10px;color:#141414;background:linear-gradient(135deg,#f1d784,#c9a227);font-weight:700;text-decoration:none" href="/download/cine-idf.apk" download>Télécharger l’APK (Android 7+)</a></li>
-   <li>Ouvrez le fichier téléchargé ; si Android le demande, autorisez « Installer des applis inconnues » pour votre navigateur.</li><li>Touchez « Installer » puis ouvrez Ciné IDF.</li></ol>
+   <li>Ouvrez le fichier téléchargé ; si Android le demande, autorisez « Installer des applis inconnues » pour votre navigateur.</li><li>Touchez « Installer » puis ouvrez Pathé &amp; co.</li></ol>
    <p class="sub">Ou, sans APK : dans Chrome, menu ⋮ → « Installer l’application ».</p>
    <h3 style="color:var(--gold2)">iPhone / iPad</h3><ol><li>Ouvrez ce site dans <b>Safari</b>.</li><li>Touchez le bouton Partager <b>⬆︎</b>.</li><li>Choisissez « <b>Sur l’écran d’accueil</b> » puis « Ajouter ».</li></ol>
    ${ios ? `<p class="sub">Vous êtes sur iOS : suivez les 3 étapes ci-dessus.</p>` : ""}

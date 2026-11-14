@@ -41,15 +41,15 @@ window.patheIcs = async inp => { const f = inp.files[0]; if (!f) return; const t
     $("#ptxt").value = `${g("SUMMARY")} ${g("LOCATION")} ${g("DESCRIPTION")} ${ds[3]}/${ds[2]}/${ds[1]} ${ds[4]}:${ds[5]}`; patheImport(); n++; });
   if (!n) { $("#ptxt").value = t.replace(/<[^>]+>/g, " ").slice(0, 20000); patheImport(); } inp.value = ""; };
 window.patheSave = () => { EXTRA.pathe = {email: $("#pem").value.trim(), card: $("#pcard").value.trim(), at: new Date().toISOString()};
-  saveExtra(); toast(EXTRA.pathe.email || EXTRA.pathe.card ? "Compte Pathé lié à votre profil Ciné IDF" : "Liaison Pathé retirée"); renderPathe(); };
+  saveExtra(); toast(EXTRA.pathe.email || EXTRA.pathe.card ? "Compte Pathé lié à votre profil Pathé & co" : "Liaison Pathé retirée"); renderPathe(); };
 window.patheUnlink = () => { delete EXTRA.pathe; saveExtra(); renderPathe(); toast("Compte Pathé délié"); };
 function box() { const P = EXTRA.pathe || {}, linked = P.email || P.card, n = TICKETS.filter(t => t.src === "pathe").length, cp = EXTRA.cp || {};
   return `<div class="lbbox pathe-link" id="pathebox"><h2>🔗 Mon compte Pathé ${linked ? '<span class="lbw" style="background:#c9a227;color:#111">LIÉ</span>' : ""}</h2>
-  <p class="sub">Pathé ne propose pas de connexion externe (pas d’OAuth ni d’API publique pour les billets). Pour votre sécurité, Ciné IDF <b>ne demande jamais votre mot de passe Pathé</b>. On lie votre compte par son e-mail et votre n° de carte CinéPass, et vous importez vos billets en 2 secondes depuis l’e-mail de confirmation.</p>
+  <p class="sub">Pathé ne propose pas de connexion externe (pas d’OAuth ni d’API publique pour les billets). Pour votre sécurité, Pathé &amp; co <b>ne demande jamais votre mot de passe Pathé</b>. On lie votre compte par son e-mail et votre n° de carte CinéPass, et vous importez vos billets en 2 secondes depuis l’e-mail de confirmation.</p>
   <div class="row"><input id="pem" type="email" placeholder="E-mail du compte Pathé" value="${esc(P.email || "")}" aria-label="E-mail du compte Pathé" autocomplete="email">
   <input id="pcard" placeholder="N° carte CinéPass (facultatif)" value="${esc(P.card || "")}" aria-label="Numéro de carte CinéPass" inputmode="numeric">
   <button class="primary" onclick="patheSave()">${linked ? "Mettre à jour" : "Lier mon compte"}</button>${linked ? '<button class="ghost" onclick="patheUnlink()">Délier</button>' : ""}</div>
-  ${linked ? `<p class="sub">✔ ${esc(P.email || "")}${P.card ? " · carte •••• " + esc(P.card.slice(-4)) : ""}${cp.f ? " · " + esc(cp.f) : ""} · ${n} billet(s) importé(s) · synchronisé avec votre compte Ciné IDF</p>` : ""}
+  ${linked ? `<p class="sub">✔ ${esc(P.email || "")}${P.card ? " · carte •••• " + esc(P.card.slice(-4)) : ""}${cp.f ? " · " + esc(cp.f) : ""} · ${n} billet(s) importé(s) · synchronisé avec votre compte Pathé &amp; co</p>` : ""}
   <details ${linked ? "open" : ""}><summary><b>🎟️ Importer un billet Pathé</b></summary>
   <ol class="sub"><li>Ouvrez l’e-mail « Confirmation de réservation » de Pathé (ou la page billet de l’app Pathé).</li><li>Copiez tout le texte, collez-le ci-dessous : film, cinéma, date, heure, salle et place sont détectés.</li></ol>
   <textarea id="ptxt" rows="4" placeholder="Collez ici l’e-mail de confirmation Pathé…" style="width:100%"></textarea>
