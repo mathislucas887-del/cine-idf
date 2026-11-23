@@ -399,3 +399,14 @@ body.light .rs-x{background:rgba(255,255,255,.9);color:#1b1608}
 .rs-attr{margin:10px 0 0;font-size:11px;color:var(--mut);line-height:1.4}
 .rs-attr a{color:var(--mut);text-decoration:underline}
 @media(min-width:701px){.rsheet{left:50%;right:auto;transform:translateX(-50%);width:min(520px,calc(100% - 24px))}}
+
+/* v26 : filtre par moment de la journée + Toutes les séances (Accueil) */
+.slots{display:flex;gap:8px;overflow-x:auto;padding:8px 0 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch;-ms-overflow-style:none}
+.slots::-webkit-scrollbar{display:none}
+.slots button{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;border:1px solid var(--line);background:var(--panel2);color:var(--txt);border-radius:999px;padding:8px 16px;font:600 14px Inter,sans-serif;min-height:44px;min-width:44px;cursor:pointer;white-space:nowrap;line-height:1.15}
+.slots button small{font:500 11px Inter,sans-serif;color:var(--mut);margin-top:1px}
+.slots button.on{background:linear-gradient(135deg,var(--gold2),var(--gold));color:#141414;border-color:transparent;font-weight:700}
+.slots button.on small{color:inherit;opacity:.8}
+@media(max-width:700px){.slots{margin:0 -6px;padding:8px 6px 12px}.slots button{padding:9px 16px;font-size:14.5px;min-height:46px}}
+
+.dates button.allshows{display:flex;flex-direction:column;justify-content:center;padding:8px 14px;font-weight:600;white-space:normal;line-height:1.2;max-width:7.8em;text-align:center}

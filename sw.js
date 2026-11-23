@@ -1,5 +1,5 @@
-const V = "cine-idf-v25", DATA = "cine-idf-data", FRESH = 8 * 60 * 1000,
-  STATIC = ["/", "/index.html", "/style.css", "/app.js", "/itineraire.js", "/data/cinemas.js", "/manifest.webmanifest", "/icon.svg", "/apple-touch-icon.png", "/icon-192.png", "/plus.js", "/pathe.js", "/v11.js", "/v12.js", "/v13.js", "/v15.js", "/v18.js", "/reset.js", "/durable.js", "/logo-96.png"];
+const V = "cine-idf-v26", DATA = "cine-idf-data", FRESH = 8 * 60 * 1000,
+  STATIC = ["/", "/index.html", "/style.css", "/app.js", "/itineraire.js", "/data/cinemas.js", "/slot.js", "/manifest.webmanifest", "/icon.svg", "/apple-touch-icon.png", "/icon-192.png", "/plus.js", "/pathe.js", "/v11.js", "/v12.js", "/v13.js", "/v15.js", "/v18.js", "/v26.js", "/reset.js", "/durable.js", "/logo-96.png"];
 self.addEventListener("install", e => {
   e.waitUntil((async () => {
     const keys = await caches.keys(), old = keys.find(k => k.startsWith("cine-idf-v") && k !== V);

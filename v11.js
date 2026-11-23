@@ -1,4 +1,4 @@
-// v11 : 4 espaces (Accueil / Explorer / Collection / Profil), Ciné XP, défis, badges, collections, social
+// v11 : espaces Accueil / CinéMatch / Collection / Profil, Ciné XP, défis, badges, collections, social
 (function () {
 "use strict";
 const today = () => ymd(new Date());
@@ -131,23 +131,23 @@ window.openPublic = async ps => { try { const p = await (await fetch("/u/" + enc
   ${TOKEN && p.pseudo !== SOC.me && !SOC.friends.includes(p.pseudo) ? `<button class="primary" onclick="document.getElementById('fpseudo')||0;post('/api/friend',{pseudo:'${esc(p.pseudo)}'}).then(()=>{toast('Ami ajouté');loadSocialX()}).catch(e=>toast(e.message))">➕ Ajouter en ami</button>` : ""}</div>`); } catch (e) { toast("Profil introuvable"); } };
 window.loadSocialX = () => loadSocial(true);
 // ---------- Navigation 4 espaces ----------
-const TABS = {home: ["🏠", "Accueil"], explorer: ["🔍", "Explorer"], match: ["💘", "CinéMatch"], collection: ["🎞️", "Collection"], profil: ["👤", "Profil"]};
-const TABOF = {match: "match", home: "home", seances: "explorer", map: "explorer", list: "explorer", billets: "collection", coll: "collection", profil: "profil", infos: "profil"};
-const SUB = {explorer: [["seances", "Séances"], ["map", "Carte"], ["list", "Cinémas"]], collection: [["billets", "Mes films & billets"], ["coll", "Badges & collections"]], profil: [["profil", "Progression & amis"], ["infos", "CinéPass & Pathé"]]};
-const LASTSUB = {explorer: "seances", collection: "billets", profil: "profil"};
+const TABS = {accueil: ["🏠", "Accueil"], match: ["💘", "CinéMatch"], collection: ["🎞️", "Collection"], profil: ["👤", "Profil"]};
+const TABOF = {match: "match", seances: "accueil", map: "accueil", list: "accueil", home: "accueil", explorer: "accueil", accueil: "accueil", billets: "collection", coll: "collection", profil: "profil", infos: "profil"};
+const SUB = {accueil: [["seances", "Séances"], ["map", "Carte"], ["list", "Cinémas"]], collection: [["billets", "Mes films & billets"], ["coll", "Badges & collections"]], profil: [["profil", "Progression & amis"], ["infos", "CinéPass & Pathé"]]};
+const LASTSUB = {accueil: "seances", collection: "billets", profil: "profil"};
 const nav = $("#nav"); nav.innerHTML = Object.entries(TABS).map(([k, [ic, l]]) => `<button data-t="${k}"><span class="ic" aria-hidden="true">${ic}</span>${l}</button>`).join("");
-nav.querySelectorAll("button").forEach(b => b.onclick = () => { const t = b.dataset.t; go(t === "home" || t === "match" ? t : LASTSUB[t]); });
+nav.querySelectorAll("button").forEach(b => b.onclick = () => { const t = b.dataset.t; go(t === "match" ? t : LASTSUB[t]); });
 const sub = document.createElement("div"); sub.id = "subnav"; sub.className = "subnav"; sub.setAttribute("role", "tablist"); $("#main").prepend(sub);
 const main = $("#main");
-main.insertAdjacentHTML("afterbegin", `<section id="v-home" class="view" aria-label="Accueil"></section>`);
 main.insertAdjacentHTML("beforeend", `<section id="v-coll" class="view" aria-label="Badges et collections"><div class="pad" id="collc"></div></section><section id="v-profil" class="view" aria-label="Profil"><div class="pad" id="profc"></div></section>`);
-const oGo = go; let POP = 0; go = function (v) { const prev = (document.querySelector('.view.on') || {}).id; oGo(v); if (!POP && prev && prev !== 'v-' + v) history.pushState({v}, ''); window.scrollTo(0, 0); const t = TABOF[v] || "explorer"; if (SUB[t]) LASTSUB[t] = v;
+const ALIAS = {home: "seances", explorer: "seances", accueil: "seances"};
+const oGo = go; let POP = 0; go = function (v) { if (ALIAS[v]) v = LASTSUB.accueil || "seances"; const prev = (document.querySelector('.view.on') || {}).id; oGo(v); if (!POP && prev && prev !== 'v-' + v) history.pushState({v}, ''); window.scrollTo(0, 0); const t = TABOF[v] || "accueil"; if (SUB[t]) LASTSUB[t] = v;
   nav.querySelectorAll("button").forEach(b => { const on = b.dataset.t === t; b.classList.toggle("on", on); on ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"); });
   sub.innerHTML = SUB[t] ? SUB[t].map(([k, l]) => `<button role="tab" aria-selected="${k === v}" class="${k === v ? "on" : ""}" onclick="go('${k}')">${l}</button>`).join("") : ""; sub.classList.toggle("hidden", !SUB[t]);
-  document.body.dataset.tab = t; if (v === "home") renderHome(); if (v === "coll") renderColl(); if (v === "profil") { renderProfil(); loadSocial(); } if (v === "match" && window.renderMatch) renderMatch(); };
+  document.body.dataset.tab = t; if (v === "coll") renderColl(); if (v === "profil") { renderProfil(); loadSocial(); } if (v === "match" && window.renderMatch) renderMatch(); };
 window.go = go;
-history.replaceState({v: 'home'}, '');
-addEventListener('popstate', e => { const m = document.getElementById('modal'); if (m && !m.classList.contains('hidden')) { closeModal(); return; } POP = 1; go((e.state && e.state.v) || 'home'); POP = 0; });
+history.replaceState({v: 'seances'}, '');
+addEventListener('popstate', e => { const m = document.getElementById('modal'); if (m && !m.classList.contains('hidden')) { closeModal(); return; } POP = 1; go((e.state && e.state.v) || 'seances'); POP = 0; });
 const hdr = document.querySelector('header'); const setHH = () => document.documentElement.style.setProperty('--hh', hdr ? hdr.offsetHeight + 'px' : '0px'); setHH(); addEventListener('resize', setHH);
 // ---------- Rendus ----------
 function greet() { const h = new Date().getHours(); return h < 5 ? "Bonne nuit" : h < 18 ? "Bonjour" : "Bonsoir"; }
@@ -232,7 +232,10 @@ document.body.classList.toggle("logged", !!EMAIL);
 const br = $(".brand"); if (br && !br.querySelector("img")) br.insertAdjacentHTML("afterbegin", `<img src="/logo-96.png" alt="" width="34" height="34">`);
 // démarrage
 const PQ2 = new URLSearchParams(location.search);
-if (!location.hash && !PQ2.get("v") && !PQ2.get("soir") && !PQ2.get("agenda") && !PQ2.get("retro")) go("home"); else go((document.querySelector(".view.on") || {id: "v-seances"}).id.slice(2));
+const _h = (location.hash || "").replace(/^#/, ""), _qv = PQ2.get("v") || "", _home = {accueil: 1, explorer: 1, home: 1, seances: 1};
+if (PQ2.get("soir") || PQ2.get("agenda") || PQ2.get("retro")) go((document.querySelector(".view.on") || {id: "v-seances"}).id.slice(2));
+else if (_home[_h] || _home[_qv] || (!_h && !_qv)) go("seances");
+else go((document.querySelector(".view.on") || {id: "v-seances"}).id.slice(2));
 if (PQ2.get("u")) setTimeout(() => openPublic(PQ2.get("u")), 400);
 loadSocial(); setInterval(() => { checkLB(); }, 30000);
 })();
