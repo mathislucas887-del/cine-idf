@@ -116,5 +116,59 @@ eq("barre vide, sans last", T.rangeDates([], ""), []);
 eq("barre vide, avec last", T.rangeDates([], "2026-12-06"), ["2026-12-06"]);
 eq("plafond 28", T.rangeDates(strip7, "2027-02-01").length, 28);
 
+
+// Multi-sélection : un horaire passe s’il correspond à AU MOINS un créneau choisi
+eq("soir+nuit 18:00", T.inSlot(at("18:00"), ["soir", "nuit"]), true);
+eq("soir+nuit 20:00", T.inSlot(at("20:00"), ["soir", "nuit"]), true);
+eq("soir+nuit 00:30", T.inSlot(at("00:30", "2026-11-24"), ["soir", "nuit"]), true);
+eq("soir+nuit pas 10:00", T.inSlot(at("10:00"), ["soir", "nuit"]), false);
+eq("soir+nuit pas 08:00", T.inSlot(at("08:00"), ["soir", "nuit"]), false);
+eq("tableau vide = toutes", T.inSlot(at("08:00"), []), true);
+eq("inSlot sans 2e arg suit la sélection", (T.set(["soir","nuit"]), T.inSlot(at("20:00"))), true);
+eq("isAll après set all", (T.set("all"), T.isAll()), true);
+eq("selected vide", T.selected(), []);
+eq("isSelected toutes", T.isSelected("all"), true);
+
+// toggle
+T.set("all");
+eq("toggle soir", T.toggle("soir"), ["soir"]);
+eq("toggle nuit en plus", T.toggle("nuit"), ["soir", "nuit"]);
+eq("isSelected soir", T.isSelected("soir"), true);
+eq("isSelected nuit", T.isSelected("nuit"), true);
+eq("isAll faux", T.isAll(), false);
+eq("current multi", T.current(), ["soir", "nuit"]);
+eq("toggle soir retire", T.toggle("soir"), ["nuit"]);
+eq("toggle dernier → toutes", T.toggle("nuit"), []);
+eq("isAll après dernier", T.isAll(), true);
+eq("toggle toutes vide", T.toggle("all"), []);
+T.toggle("matin"); T.toggle("midi");
+eq("toggle toutes efface", T.toggle("all"), []);
+
+// fromStored : migration de l’ancienne clé simple
+eq("migrate all", T.fromStored("all"), []);
+eq("migrate soir", T.fromStored("soir"), ["soir"]);
+eq("migrate tableau", T.fromStored(["soir", "nuit"]), ["soir", "nuit"]);
+eq("migrate ignore all dans tableau", T.fromStored(["all", "soir"]), ["soir"]);
+eq("migrate inconnu", T.fromStored("foo"), []);
+eq("migrate mixte", T.fromStored(["foo", "nuit", "all"]), ["nuit"]);
+T.set(["nuit", "soir", "foo"]);
+eq("set réordonne selon SLOTS", T.selected(), ["soir", "nuit"]);
+
+// emptyMsg
+T.set("soir");
+eq("empty un créneau", T.emptyMsg("aujourd’hui"), "Aucun film avec une séance le soir (16h–19h) aujourd’hui.");
+T.set(["soir", "nuit"]);
+eq("empty deux créneaux", T.emptyMsg("aujourd’hui"), "Aucun film avec une séance le soir (16h–19h) ou la nuit (dès 19h) aujourd’hui.");
+T.set(["matin", "soir", "nuit"]);
+eq("empty trois créneaux", T.emptyMsg(), "Aucun film avec une séance le matin (9h–12h), le soir (16h–19h) ou la nuit (dès 19h) pour les jours affichés.");
+T.set("all");
+eq("empty toutes après multi", T.emptyMsg(), "Aucun film pour ces critères.");
+
+// filterBy avec plusieurs créneaux
+const times2 = ["08:00", "10:00", "17:00", "20:00", "00:40"].map(hm => at(hm, hm < "06:00" ? "2026-11-24" : D));
+eq("filter soir+nuit count", T.filterTimes(times2, ["soir", "nuit"]).length, 3); // 17:00, 20:00, 00:40
+const by2 = [{c: {id: "a"}, times: times2}, {c: {id: "b"}, times: [at("08:00")]}];
+eq("filterBy soir+nuit cinémas", T.filterBy(by2, ["soir", "nuit"]).map(x => x.c.id), ["a"]);
+
 if (failed) { console.error(failed + " échec(s), " + passed + " ok"); process.exit(1); }
 console.log(passed + " tests ok");

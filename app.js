@@ -284,7 +284,7 @@ function timeOk(t, f) {
   if (sp === "acc" && !t.acc) return false;
   if (APONLY && !(t.preview || f.cl.ap)) return false;
   if (TONIGHT && new Date(t.time) < new Date()) return false;
-  if (typeof TimeSlot !== "undefined" && !TimeSlot.inSlot(t, TimeSlot.current())) return false;
+  if (typeof TimeSlot !== "undefined" && !TimeSlot.inSlot(t)) return false;
   return true;
 }
 function lev(a, b) { if (Math.abs(a.length - b.length) > 2) return 9; let p = Array.from({length: b.length + 1}, (_, i) => i);
@@ -308,7 +308,7 @@ function posterCard(f, extra) {
   return `<button class="poster${L.seen ? " seen" : ""}" onclick="openFilm('${f.id}')" aria-label="${esc(f.title)}${L.seen ? " (déjà vu)" : ""}${L.watch ? " (dans ma watchlist)" : ""}">${L.watch ? `<span class="lbw" title="Dans votre watchlist Letterboxd">Watchlist</span>` : ""}${L.seen ? `<span class="lbs">✓ Vu</span>` : my ? `<span class="lbs">${my}</span>` : ""}<div class="im">${f.poster ? `<img src="${esc(f.poster)}" alt="Affiche de ${esc(f.title)}" loading="lazy" decoding="async">` : ""}</div><div class="tags">${t}</div>${tmdbBadge(f, "rating")}<h3>${esc(f.title)}</h3><small>${extra || `${f.vby.length} cinéma${f.vby.length>1?"s":""} · ${f.n} séance${f.n>1?"s":""}`}</small></button>`;
 }
 function renderAll() {
-  const V = view(), none = `<div class="empty">${typeof TimeSlot !== "undefined" && TimeSlot.current() !== "all" ? TimeSlot.emptyMsg(typeof TimeSlot.periodLabel === "function" ? TimeSlot.periodLabel() : "pour les jours affichés") : "Aucun film pour ces critères."}</div>`;
+  const V = view(), none = `<div class="empty">${typeof TimeSlot !== "undefined" && !TimeSlot.isAll() ? TimeSlot.emptyMsg(typeof TimeSlot.periodLabel === "function" ? TimeSlot.periodLabel() : "pour les jours affichés") : "Aucun film pour ces critères."}</div>`;
   const rail = (sel, arr, ex) => $(sel).innerHTML = arr.map(f => posterCard(f, ex && ex(f))).join("") || none;
   rail("#c-new", V.filter(f => f.cl.fresh).sort((a, b) => (b.cl.rel||"").localeCompare(a.cl.rel||"") || b.n - a.n), f => "Sortie le " + new Date(f.cl.rel + "T12:00").toLocaleDateString("fr-FR", {day: "numeric", month: "short"}));
   rail("#c-sp", V.filter(f => f.cl.ap || f.cl.special.length));

@@ -3,7 +3,7 @@
   "use strict";
   if (!window.TimeSlot) return;
   const KEY = "timeSlot";
-  try { TimeSlot.set(LS.get(KEY, "all")); } catch (e) { TimeSlot.set("all"); }
+  try { TimeSlot.set(TimeSlot.fromStored(LS.get(KEY, "all"))); } catch (e) { TimeSlot.set([]); }
 
   let ALLSHOWS = false;
   window.ALLSHOWS = () => ALLSHOWS;
@@ -219,7 +219,7 @@
     el = document.createElement("div");
     el.id = "slots";
     el.className = "slots";
-    el.setAttribute("role", "tablist");
+    el.setAttribute("role", "group");
     el.setAttribute("aria-label", "Moment de la journée");
     const dates = bar.querySelector("#dates");
     if (dates && dates.nextSibling) bar.insertBefore(el, dates.nextSibling);
@@ -235,17 +235,16 @@
   function renderSlots() {
     const el = ensureBar();
     if (!el) return;
-    const cur = TimeSlot.current();
     el.innerHTML = TimeSlot.SLOTS.map(s => {
-      const on = s.id === cur;
+      const on = TimeSlot.isSelected(s.id);
       const aria = s.hours ? `${s.label}, ${s.hours}` : "Tous les horaires";
-      return `<button type="button" role="tab" data-slot="${s.id}" aria-selected="${on}" aria-label="${aria}" class="${on ? "on" : ""}">${s.hours ? `<span>${s.label}</span><small>${s.hours}</small>` : s.label}</button>`;
+      return `<button type="button" data-slot="${s.id}" aria-pressed="${on}" aria-label="${aria}" class="${on ? "on" : ""}">${s.hours ? `<span>${s.label}</span><small>${s.hours}</small>` : s.label}</button>`;
     }).join("");
     const on = el.querySelector(".on");
     on && on.scrollIntoView({inline: "center", block: "nearest", behavior: "smooth"});
   }
   function pick(id) {
-    const next = TimeSlot.set(id);
+    const next = TimeSlot.toggle(id);
     try { LS.set(KEY, next); } catch (e) {}
     if (typeof SHOWN !== "undefined") SHOWN = 25;
     renderSlots();
@@ -257,9 +256,8 @@
   const _s18 = window.s18;
   if (typeof _s18 === "function") {
     window.s18 = function (f, by, pref) {
-      const id = TimeSlot.current();
-      if (id === "all") return _s18(f, by, pref);
-      const filtered = TimeSlot.filterBy(by, id);
+      if (TimeSlot.isAll()) return _s18(f, by, pref);
+      const filtered = TimeSlot.filterBy(by);
       const n = Array.isArray(filtered) ? filtered.reduce((a, x) => a + x.times.length, 0) : Object.values(filtered).reduce((a, ts) => a + ts.length, 0);
       if (!n) return `<p class="sub">${TimeSlot.emptyMsg(periodLabel())}</p>`;
       return _s18(f, filtered, pref);

@@ -13,7 +13,7 @@
     {id: "soir",  label: "Soir",        hours: "16h–19h",   phrase: "le soir (16h–19h)",       start: 16 * 60, end: 19 * 60},
     {id: "nuit",  label: "Nuit",        hours: "dès 19h",   phrase: "la nuit (dès 19h)",       start: 19 * 60, end: 24 * 60, late: true}
   ];
-  let current = "all";
+  let current = []; // ids nommés sélectionnés ; vide = « Toutes »
 
   function minutesOf(t) {
     const s = String((t && typeof t === "object") ? (t.time || "") : (t || ""));
@@ -22,9 +22,15 @@
     if (!isFinite(hh) || !isFinite(mm) || hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
     return hh * 60 + mm;
   }
+  const NAMED = SLOTS.filter(s => s.id !== "all").map(s => s.id);
   function normalize(id) { return SLOTS.some(s => s.id === id) ? id : "all"; }
   function slotOf(id) { id = normalize(id); return SLOTS.find(s => s.id === id); }
-  function inSlot(t, id) {
+  function fromStored(raw) {
+    if (raw == null || raw === "" || raw === "all") return [];
+    const arr = Array.isArray(raw) ? raw : [raw];
+    return NAMED.filter(id => arr.includes(id));
+  }
+  function inOne(t, id) {
     const slot = slotOf(id);
     if (!slot || slot.id === "all") return true;
     const m = minutesOf(t);
@@ -32,21 +38,48 @@
     if (slot.late && m < LATE_END) return true;
     return m >= slot.start && m < slot.end;
   }
-  function filterTimes(times, id) { return (times || []).filter(t => inSlot(t, id)); }
-  function filterBy(by, id) {
-    if (!id || id === "all") return by;
-    if (Array.isArray(by)) return by.map(({c, times}) => ({c, times: filterTimes(times, id)})).filter(x => x.times.length);
+  function activeIds(ids) {
+    if (ids == null) return current.slice();
+    if (ids === "all") return [];
+    return fromStored(Array.isArray(ids) ? ids : [ids]);
+  }
+  function inSlot(t, ids) {
+    const sel = activeIds(ids);
+    if (!sel.length) return true;
+    return sel.some(id => inOne(t, id));
+  }
+  function filterTimes(times, ids) { return (times || []).filter(t => inSlot(t, ids)); }
+  function isAll(ids) { return activeIds(ids).length === 0; }
+  function filterBy(by, ids) {
+    if (isAll(ids)) return by;
+    if (Array.isArray(by)) return by.map(({c, times}) => ({c, times: filterTimes(times, ids)})).filter(x => x.times.length);
     const out = {};
-    Object.entries(by || {}).forEach(([k, ts]) => { const f = filterTimes(ts, id); if (f.length) out[k] = f; });
+    Object.entries(by || {}).forEach(([k, ts]) => { const f = filterTimes(ts, ids); if (f.length) out[k] = f; });
     return out;
   }
-  function set(id) { current = normalize(id); return current; }
-  function get() { return current; }
-  function emptyMsg(when) {
-    const s = slotOf(current);
-    if (!s || s.id === "all") return "Aucun film pour ces critères.";
-    return "Aucun film avec une séance " + s.phrase + (when ? " " + when : " pour les jours affichés") + ".";
+  function selected() { return current.slice(); }
+  function isSelected(id) { return id === "all" ? isAll() : current.includes(id); }
+  function set(ids) { current = fromStored(ids); return selected(); }
+  function toggle(id) {
+    if (id === "all") { current = []; return selected(); }
+    if (!NAMED.includes(id)) return selected();
+    current = current.includes(id) ? current.filter(x => x !== id) : current.concat(id);
+    current = NAMED.filter(x => current.includes(x));
+    return selected();
   }
+  function joinFr(parts) {
+    if (!parts.length) return "";
+    if (parts.length === 1) return parts[0];
+    if (parts.length === 2) return parts[0] + " ou " + parts[1];
+    return parts.slice(0, -1).join(", ") + " ou " + parts[parts.length - 1];
+  }
+  function emptyMsg(when) {
+    const sel = selected();
+    if (!sel.length) return "Aucun film pour ces critères.";
+    const phrases = sel.map(id => (slotOf(id) || {}).phrase).filter(Boolean);
+    return "Aucun film avec une séance " + joinFr(phrases) + (when ? " " + when : " pour les jours affichés") + ".";
+  }
+  function get() { return isAll() ? "all" : (current.length === 1 ? current[0] : selected()); }
 
   // Nombre de jours du catalogue (utilitaire). « Toutes les séances » s’appuie plutôt sur rangeDates.
   function allDaysCount(today, last, min, max) {
@@ -80,5 +113,5 @@
     return out.slice(0, cap);
   }
 
-  root.TimeSlot = {SLOTS, LATE_END, minutesOf, inSlot, normalize, slotOf, filterTimes, filterBy, set, current: get, emptyMsg, allDaysCount, rangeDates};
+  root.TimeSlot = {SLOTS, LATE_END, minutesOf, inSlot, inOne, normalize, slotOf, fromStored, filterTimes, filterBy, set, toggle, selected, isSelected, isAll, current: get, emptyMsg, joinFr, allDaysCount, rangeDates};
 })(typeof window !== "undefined" ? window : globalThis);
