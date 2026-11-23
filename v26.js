@@ -105,37 +105,81 @@
     };
   }
 
-  const _renderDates = typeof renderDates === "function" ? renderDates : null;
-  if (_renderDates) {
-    renderDates = window.renderDates = function () {
-      _renderDates();
-      const el = $("#dates");
-      if (!el) return;
-      el.insertAdjacentHTML("afterbegin", `<button type="button" role="tab" data-all="1" class="allshows${ALLSHOWS ? " on" : ""}" aria-selected="${ALLSHOWS}" aria-label="Toutes les séances connues, sur toute la période disponible">Toutes les séances</button>`);
-      if (!ALLSHOWS) return;
-      el.querySelectorAll("button[data-d]").forEach(b => { b.classList.remove("on"); b.setAttribute("aria-selected", "false"); });
-      const last = SELDATES[SELDATES.length - 1], n = SELDATES.length;
-      const range = last && typeof fmtDay === "function" ? "jusqu’au " + fmtDay(last) : n + " jour" + (n > 1 ? "s" : "");
-      const h = $(".today");
-      if (h) h.innerHTML = `Toutes les séances · <em>${range}</em>`;
-      $$(".qk").forEach(b => {
-        if (b.dataset.q === "today" || b.dataset.q === "weekend" || b.dataset.q === "tomorrow") b.classList.remove("on");
-      });
-      const per = document.querySelector(".period");
-      if (per) per.classList.remove("on");
+  // Le premier renderDates() a déjà eu lieu à la fin de app.js, avant ce script.
+  // On enveloppe le rendu, on réinjecte la pastille tout de suite, et un observateur
+  // la remet si une autre fonction réécrit #dates (référence périmée, nouvel appel, etc.).
+  const CHIP = `<button type="button" role="tab" data-all="1" class="allshows" aria-selected="false" aria-label="Toutes les séances connues, sur toute la période disponible">Toutes les séances</button>`;
+  function ensureAllShowsChip() {
+    const el = document.getElementById("dates");
+    if (!el) return;
+    let btn = el.querySelector("button[data-all]");
+    if (!btn) {
+      el.insertAdjacentHTML("afterbegin", CHIP);
+      btn = el.querySelector("button[data-all]");
+    } else if (el.firstElementChild !== btn) {
+      el.insertBefore(btn, el.firstElementChild);
+    }
+    if (!btn) return;
+    btn.classList.toggle("on", ALLSHOWS);
+    btn.setAttribute("aria-selected", ALLSHOWS);
+    if (!ALLSHOWS) return;
+    el.querySelectorAll("button[data-d]").forEach(b => { b.classList.remove("on"); b.setAttribute("aria-selected", "false"); });
+    const last = SELDATES[SELDATES.length - 1], n = SELDATES.length;
+    const range = last && typeof fmtDay === "function" ? "jusqu’au " + fmtDay(last) : n + " jour" + (n > 1 ? "s" : "");
+    const h = document.querySelector(".today");
+    if (h) h.innerHTML = "Toutes les séances · <em>" + range + "</em>";
+    document.querySelectorAll(".qk").forEach(b => {
+      if (b.dataset.q === "today" || b.dataset.q === "weekend" || b.dataset.q === "tomorrow") b.classList.remove("on");
+    });
+    const per = document.querySelector(".period");
+    if (per) per.classList.remove("on");
+  }
+  function hookRenderDates() {
+    const orig = window.renderDates || (typeof renderDates === "function" ? renderDates : null);
+    if (orig && orig._allShows) return orig;
+    const wrapped = function () {
+      if (orig) orig();
+      ensureAllShowsChip();
     };
+    wrapped._allShows = true;
+    window.renderDates = wrapped;
+    try { renderDates = wrapped; } catch (e) {}
+    return wrapped;
+  }
+  hookRenderDates();
+  function observeDates() {
+    const el = document.getElementById("dates");
+    if (!el || el._allShowsObs) return;
+    const obs = new MutationObserver(() => {
+      hookRenderDates();
+      const first = el.firstElementChild;
+      if (!first || !first.getAttribute || first.getAttribute("data-all") !== "1") ensureAllShowsChip();
+      else if (ALLSHOWS) ensureAllShowsChip();
+    });
+    obs.observe(el, {childList: true});
+    el._allShowsObs = obs;
   }
 
-  const datesEl = $("#dates");
-  if (datesEl) datesEl.onclick = e => {
+  function onDatesClick(e) {
     const b = e.target.closest("button");
     if (!b) return;
     if (b.dataset.all) { pickAllShows(); return; }
+    if (!b.dataset.d) return;
     ALLSHOWS = false;
     SELDATES = [b.dataset.d];
-    renderDates();
+    (window.renderDates || renderDates)();
     loadData();
-  };
+  }
+  const datesEl = document.getElementById("dates");
+  if (datesEl) {
+    datesEl.onclick = onDatesClick;
+    if (!datesEl._allShowsClick) {
+      datesEl.addEventListener("click", ev => {
+        if (datesEl.onclick !== onDatesClick) onDatesClick(ev);
+      });
+      datesEl._allShowsClick = true;
+    }
+  }
 
   const quick = document.querySelector(".quick");
   if (quick && quick.onclick) {
@@ -161,6 +205,12 @@
     }, 200);
   });
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", renderSlots);
-  else renderSlots();
+  function initAllShows() {
+    hookRenderDates();
+    observeDates();
+    ensureAllShowsChip();
+    renderSlots();
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initAllShows);
+  else initAllShows();
 })();
