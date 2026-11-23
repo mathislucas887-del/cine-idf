@@ -109,9 +109,12 @@ function recommend(V) {
 const gcal = (f, c, t) => { const s = new Date(t.time), e = new Date(s.getTime() + ((f.dur || 120) + 15) * 60000), z = d => d.toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
   return "https://calendar.google.com/calendar/render?action=TEMPLATE&text=" + encodeURIComponent(f.title + " (" + (t.version || "").toUpperCase() + ")") + "&dates=" + z(s) + "/" + z(e) + "&location=" + encodeURIComponent(c.name + ", " + (c.fullAddress || c.address || "")) + "&details=" + encodeURIComponent("Réserver : " + (t.url || c.website || "")); };
 async function filmExtras(f) {
-  try { const x = await fetch("/film-extra/" + f.id).then(j); if (!document.querySelector("#trailer")) return;
-    if (x.trailer) $("#trailer").innerHTML = `<div class="trailer"><iframe src="${esc(x.trailer)}" title="Bande-annonce de ${esc(f.title)}" allowfullscreen loading="lazy"></iframe></div>`;
-    if ((x.photos || []).length) $("#photos").innerHTML = `<h3 style="color:var(--gold2)">Photos</h3><div class="rail photos" style="padding-left:0">${x.photos.map(p => `<img src="${esc(p)}" alt="Photo du film ${esc(f.title)}" loading="lazy">`).join("")}</div>`;
+  try {
+    if (typeof fillFicheTrailer === "function") fillFicheTrailer(f);
+    const x = await fetch("/film-extra/" + f.id).then(j);
+    if (typeof fillFicheTrailer !== "function" && x.trailer && document.querySelector("#trailer"))
+      $("#trailer").innerHTML = `<div class="trailer"><iframe src="${esc(x.trailer)}" title="Bande-annonce de ${esc(f.title)}" allowfullscreen loading="lazy"></iframe></div>`;
+    if ((x.photos || []).length && document.querySelector("#photos")) $("#photos").innerHTML = `<h3 style="color:var(--gold2)">Photos</h3><div class="rail photos" style="padding-left:0">${x.photos.map(p => `<img src="${esc(p)}" alt="Photo du film ${esc(f.title)}" loading="lazy">`).join("")}</div>`;
   } catch (e) {}
 }
 function checkAlerts() {
@@ -385,13 +388,12 @@ window.openFilm = id => {
   const labs = [f.cl.ap && "Avant-première", ...f.cl.special, f.cl.fresh && "Sortie de la semaine", f.cl.retro && f.year < 2026 && "Séance rétro"].filter(Boolean);
   const sim = FILMS.filter(x => x !== f && (x.genres||[]).some(g => (f.genres||[]).includes(g))).slice(0, 10).map(x => ({...x, vby: x.by, n: x.times.length}));
   const yt = "https://www.youtube.com/results?search_query=" + encodeURIComponent(f.title + " bande annonce " + (f.year || ""));
-  modal(`<div class="mbody fd">${f.poster ? `<img class="pl" src="${esc(f.poster)}" alt="Affiche de ${esc(f.title)}">` : ""}<h2>${esc(f.title)}</h2>
+  modal(`<div class="mbody fd"><div id="trailer" class="trailer"></div>${f.poster ? `<img class="pl" src="${esc(f.poster)}" alt="Affiche de ${esc(f.title)}">` : ""}<h2>${esc(f.title)}</h2>
    <div>${labs.map(l => `<span class="tag g" style="display:inline-block;margin:0 4px 4px 0">${esc(l)}</span>`).join("")}</div>
    <p class="sub">${meta(f)}${f.directors ? " · de " + esc(f.directors) : ""}</p>${(f.cast||[]).length ? `<p class="sub">Avec ${esc(f.cast.join(", "))}</p>` : ""}
    <p class="syn">${esc(f.synopsis || "")}</p>
    ${lbState(f).watch ? `<p><span class="lbw">Dans votre watchlist Letterboxd</span></p>` : ""}${lbState(f).seen ? `<p><span class="lbs">✓ Déjà vu (Letterboxd)</span></p>` : ""}
    <div class="btns" role="group" aria-label="Mes listes">${[["towatch","📌 À voir"],["seen","✓ Vu"],["rewatch","🔁 À revoir"]].map(([k,l]) => `<button class="ghost${inList(k, f) ? " on" : ""}" aria-pressed="${inList(k, f)}" onclick="toggleList('${k}','${f.id}')">${l}</button>`).join("")}</div>
-   <div id="trailer"></div>
    <div class="btns"><a class="ghost" href="${yt}" target="_blank" rel="noopener">▶ Bande-annonce (YouTube)</a><a class="ghost" href="https://www.allocine.fr/film/fichefilm_gen_cfilm=${esc(f.id)}.html" target="_blank" rel="noopener">Plus d’infos (Allociné)</a><button class="ghost" onclick="shareFilm('${f.id}')">↗ Partager</button></div>
    <h3 style="clear:both;color:var(--gold2)">🎟️ Séances</h3>${lines || `<p class="sub">Aucune séance avec les filtres actuels.</p>`}
    <p class="sub">Touchez un horaire : réserver, ajouter à mes billets ou à l’agenda. ★ = séance spéciale, ♿ = accessible.</p>

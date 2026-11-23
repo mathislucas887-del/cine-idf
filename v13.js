@@ -115,7 +115,38 @@ window.matchRemove = id => { LISTS.towatch = LISTS.towatch.filter(x => x.id !== 
 const YTC = new Map();
 const ytFor = f => { if (!f) return Promise.resolve({}); const k = String(f.id); if (!YTC.has(k)) YTC.set(k, fetch(`/yt-trailer/${encodeURIComponent(k)}?t=${encodeURIComponent(f.title || "")}&y=${encodeURIComponent(f.year || "")}`).then(j).catch(() => (YTC.delete(k), {}))); return YTC.get(k); };
 window.matchYT = ytFor;
-window.matchPlay = (vid, t) => { const box = $("#mtr"); if (!box) return; box.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(vid)}?autoplay=1&mute=1&playsinline=1&rel=0&modestbranding=1" title="Bande-annonce de ${esc(t)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`; };
+window.ytEmbedUrl = vid => "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(vid) + "?autoplay=1&mute=1&playsinline=1&rel=0&modestbranding=1";
+window.ytIdOk = vid => typeof vid === "string" && /^[\w-]{11}$/.test(vid);
+window.matchPlay = (vid, t, box) => { box = box || $("#mtr") || $("#trailer"); if (!box || !ytIdOk(vid)) return; box.innerHTML = `<iframe src="${ytEmbedUrl(vid)}" title="Bande-annonce de ${esc(t)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen data-yt="${esc(vid)}"></iframe>`; };
+window.fillFicheTrailer = async function (f, el) {
+  el = el || document.getElementById("trailer");
+  if (!el || !f) return;
+  const token = String(f.id || "");
+  el.dataset.fid = token;
+  el.hidden = false;
+  el.classList.add("trailer");
+  el.innerHTML = `<div class="sk" style="height:100%" aria-hidden="true"><div class="im" style="height:100%"></div></div>`;
+  const still = () => el.isConnected && el.dataset.fid === token;
+  try {
+    const y = await ytFor(f);
+    if (!still()) return;
+    if (y && ytIdOk(y.id)) {
+      const title = esc(f.title || "");
+      // Zone de lecture (vignette officielle) : un tap lance l’embed YouTube en sourdine (autoplay sonore bloqué sur iOS).
+      el.innerHTML = `<button type="button" class="ytlite" data-yt="${esc(y.id)}" onclick="matchPlay('${esc(y.id)}', this.dataset.t, this.parentNode)" data-t="${title}" aria-label="Lire la bande-annonce de ${title} (son coupé au départ)"><img src="https://i.ytimg.com/vi/${esc(y.id)}/hqdefault.jpg" alt="Bande-annonce de ${title}"><span class="ytplay" aria-hidden="true">▶</span></button>`;
+      return;
+    }
+  } catch (e) {}
+  try {
+    const x = await fetch("/film-extra/" + encodeURIComponent(f.id)).then(j);
+    if (!still()) return;
+    if (x && x.trailer) {
+      el.innerHTML = `<iframe src="${esc(x.trailer)}" title="Bande-annonce de ${esc(f.title)}" allow="fullscreen; picture-in-picture" allowfullscreen loading="lazy"></iframe>`;
+      return;
+    }
+  } catch (e) {}
+  if (still()) { el.innerHTML = ""; el.hidden = true; el.classList.remove("trailer"); }
+};
 window.matchTrailer = async id => { const f = film(id) || (LISTS.towatch || []).find(x => x.id === String(id)) || {id, title: ""};
   modal(`<div class="mbody mtrail"><h2>▶ ${esc(f.title)}</h2><div class="trailer" id="mtr"><div class="sk" style="height:100%"><div class="im" style="height:100%"></div></div></div><p class="sub" id="mtrm">Recherche de la bande-annonce…</p></div>`);
   const y = await ytFor(f); if (!document.getElementById("mtr")) return;

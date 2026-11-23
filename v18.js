@@ -19,7 +19,7 @@ window.s18Day = (id, d) => { const box = document.getElementById(id); if (!box |
   const el = box.querySelector(".fdt"); el.classList.remove("in"); void el.offsetWidth; el.classList.add("in"); el.innerHTML = body(id); };
 // Glisser vers le bas pour fermer (panneau séance : partout si en haut ; fiche : depuis le haut de la fiche)
 const drag = (wrap, box, close, zone) => { let y0 = null, dy = 0;
-  wrap.addEventListener("touchstart", e => { if (!box.contains(e.target) || e.target.closest("input,textarea,select,iframe,.fdays,.rail,.dayp")) return; const r = box.getBoundingClientRect(), y = e.touches[0].clientY;
+  wrap.addEventListener("touchstart", e => { if (!box.contains(e.target) || e.target.closest("input,textarea,select,iframe,.trailer,.ytlite,.fdays,.rail,.dayp")) return; const r = box.getBoundingClientRect(), y = e.touches[0].clientY;
     if (wrap.scrollTop > 0 || box.scrollTop > 0 || (zone && y - r.top > zone)) return; y0 = y; dy = 0; box.style.transition = "none"; }, {passive: true});
   wrap.addEventListener("touchmove", e => { if (y0 == null) return; dy = Math.max(0, e.touches[0].clientY - y0); box.style.transform = `translateY(${dy}px)`; }, {passive: true});
   wrap.addEventListener("touchend", () => { if (y0 == null) return; y0 = null; box.style.transition = "transform .22s ease"; if (dy > 90) { box.style.transform = "translateY(100%)"; setTimeout(() => { close(); box.style.transform = ""; box.style.transition = ""; }, 200); } else box.style.transform = ""; }); };

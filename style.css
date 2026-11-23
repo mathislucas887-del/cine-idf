@@ -419,3 +419,8 @@ body.light .rs-x{background:rgba(255,255,255,.9);color:#1b1608}
   nav button .ic{display:block;font-size:22px;line-height:1}
   nav button[hidden],nav button.hidden,nav button[aria-hidden="true"]{display:none!important}
 }
+
+/* v30 : bande-annonce YouTube en tête de fiche, sans bloquer scroll ni fermeture */
+.mbody > #trailer:first-child{margin:-16px -20px 14px;border-radius:0;width:auto;max-width:none;clear:none}
+#trailer[hidden]{display:none!important;margin:0;height:0}
+#modal .mbox .x{z-index:2600}
