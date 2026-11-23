@@ -48,8 +48,7 @@
     return "Aucun film avec une séance " + s.phrase + (when ? " " + when : " pour les jours affichés") + ".";
   }
 
-  // Nombre de jours connus à charger pour « Toutes les séances » : au moins 7, au plus 28,
-  // ou jusqu’au dernier jour déjà annoncé par le catalogue Allociné (CAT.last).
+  // Nombre de jours du catalogue (utilitaire). « Toutes les séances » s’appuie plutôt sur rangeDates.
   function allDaysCount(today, last, min, max) {
     min = min == null ? 7 : min; max = max == null ? 28 : max;
     if (!last) return min;
@@ -58,6 +57,28 @@
     const n = Math.round((L - t) / 864e5) + 1;
     return Math.max(min, Math.min(max, n));
   }
+  function ymdParts(d) {
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  // Union de la barre des jours (strip) et du dernier jour connu du catalogue (CAT.last), plafonnée.
+  function rangeDates(strip, last, cap) {
+    cap = cap == null ? 28 : cap;
+    const out = (strip || []).slice();
+    if (last && (!out.length || last > out[out.length - 1])) {
+      if (!out.length) {
+        out.push(last);
+      } else {
+        let d = new Date(out[out.length - 1] + "T12:00");
+        while (out.length < cap) {
+          d.setDate(d.getDate() + 1);
+          const k = ymdParts(d);
+          out.push(k);
+          if (k >= last) break;
+        }
+      }
+    }
+    return out.slice(0, cap);
+  }
 
-  root.TimeSlot = {SLOTS, LATE_END, minutesOf, inSlot, normalize, slotOf, filterTimes, filterBy, set, current: get, emptyMsg, allDaysCount};
+  root.TimeSlot = {SLOTS, LATE_END, minutesOf, inSlot, normalize, slotOf, filterTimes, filterBy, set, current: get, emptyMsg, allDaysCount, rangeDates};
 })(typeof window !== "undefined" ? window : globalThis);

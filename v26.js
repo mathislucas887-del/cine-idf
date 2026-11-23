@@ -9,11 +9,175 @@
   window.ALLSHOWS = () => ALLSHOWS;
 
   function knownDates() {
+    const strip = (typeof DAYS !== "undefined" && DAYS.length && typeof ymd === "function") ? DAYS.map(d => ymd(d)) : [];
     const last = (window.MATCHCAT || {}).last || "";
-    const today = typeof ymd === "function" ? ymd(DAYS && DAYS[0] ? DAYS[0] : new Date()) : "";
-    const n = TimeSlot.allDaysCount(today, last);
-    if (typeof DAYS !== "undefined" && DAYS.length) return DAYS.slice(0, n).map(d => ymd(d));
-    return [];
+    return TimeSlot.rangeDates(strip, last, 28);
+  }
+  function lastLabel(dates) {
+    const last = (dates || SELDATES || [])[(dates || SELDATES || []).length - 1];
+    return last && typeof fmtDay === "function" ? "jusqu’au " + fmtDay(last) : "";
+  }
+  function showAllProgress(done, total, on) {
+    let el = document.getElementById("allprog");
+    if (!on) { if (el) el.remove(); return; }
+    if (!el) {
+      el = document.createElement("p");
+      el.id = "allprog";
+      el.className = "allprog";
+      el.setAttribute("role", "status");
+      el.setAttribute("aria-live", "polite");
+      const slots = document.getElementById("slots");
+      const bar = document.querySelector("#v-seances .daybar");
+      if (slots) slots.after(el);
+      else if (bar) bar.appendChild(el);
+      else return;
+    }
+    el.textContent = total ? ("Chargement des séances… " + done + " / " + total + " jours") : "Chargement des séances…";
+  }
+  function dayCached(d, q) {
+    try {
+      const cache = window.MEM_DAY_CACHE;
+      if (!cache || typeof cache.get !== "function") return false;
+      const ttl = (typeof DAY_TTL === "number" ? DAY_TTL : 8 * 60 * 1000);
+      const hit = cache.get(d + (q || ""));
+      return !!(hit && hit.data && Date.now() - hit.at < ttl);
+    } catch (e) { return false; }
+  }
+  function mergeDay(by, cinemas) {
+    let failed = 0, shows = 0, lastDay = "";
+    Object.entries(cinemas || {}).forEach(([cid, films]) => {
+      const cine = typeof byId === "function" ? byId(cid) : null;
+      if (!films) { failed++; return; }
+      if (!cine) return;
+      films.forEach(f => {
+        const times = (f.times || []).filter(t => t && t.time);
+        if (!times.length) return;
+        shows += times.length;
+        times.forEach(t => { const day = String(t.time).slice(0, 10); if (day > lastDay) lastDay = day; });
+        const k = f.id || norm(f.title);
+        const F = by[k] ||= {...f, times: [], by: []};
+        F.times.push(...times);
+        const ex = F.by.find(x => x.c === cine);
+        ex ? ex.times.push(...times) : F.by.push({c: cine, times: [...times]});
+      });
+    });
+    return {failed, shows, lastDay};
+  }
+  async function loadAllShows() {
+    const my = ++LOADING;
+    ERR = "";
+    try {
+      if ($("#scope").value === "near" && !GEO) {
+        try { await locate(); } catch (e) { ERR = e.message; $("#scope").value = "core"; }
+      }
+    } catch (e) {}
+    const ids = typeof scopeIds === "function" ? scopeIds() : null;
+    if (ids && !ids.length) {
+      FILMS = [];
+      ERR = $("#scope").value === "fav" ? "Aucun cinéma en favori : ajoutez-en depuis la fiche d’un cinéma (⭐)." : "Aucun cinéma trouvé.";
+      showAllProgress(0, 0, false);
+      return renderAll();
+    }
+    const q = ids && ids.length ? "?ids=" + encodeURIComponent(ids.join(",")) : "";
+    const dates = knownDates();
+    SELDATES = dates.slice();
+    if (typeof renderDates === "function") renderDates();
+    showAllProgress(0, dates.length, true);
+
+    const by = {};
+    let failed = 0, done = 0, painted = false;
+    let pubT = 0;
+
+    const ingest = cinemas => {
+      const r = mergeDay(by, cinemas);
+      failed += r.failed;
+      done++;
+    };
+    const publish = final => {
+      if (my !== LOADING) return;
+      FILMS = Object.values(by).map(classify);
+      FETCHED = Date.now();
+      if (failed) ERR = "Allociné n’a pas répondu pour " + failed + " cinéma(s) – les autres séances s’affichent.";
+      if (typeof renderAll === "function") renderAll();
+      painted = true;
+      showAllProgress(done, dates.length, !final);
+      if (final) {
+        try {
+          LS.set("lastData", {at: FETCHED, dates: SELDATES, films: FILMS.slice(0, 80).map(f => ({...f, by: f.by.map(b => ({cid: b.c.id, times: b.times}))}))});
+        } catch (e) {}
+        if (typeof injectLD === "function") injectLD();
+        if (typeof loadTMDB === "function") { try { _tmN = 0; loadTMDB(); } catch (e) {} }
+        if (typeof FILMPATH !== "undefined" && FILMPATH && !window._fp) { window._fp = 1; openFilm(FILMPATH[1]); }
+      }
+    };
+    const publishSoon = () => {
+      showAllProgress(done, dates.length, true);
+      if (pubT) return;
+      pubT = setTimeout(() => { pubT = 0; if (my === LOADING) publish(false); }, 120);
+    };
+
+    const finished = Object.create(null);
+    const markDone = d => { if (finished[d]) return false; finished[d] = true; done++; return true; };
+    let emptyStreak = 0, stopRest = false;
+    const fetchDay = d => {
+      const p = fetchDayShows(d, q).then(x => {
+        if (my !== LOADING) return;
+        const cinemas = x && x.cinemas;
+        if (cinemas) {
+          const r = mergeDay(by, cinemas);
+          failed += r.failed;
+          if (r.shows) emptyStreak = 0; else emptyStreak++;
+        } else {
+          emptyStreak++;
+        }
+        if (emptyStreak >= 3) stopRest = true;
+        markDone(d);
+        publishSoon();
+      }).catch(() => {
+        if (my !== LOADING) return;
+        emptyStreak++;
+        if (emptyStreak >= 3) stopRest = true;
+        markDone(d);
+        showAllProgress(done, dates.length, true);
+      });
+      // Un jour très lent (Allociné à froid ~2 min) ne doit pas bloquer indéfiniment la suite.
+      return Promise.race([p, new Promise(res => setTimeout(() => {
+        if (!finished[d]) {
+          emptyStreak++;
+          if (emptyStreak >= 3) stopRest = true;
+          markDone(d);
+          showAllProgress(done, dates.length, true);
+        }
+        res();
+      }, 120000))]);
+    };
+
+    const cached = [], rest = [];
+    dates.forEach(d => (dayCached(d, q) ? cached : rest).push(d));
+
+    // Jours déjà en cache : affichage immédiat, sans vider la liste.
+    for (const d of cached) {
+      if (my !== LOADING) return;
+      try { const x = await fetchDayShows(d, q); if (my !== LOADING) return; if (x && x.cinemas) ingest(x.cinemas); else done++; }
+      catch (e) { done++; }
+    }
+    if (my !== LOADING) return;
+    if (cached.length) publish(false);
+    else if (!FILMS.length) { try { skeleton(); } catch (e) {} }
+
+    // Les autres jours : un à la fois, publication au fil de l’eau, arrêt après 3 jours vides ou en échec.
+    const LIMIT = 1; // un jour à la fois : Allociné est sérialisé côté serveur (~1,5 s par cinéma)
+    let i = 0;
+    const workers = Array.from({length: Math.min(LIMIT, rest.length)}, async () => {
+      while (i < rest.length && my === LOADING && !stopRest) {
+        const d = rest[i++];
+        await fetchDay(d);
+      }
+    });
+    if (workers.length) await Promise.all(workers);
+    if (my !== LOADING) return;
+    if (pubT) { clearTimeout(pubT); pubT = 0; }
+    publish(true);
   }
 
   function periodLabel() {
@@ -43,10 +207,7 @@
     SELDATES = knownDates();
     if (typeof SHOWN !== "undefined") SHOWN = 25;
     renderDates();
-    if (typeof loadData === "function") loadData();
-    if (!(window.MATCHCAT || {}).last && typeof window.loadCatalogX === "function") {
-      try { loadCatalogX(); } catch (e) {}
-    }
+    loadAllShows();
   }
   window.pickAllShows = pickAllShows;
 
@@ -124,8 +285,7 @@
     btn.setAttribute("aria-selected", ALLSHOWS);
     if (!ALLSHOWS) return;
     el.querySelectorAll("button[data-d]").forEach(b => { b.classList.remove("on"); b.setAttribute("aria-selected", "false"); });
-    const last = SELDATES[SELDATES.length - 1], n = SELDATES.length;
-    const range = last && typeof fmtDay === "function" ? "jusqu’au " + fmtDay(last) : n + " jour" + (n > 1 ? "s" : "");
+    const range = lastLabel(SELDATES) || (SELDATES.length + " jour" + (SELDATES.length > 1 ? "s" : ""));
     const h = document.querySelector(".today");
     if (h) h.innerHTML = "Toutes les séances · <em>" + range + "</em>";
     document.querySelectorAll(".qk").forEach(b => {
@@ -201,9 +361,21 @@
     clearTimeout(catT);
     catT = setTimeout(() => {
       const next = knownDates();
-      if (next.join() !== SELDATES.join()) { SELDATES = next; renderDates(); loadData(); }
+      if (next.join() !== SELDATES.join()) { SELDATES = next; renderDates(); loadAllShows(); }
     }, 200);
   });
+
+  const _loadData = typeof loadData === "function" ? loadData : null;
+  if (_loadData && !_loadData._allShows) {
+    const wrapped = async function () {
+      if (ALLSHOWS) return loadAllShows();
+      showAllProgress(0, 0, false);
+      return _loadData.apply(this, arguments);
+    };
+    wrapped._allShows = true;
+    try { loadData = wrapped; } catch (e) {}
+    window.loadData = wrapped;
+  }
 
   function initAllShows() {
     hookRenderDates();

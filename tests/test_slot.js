@@ -103,5 +103,18 @@ eq("last J+13 → 14", T.allDaysCount("2026-11-23", "2026-12-06"), 14);
 eq("last J+40 → 28 (plafond)", T.allDaysCount("2026-11-23", "2027-01-10"), 28);
 eq("last avant aujourd’hui → 7", T.allDaysCount("2026-11-23", "2026-11-01"), 7);
 
+
+// rangeDates : au moins toute la barre des jours, étendue jusqu’à CAT.last
+const strip7 = ["2026-11-23","2026-11-24","2026-11-25","2026-11-26","2026-11-27","2026-11-28","2026-11-29"];
+const strip28 = [...Array(28)].map((_, i) => { const d = new Date("2026-11-23T12:00"); d.setDate(d.getDate() + i); return d.toISOString().slice(0, 10); });
+eq("barre 28 j, sans last → 28", T.rangeDates(strip28, "").length, 28);
+eq("barre 28 j, last plus tôt → 28 (on garde la barre)", T.rangeDates(strip28, "2026-11-29").length, 28);
+eq("barre 28 j dernier", T.rangeDates(strip28, "")[27], "2026-12-20");
+eq("barre 7 j, last J+13 → 14", T.rangeDates(strip7, "2026-12-06").length, 14);
+eq("barre 7 j, last J+13 dernier", T.rangeDates(strip7, "2026-12-06")[13], "2026-12-06");
+eq("barre vide, sans last", T.rangeDates([], ""), []);
+eq("barre vide, avec last", T.rangeDates([], "2026-12-06"), ["2026-12-06"]);
+eq("plafond 28", T.rangeDates(strip7, "2027-02-01").length, 28);
+
 if (failed) { console.error(failed + " échec(s), " + passed + " ok"); process.exit(1); }
 console.log(passed + " tests ok");
