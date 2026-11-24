@@ -135,3 +135,53 @@ def test_meta_persists_last(tmp_path, monkeypatch):
     S.ALLO_WARM["last"] = ""
     S.allo_meta_load()
     assert S.ALLO_WARM["last"] == "2026-12-20"
+
+
+def test_warm_refreshes_first_seven_days_even_if_cache_is_fresh():
+    """Un programme partiel tout juste mis en cache ne doit pas bloquer le rafraîchissement de J..J+6."""
+    cines = _cines("W9230")
+    fetched = []
+    now = 1_000_000.0
+    # Cache « frais » et incomplet pour 11 jours (1 film seulement)
+    for i, d in enumerate(["2026-11-24", "2026-11-25", "2026-11-26", "2026-11-27", "2026-11-28", "2026-11-29", "2026-11-30", "2026-12-01", "2026-12-02", "2026-12-03", "2026-12-04"]):
+        _put("W9230", d, [{"id": 1, "title": "Partiel", "times": [{"time": d + "T20:00:00"}]}], ts=now - 60)
+    def fetch(c, dd):
+        fetched.append(dd)
+        _put(c["allocineId"], dd, [{"id": 2, "title": "Complet", "times": [{"time": dd + "T18:00:00"}, {"time": dd + "T21:00:00"}]}], ts=now)
+    out = S.warm_pass(cines=cines, today="2026-11-24", fetch=fetch, now_ts=now)
+    # J à J+6 doivent être rappelés malgré un cache frais
+    for d in ["2026-11-24", "2026-11-25", "2026-11-26", "2026-11-27", "2026-11-28", "2026-11-29", "2026-11-30"]:
+        assert d in fetched, d
+    # J+7 (1er déc.) est encore dans la fenêtre de skip 3 h
+    assert "2026-12-01" not in fetched
+    assert out["last"] >= "2026-11-30"
+
+
+def test_allo_revalidate_ts_marks_near_days_stale():
+    now = 5_000_000.0
+    fresh = now - 10
+    assert S.allo_revalidate_ts(fresh, "2026-11-26", now=now, today="2026-11-24") <= now - S.TTL - 1
+    # au-delà de J+6, on conserve l’horodatage
+    assert S.allo_revalidate_ts(fresh, "2026-12-05", now=now, today="2026-11-24") == fresh
+
+
+def test_allo_fetch_force_bypasses_ttl(monkeypatch):
+    key = "allo:W9230" + "2026-11-25"
+    stale = json.dumps({"source": "allocine", "films": [{"id": 1, "title": "Partiel", "times": [{"time": "2026-11-25T21:45:00"}]}]}, ensure_ascii=False).encode()
+    full = json.dumps({"source": "allocine", "films": [{"id": 1, "title": "Partiel"}, {"id": 2, "title": "Hunger Games"}]}, ensure_ascii=False).encode()
+    S.CACHE[key] = (time.time(), stale)
+    calls = []
+    def fake_live(cid, date, k):
+        calls.append((cid, date))
+        S.CACHE[k] = (time.time(), full)
+        return full
+    monkeypatch.setattr(S, "allo_live", fake_live)
+    # sans force : TTL, on sert le cache partiel
+    got = S.allo_fetch("W9230", "2026-11-25")
+    assert json.loads(got)["films"][0]["title"] == "Partiel"
+    assert len(json.loads(got)["films"]) == 1
+    assert calls == []
+    # avec force : on rappelle Allociné
+    got2 = S.allo_fetch("W9230", "2026-11-25", force=True)
+    assert calls == [("W9230", "2026-11-25")]
+    assert len(json.loads(got2)["films"]) == 2

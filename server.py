@@ -324,7 +324,7 @@ class H(http.server.SimpleHTTPRequestHandler):
     def transit(s):
         return transit_get(s)
 
-def allo_fetch(cid, date):
+def allo_fetch(cid, date, force=False):
         parts = [None, cid, date]
         key = "allo:" + cid + date; now = time.time()
         with LOCK: hit = CACHE.get(key)
@@ -334,6 +334,11 @@ def allo_fetch(cid, date):
                 with LOCK:
                     if key not in CACHE: CACHE[key] = hit
                     hit = CACHE[key]
+        if force:
+            try: return allo_live(cid, date, key)
+            except Exception:
+                if hit: return hit[1]
+                raise
         if hit and now - hit[0] < TTL: return hit[1]
         if hit and now - hit[0] < 8 * 86400:  # stale-while-revalidate (inclut le dernier instantané sauvegardé)
             if key not in REFRESHING:
@@ -458,6 +463,7 @@ ALLO_CACHE_DIR = os.environ.get("ALLO_CACHE", os.path.join(ROOT, "cache", "alloc
 ALLO_WARM = {"on": False, "last": "", "started": 0, "pass_at": 0, "day": "", "done_days": 0, "total_days": 0, "empty_streak": 0, "eta_s": 0}
 ALLO_WARM_MAX = 42
 ALLO_WARM_REFRESH = 3 * 3600
+ALLO_WARM_FORCE_DAYS = 7  # J à J+6 : la semaine à l’affiche, souvent complétée après un premier cache partiel
 _ALLO_DISK_KEY = re.compile(r"^allo:[A-Za-z0-9]{5}\d{4}-\d{2}-\d{2}$")
 
 def allo_cache_dir():
@@ -488,6 +494,24 @@ def allo_disk_get(key):
     except Exception:
         return None
 
+def allo_near_dates(today=None, n=None):
+    """Dates J..J+6 (semaine à l’affiche) dont le programme peut encore être complété par Allociné."""
+    import datetime
+    n = ALLO_WARM_FORCE_DAYS if n is None else n
+    today = today or datetime.date.today().isoformat()
+    start = datetime.date.fromisoformat(today)
+    return {(start + datetime.timedelta(days=i)).isoformat() for i in range(n)}
+
+def allo_revalidate_ts(ts, date, now=None, today=None):
+    """Pour les jours proches, on force la revalidation : un cache partiel ne doit pas passer pour frais."""
+    now = time.time() if now is None else now
+    try:
+        if date in allo_near_dates(today):
+            return min(float(ts), now - TTL - 1)
+    except Exception:
+        pass
+    return ts
+
 def allo_disk_boot():
     """Recharge le cache disque en mémoire au démarrage. N’invente aucune séance."""
     root = allo_cache_dir()
@@ -496,6 +520,7 @@ def allo_disk_boot():
     if not os.path.isdir(root):
         return 0
     today = __import__("datetime").date.today().isoformat()
+    now = time.time()
     for name in os.listdir(root):
         if not name.startswith("allo_") or not name.endswith(".json"): continue
         key = name[:-5].replace("_", ":", 1)
@@ -503,8 +528,10 @@ def allo_disk_boot():
         if key[-10:] < today: continue
         hit = allo_disk_get(key)
         if not hit: continue
+        ts, body = hit
+        ts = allo_revalidate_ts(ts, key[-10:], now=now, today=today)
         with LOCK:
-            if key not in CACHE: CACHE[key] = hit; n += 1
+            if key not in CACHE: CACHE[key] = (ts, body); n += 1
     print("Cache disque Allociné rechargé :", n, "entrées", flush=True)
     return n
 
@@ -581,9 +608,9 @@ def warm_horizon(today=None, last=None, cap=None):
             pass
     return max(1, min(cap, n))
 
-def _warm_one(c, dd):
+def _warm_one(c, dd, force=False):
     try:
-        allo_fetch(c["allocineId"], dd)
+        allo_fetch(c["allocineId"], dd, force=force)
         return True
     except Exception:
         return False
@@ -611,13 +638,17 @@ def warm_pass(cines=None, today=None, fetch=None, now_ts=None, sleep=None):
         dd = (start + datetime.timedelta(days=k)).isoformat()
         ALLO_WARM["day"] = dd
         for c in cines:
-            if k >= 2:
+            # J..J+6 : toujours rafraîchir (le programme de la semaine peut être complété après un 1er cache partiel).
+            if k >= ALLO_WARM_FORCE_DAYS:
                 with LOCK: hit = CACHE.get("allo:" + c["allocineId"] + dd)
                 if hit and now_ts - hit[0] < ALLO_WARM_REFRESH:
                     continue
             if sleep:
                 while time.time() < STAT["backoff_until"]: sleep(15)
-            fetch(c, dd)
+            if fetch is _warm_one:
+                _warm_one(c, dd, force=(k < ALLO_WARM_FORCE_DAYS))
+            else:
+                fetch(c, dd)
         ALLO_WARM["done_days"] = k + 1
         walked = k + 1
         if not day_is_computed(dd, cines):
@@ -767,7 +798,8 @@ def snap_pull():
         today = datetime.date.today().isoformat(); n = 0
         with LOCK:
             for k, (ts, body) in packed.items():
-                if k[-10:] >= today and k not in CACHE: CACHE[k] = (ts, body); n += 1
+                if k[-10:] >= today and k not in CACHE:
+                    CACHE[k] = (allo_revalidate_ts(ts, k[-10:], today=today), body); n += 1
         try:
             _, digest, size = snap_pack(packed, today)
             SNAP_STATE["hash"] = digest; STAT["snap_bytes"] = size
