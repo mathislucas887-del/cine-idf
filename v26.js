@@ -5,8 +5,9 @@
   const KEY = "timeSlot";
   try { TimeSlot.set(TimeSlot.fromStored(LS.get(KEY, "all"))); } catch (e) { TimeSlot.set([]); }
 
-  let ALLSHOWS = false;
+  let ALLSHOWS = false, WEEKSHOWS = false;
   window.ALLSHOWS = () => ALLSHOWS;
+  window.WEEKSHOWS = () => WEEKSHOWS;
 
   function knownDates() {
     const strip = (typeof DAYS !== "undefined" && DAYS.length && typeof ymd === "function") ? DAYS.map(d => ymd(d)) : [];
@@ -63,7 +64,7 @@
     });
     return {failed, shows, lastDay};
   }
-  async function loadAllShows() {
+  async function loadAllShows(range) {
     const my = ++LOADING;
     ERR = "";
     try {
@@ -79,7 +80,7 @@
       return renderAll();
     }
     const q = ids && ids.length ? "?ids=" + encodeURIComponent(ids.join(",")) : "";
-    const dates = knownDates();
+    const dates = (range && range.length) ? range.slice() : (WEEKSHOWS ? TimeSlot.weekDates() : knownDates());
     SELDATES = dates.slice();
     if (typeof renderDates === "function") renderDates();
     showAllProgress(0, dates.length, true);
@@ -188,6 +189,15 @@
           ? "sur toute la période connue (jusqu’au " + fmtDay(last) + ")"
           : "sur toute la période connue";
       }
+      if (WEEKSHOWS) {
+        const last = (SELDATES || [])[(SELDATES || []).length - 1];
+        if (last && typeof fmtDay === "function") {
+          const today = typeof ymd === "function" ? ymd(new Date()) : "";
+          if (SELDATES.length === 1 && last === today) return "cette semaine (séances à venir jusqu’à ce soir)";
+          return "cette semaine (séances à venir jusqu’au " + fmtDay(last) + ")";
+        }
+        return "cette semaine";
+      }
       if (typeof SELDATES === "undefined" || !SELDATES.length) return "pour les jours affichés";
       const today = ymd(new Date()), tom = ymd(new Date(Date.now() + 864e5));
       if (SELDATES.length === 1) {
@@ -203,13 +213,24 @@
 
   function pickAllShows() {
     ALLSHOWS = true;
+    WEEKSHOWS = false;
     if (typeof TONIGHT !== "undefined" && TONIGHT) TONIGHT = false;
     SELDATES = knownDates();
     if (typeof SHOWN !== "undefined") SHOWN = 25;
     renderDates();
-    loadAllShows();
+    loadAllShows(SELDATES);
   }
   window.pickAllShows = pickAllShows;
+  function pickWeekShows() {
+    WEEKSHOWS = true;
+    ALLSHOWS = false;
+    if (typeof TONIGHT !== "undefined" && TONIGHT) TONIGHT = false;
+    SELDATES = TimeSlot.weekDates();
+    if (typeof SHOWN !== "undefined") SHOWN = 25;
+    renderDates();
+    loadAllShows(SELDATES);
+  }
+  window.pickWeekShows = pickWeekShows;
 
   function ensureBar() {
     let el = document.getElementById("slots");
@@ -256,8 +277,10 @@
   const _s18 = window.s18;
   if (typeof _s18 === "function") {
     window.s18 = function (f, by, pref) {
-      if (TimeSlot.isAll()) return _s18(f, by, pref);
-      const filtered = TimeSlot.filterBy(by);
+      let filtered = by;
+      if (WEEKSHOWS && typeof TimeSlot.filterByWeek === "function") filtered = TimeSlot.filterByWeek(filtered);
+      if (!TimeSlot.isAll()) filtered = TimeSlot.filterBy(filtered);
+      if (filtered === by && TimeSlot.isAll() && !WEEKSHOWS) return _s18(f, by, pref);
       const n = Array.isArray(filtered) ? filtered.reduce((a, x) => a + x.times.length, 0) : Object.values(filtered).reduce((a, ts) => a + ts.length, 0);
       if (!n) return `<p class="sub">${TimeSlot.emptyMsg(periodLabel())}</p>`;
       return _s18(f, filtered, pref);
@@ -268,6 +291,7 @@
   // On enveloppe le rendu, on réinjecte la pastille tout de suite, et un observateur
   // la remet si une autre fonction réécrit #dates (référence périmée, nouvel appel, etc.).
   const CHIP = `<button type="button" role="tab" data-all="1" class="allshows" aria-selected="false" aria-label="Toutes les séances connues, sur toute la période disponible">Toutes les séances</button>`;
+  const WEEK_CHIP = `<button type="button" role="tab" data-week="1" class="allshows weekshows" aria-selected="false" aria-label="Séances de cette semaine, à partir de maintenant jusqu’à dimanche">Cette semaine</button>`;
   function ensureAllShowsChip() {
     const el = document.getElementById("dates");
     if (!el) return;
@@ -278,14 +302,37 @@
     } else if (el.firstElementChild !== btn) {
       el.insertBefore(btn, el.firstElementChild);
     }
+    let weekBtn = el.querySelector("button[data-week]");
+    if (!weekBtn) {
+      if (btn) btn.insertAdjacentHTML("afterend", WEEK_CHIP);
+      else el.insertAdjacentHTML("afterbegin", WEEK_CHIP);
+      weekBtn = el.querySelector("button[data-week]");
+    } else if (btn && btn.nextElementSibling !== weekBtn) {
+      btn.after(weekBtn);
+    }
     if (!btn) return;
     btn.classList.toggle("on", ALLSHOWS);
     btn.setAttribute("aria-selected", ALLSHOWS);
-    if (!ALLSHOWS) return;
+    if (weekBtn) {
+      weekBtn.classList.toggle("on", WEEKSHOWS);
+      weekBtn.setAttribute("aria-selected", WEEKSHOWS);
+    }
+    if (!ALLSHOWS && !WEEKSHOWS) return;
     el.querySelectorAll("button[data-d]").forEach(b => { b.classList.remove("on"); b.setAttribute("aria-selected", "false"); });
-    const range = lastLabel(SELDATES) || (SELDATES.length + " jour" + (SELDATES.length > 1 ? "s" : ""));
     const h = document.querySelector(".today");
-    if (h) h.innerHTML = "Toutes les séances · <em>" + range + "</em>";
+    if (ALLSHOWS) {
+      if (weekBtn) { weekBtn.classList.remove("on"); weekBtn.setAttribute("aria-selected", "false"); }
+      const range = lastLabel(SELDATES) || (SELDATES.length + " jour" + (SELDATES.length > 1 ? "s" : ""));
+      if (h) h.innerHTML = "Toutes les séances · <em>" + range + "</em>";
+    } else if (WEEKSHOWS) {
+      btn.classList.remove("on"); btn.setAttribute("aria-selected", "false");
+      const last = (SELDATES || [])[(SELDATES || []).length - 1];
+      const today = typeof ymd === "function" ? ymd(new Date()) : "";
+      const range = last && typeof fmtDay === "function"
+        ? ((SELDATES.length === 1 && last === today) ? "jusqu’à ce soir" : "jusqu’au " + fmtDay(last))
+        : "";
+      if (h) h.innerHTML = "Cette semaine" + (range ? " · <em>" + range + "</em>" : "");
+    }
     document.querySelectorAll(".qk").forEach(b => {
       if (b.dataset.q === "today" || b.dataset.q === "weekend" || b.dataset.q === "tomorrow") b.classList.remove("on");
     });
@@ -311,8 +358,9 @@
     const obs = new MutationObserver(() => {
       hookRenderDates();
       const first = el.firstElementChild;
-      if (!first || !first.getAttribute || first.getAttribute("data-all") !== "1") ensureAllShowsChip();
-      else if (ALLSHOWS) ensureAllShowsChip();
+      const week = el.querySelector("button[data-week]");
+      if (!first || !first.getAttribute || first.getAttribute("data-all") !== "1" || !week || first.nextElementSibling !== week) ensureAllShowsChip();
+      else if (ALLSHOWS || WEEKSHOWS) ensureAllShowsChip();
     });
     obs.observe(el, {childList: true});
     el._allShowsObs = obs;
@@ -322,8 +370,10 @@
     const b = e.target.closest("button");
     if (!b) return;
     if (b.dataset.all) { pickAllShows(); return; }
+    if (b.dataset.week) { pickWeekShows(); return; }
     if (!b.dataset.d) return;
     ALLSHOWS = false;
+    WEEKSHOWS = false;
     SELDATES = [b.dataset.d];
     (window.renderDates || renderDates)();
     loadData();
@@ -344,13 +394,13 @@
     const prev = quick.onclick;
     quick.onclick = function (e) {
       const b = e.target.closest("button");
-      if (b && b.dataset.q && b.dataset.q !== "ap") ALLSHOWS = false;
+      if (b && b.dataset.q && b.dataset.q !== "ap") { ALLSHOWS = false; WEEKSHOWS = false; }
       return prev.call(this, e);
     };
   }
   ["#pfrom", "#pto"].forEach(s => {
     const el = $(s);
-    if (el) el.addEventListener("change", () => { ALLSHOWS = false; }, true);
+    if (el) el.addEventListener("change", () => { ALLSHOWS = false; WEEKSHOWS = false; }, true);
   });
 
   let catT;
@@ -367,12 +417,26 @@
   if (_loadData && !_loadData._allShows) {
     const wrapped = async function () {
       if (ALLSHOWS) return loadAllShows();
+      if (WEEKSHOWS) return loadAllShows(TimeSlot.weekDates());
       showAllProgress(0, 0, false);
       return _loadData.apply(this, arguments);
     };
     wrapped._allShows = true;
     try { loadData = wrapped; } catch (e) {}
     window.loadData = wrapped;
+  }
+
+
+  const _timeOk = typeof timeOk === "function" ? timeOk : null;
+  if (_timeOk && !_timeOk._weekShows) {
+    const wrapped = function (t, f) {
+      if (!_timeOk(t, f)) return false;
+      if (WEEKSHOWS && typeof TimeSlot.isUpcoming === "function" && !TimeSlot.isUpcoming(t)) return false;
+      return true;
+    };
+    wrapped._weekShows = true;
+    try { timeOk = wrapped; } catch (e) {}
+    window.timeOk = wrapped;
   }
 
   function initAllShows() {

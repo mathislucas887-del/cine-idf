@@ -36,13 +36,29 @@ const tRows = (by, f0) => { const now = Date.now(); return Object.entries(by).so
   let dk = null; try { const d = dist(c); if (d != null) dk = d < 1 ? Math.round(d * 1000) + " m" : d.toFixed(1) + " km"; } catch (e) {}
   const meta = [c.city, dk].filter(Boolean).map(esc).join(" · ");
   const fd = {...f0, dur: f0.dur || (parseInt(f0.runtime) || 0) * 60 + (parseInt(String(f0.runtime || "").split("h")[1]) || 0) || null}, nw = new Date();
-  const pills = ts.slice().sort((a, b) => a.time.localeCompare(b.time)).map(t => timeBtn(fd, c, t, nw)).join("");
+  let keep = ts;
+  if (window.WEEKSHOWS && WEEKSHOWS() && TimeSlot.inThisWeek) keep = keep.filter(t => TimeSlot.inThisWeek(t));
+  if (typeof TimeSlot !== "undefined" && !TimeSlot.isAll()) keep = TimeSlot.filterTimes(keep);
+  if (!keep.length) return "";
+  const pills = keep.slice().sort((a, b) => a.time.localeCompare(b.time)).map(t => timeBtn(fd, c, t, nw)).join("");
   return `<div class="cc17"><div class="cch"><div><b>${esc(c.name)}</b>${meta ? `<small>${meta}</small>` : ""}</div>${c.type === "pathe" ? `<span class="bdg p">Pathé</span>` : c.type === "partner" || c.cinepass ? `<span class="bdg">Partenaire CinéPass</span>` : ""}</div><div class="tps">${pills}</div></div>`; }).join(""); };
 window.filmDay = d => { FD.day = d; const f = C().films.find(x => x.id === FD.id); if (!f) return; const box = $("#fd17"); if (!box) return;
   box.querySelectorAll(".fdays button").forEach(b => { const on = b.dataset.d === d; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); });
   const by = onDay(f, d), el = box.querySelector(".fdt"); el.classList.remove("in"); void el.offsetWidth; el.classList.add("in"); el.innerHTML = `<p class="sub">${Object.keys(by).length} cinéma${Object.keys(by).length > 1 ? "s" : ""}</p>` + (tRows(by, f) || `<p class="sub">Aucune séance ce jour-là.</p>`); };
 window.homeFilm = id => { const f = C().films.find(x => x.id === String(id)); if (!f) return false;
-  const today = days()[0].k, ds = [...new Set(Object.values(f.by).flat().map(t => t.time.slice(0, 10)))].filter(k => k >= today).sort();
+  const today = days()[0].k;
+  let ds = [...new Set(Object.values(f.by).flat().map(t => t.time.slice(0, 10)))].filter(k => k >= today).sort();
+  if (window.WEEKSHOWS && WEEKSHOWS() && TimeSlot.weekDates) {
+    const allow = new Set(TimeSlot.weekDates());
+    ds = ds.filter(k => allow.has(k));
+  }
+  const dayHas = k => Object.values(onDay(f, k)).some(ts => {
+    let keep = ts;
+    if (window.WEEKSHOWS && WEEKSHOWS() && TimeSlot.filterThisWeek) keep = TimeSlot.filterThisWeek(keep);
+    if (typeof TimeSlot !== "undefined" && !TimeSlot.isAll()) keep = TimeSlot.filterTimes(keep);
+    return keep.length;
+  });
+  if ((window.WEEKSHOWS && WEEKSHOWS()) || (typeof TimeSlot !== "undefined" && !TimeSlot.isAll())) ds = ds.filter(dayHas);
   FD.id = f.id; FD.day = ST.day !== "all" && ds.includes(ST.day) ? ST.day : ds[0];
   const inW = (LISTS.towatch || []).some(x => x.id === f.id), inT = FILMS.some(x => String(x.id) === f.id);
   modal(`<div class="mbody"><div id="trailer" class="trailer"></div><div class="mfh">${f.poster ? `<img src="${esc(f.poster)}" alt="Affiche de ${esc(f.title)}">` : ""}<div><h2>${esc(f.title)}</h2><p class="sub">${[f.year, (f.genres || []).join(", "), f.runtime, f.directors && "de " + f.directors].filter(Boolean).map(esc).join(" · ")}</p>${tmdb(f) ? `<p>Note moyenne TMDB : <b>${tmdbTxt(f)}/10</b> <small class="sub">(${tmdbVotes(f).toLocaleString("fr-FR")} votes)</small></p>` : ""}

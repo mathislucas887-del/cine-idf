@@ -170,5 +170,49 @@ eq("filter soir+nuit count", T.filterTimes(times2, ["soir", "nuit"]).length, 3);
 const by2 = [{c: {id: "a"}, times: times2}, {c: {id: "b"}, times: [at("08:00")]}];
 eq("filterBy soir+nuit cinémas", T.filterBy(by2, ["soir", "nuit"]).map(x => x.c.id), ["a"]);
 
+
+// « Cette semaine » : plage lundi→dimanche, à partir de maintenant
+const atLocal = (y, mo, d, hh, mm, ss) => {
+  const x = new Date(y, mo - 1, d, hh, mm, ss || 0, 0);
+  const pad = n => String(n).padStart(2, "0");
+  return t(x.getFullYear() + "-" + pad(x.getMonth() + 1) + "-" + pad(x.getDate()) + "T" + pad(x.getHours()) + ":" + pad(x.getMinutes()) + ":" + pad(x.getSeconds()));
+};
+const nowTue = new Date(2026, 10, 24, 11, 34, 0);
+eq("semaine mardi → 6 jours", T.weekDates(nowTue), ["2026-11-24", "2026-11-25", "2026-11-26", "2026-11-27", "2026-11-28", "2026-11-29"]);
+eq("semaine mardi commence aujourd’hui", T.weekDates(nowTue)[0], "2026-11-24");
+eq("semaine mardi finit dimanche", T.weekDates(nowTue).slice(-1)[0], "2026-11-29");
+eq("semaine lundi → 7 jours", T.weekDates(new Date(2026, 10, 23, 9, 0, 0)).length, 7);
+eq("semaine lundi premier", T.weekDates(new Date(2026, 10, 23, 9, 0, 0))[0], "2026-11-23");
+eq("semaine samedi → sam+dim", T.weekDates(new Date(2026, 10, 28, 10, 0, 0)), ["2026-11-28", "2026-11-29"]);
+eq("dimanche : seulement le reste du jour", T.weekDates(new Date(2026, 10, 29, 18, 0, 0)), ["2026-11-29"]);
+eq("semaine à cheval sur l’année", T.weekDates(new Date(2026, 11, 30, 12, 0, 0)), ["2026-12-30", "2026-12-31", "2027-01-01", "2027-01-02", "2027-01-03"]);
+eq("weekEnd dimanche 23:59", T.weekEnd(nowTue).getTime(), new Date("2026-11-29T23:59:59.999").getTime());
+eq("weekEnd le dimanche même", T.weekEnd(new Date(2026, 10, 29, 8, 0, 0)).getTime(), new Date("2026-11-29T23:59:59.999").getTime());
+
+// Filtrage des séances déjà commencées + borne du dimanche 23:59
+eq("passée ce matin masquée", T.inThisWeek(at("11:00", "2026-11-24"), nowTue), false);
+eq("égale à maintenant conservée", T.inThisWeek(at("11:34", "2026-11-24"), nowTue), true);
+eq("future aujourd’hui conservée", T.inThisWeek(at("20:15", "2026-11-24"), nowTue), true);
+eq("jeudi conservée", T.inThisWeek(at("14:00", "2026-11-26"), nowTue), true);
+eq("dimanche 23:59 conservée", T.inThisWeek(at("23:59", "2026-11-29"), nowTue), true);
+eq("lundi suivant exclu", T.inThisWeek(at("00:00", "2026-11-30"), nowTue), false);
+eq("lundi 00:30 nuit exclu (après dimanche 23:59)", T.inThisWeek(at("00:30", "2026-11-30"), nowTue), false);
+eq("lundi précédent exclu", T.inThisWeek(at("21:00", "2026-11-23"), nowTue), false);
+eq("horaire invalide", T.inThisWeek({time: "foo"}, nowTue), false);
+eq("isUpcoming faux si déjà commencé", T.isUpcoming(at("11:33", "2026-11-24"), nowTue), false);
+eq("isUpcoming vrai à l’heure pile", T.isUpcoming(at("11:34", "2026-11-24"), nowTue), true);
+
+const timesW = ["11:00", "11:34", "20:00"].map(hm => at(hm, "2026-11-24")).concat([at("23:59", "2026-11-29"), at("00:10", "2026-11-30")]);
+eq("filterThisWeek compte", T.filterThisWeek(timesW, nowTue).map(x => x.time), ["2026-11-24T11:34:00", "2026-11-24T20:00:00", "2026-11-29T23:59:00"]);
+
+const byW = [{c: {id: "a"}, times: timesW}, {c: {id: "b"}, times: [at("10:00", "2026-11-24")]}];
+eq("filterByWeek cinémas", T.filterByWeek(byW, nowTue).map(x => x.c.id), ["a"]);
+
+// Dimanche soir : seulement le reste de la journée
+const nowSun = new Date(2026, 10, 29, 20, 0, 0);
+eq("dimanche 19h déjà passé", T.inThisWeek(at("19:00", "2026-11-29"), nowSun), false);
+eq("dimanche 21h encore à venir", T.inThisWeek(at("21:00", "2026-11-29"), nowSun), true);
+eq("lundi après un dimanche exclu", T.inThisWeek(at("09:00", "2026-11-30"), nowSun), false);
+
 if (failed) { console.error(failed + " échec(s), " + passed + " ok"); process.exit(1); }
 console.log(passed + " tests ok");

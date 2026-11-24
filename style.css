@@ -424,3 +424,6 @@ body.light .rs-x{background:rgba(255,255,255,.9);color:#1b1608}
 .mbody > #trailer:first-child{margin:-16px -20px 14px;border-radius:0;width:auto;max-width:none;clear:none}
 #trailer[hidden]{display:none!important;margin:0;height:0}
 #modal .mbox .x{z-index:2600}
+
+/* v31 : chip « Cette semaine » à côté de « Toutes les séances » */
+.dates button.weekshows{max-width:7.2em}

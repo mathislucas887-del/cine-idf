@@ -113,5 +113,58 @@
     return out.slice(0, cap);
   }
 
-  root.TimeSlot = {SLOTS, LATE_END, minutesOf, inSlot, inOne, normalize, slotOf, fromStored, filterTimes, filterBy, set, toggle, selected, isSelected, isAll, current: get, emptyMsg, joinFr, allDaysCount, rangeDates};
+  // « Cette semaine » : de maintenant jusqu’à dimanche 23:59:59.999 (heure locale, ex. Paris).
+  // Le dimanche, la plage se limite au reste de la journée. Aucune séance n’est inventée.
+  function asDate(now) {
+    if (now == null || now === "") return new Date();
+    if (now instanceof Date) return new Date(now.getTime());
+    if (typeof now === "number") return new Date(now);
+    const d = new Date(String(now));
+    return isNaN(d) ? new Date() : d;
+  }
+  function weekDates(now) {
+    const n = asDate(now);
+    const today = new Date(n.getFullYear(), n.getMonth(), n.getDate(), 12, 0, 0, 0);
+    const dow = today.getDay();
+    const count = dow === 0 ? 1 : 8 - dow;
+    const out = [];
+    for (let i = 0; i < count; i++) {
+      const x = new Date(today);
+      x.setDate(today.getDate() + i);
+      out.push(ymdParts(x));
+    }
+    return out;
+  }
+  function weekEnd(now) {
+    const last = weekDates(now).slice(-1)[0];
+    return last ? new Date(last + "T23:59:59.999") : asDate(now);
+  }
+  function showStart(t) {
+    const s = String((t && typeof t === "object") ? (t.time || "") : (t || ""));
+    if (s.length < 16) return null;
+    const d = new Date(s);
+    return isNaN(d) ? null : d;
+  }
+  function isUpcoming(t, now) {
+    const start = showStart(t);
+    if (!start) return false;
+    return start.getTime() >= asDate(now).getTime();
+  }
+  function inThisWeek(t, now) {
+    const start = showStart(t);
+    if (!start) return false;
+    const n = asDate(now);
+    return start.getTime() >= n.getTime() && start.getTime() <= weekEnd(n).getTime();
+  }
+  function filterThisWeek(times, now) {
+    return (times || []).filter(t => inThisWeek(t, now));
+  }
+  function filterByWeek(by, now) {
+    if (Array.isArray(by)) return by.map(({c, times}) => ({c, times: filterThisWeek(times, now)})).filter(x => x.times.length);
+    const out = {};
+    Object.entries(by || {}).forEach(([k, ts]) => { const f = filterThisWeek(ts, now); if (f.length) out[k] = f; });
+    return out;
+  }
+
+  root.TimeSlot = {SLOTS, LATE_END, minutesOf, inSlot, inOne, normalize, slotOf, fromStored, filterTimes, filterBy, set, toggle, selected, isSelected, isAll, current: get, emptyMsg, joinFr, allDaysCount, rangeDates, weekDates, weekEnd, showStart, isUpcoming, inThisWeek, filterThisWeek, filterByWeek};
 })(typeof window !== "undefined" ? window : globalThis);
