@@ -11,8 +11,8 @@
 
   function knownDates() {
     const strip = (typeof DAYS !== "undefined" && DAYS.length && typeof ymd === "function") ? DAYS.map(d => ymd(d)) : [];
-    const last = (window.MATCHCAT || {}).last || "";
-    return TimeSlot.rangeDates(strip, last, 28);
+    const last = (window.ALLO_LAST || (window.MATCHCAT || {}).last || "");
+    return TimeSlot.rangeDates(strip, last, 42);
   }
   function lastLabel(dates) {
     const last = (dates || SELDATES || [])[(dates || SELDATES || []).length - 1];
@@ -41,7 +41,7 @@
       if (!cache || typeof cache.get !== "function") return false;
       const ttl = (typeof DAY_TTL === "number" ? DAY_TTL : 8 * 60 * 1000);
       const hit = cache.get(d + (q || ""));
-      return !!(hit && hit.data && Date.now() - hit.at < ttl);
+      return !!(hit && hit.data && hit.data.computed !== false && Date.now() - hit.at < ttl);
     } catch (e) { return false; }
   }
   function mergeDay(by, cinemas) {
@@ -79,7 +79,8 @@
       showAllProgress(0, 0, false);
       return renderAll();
     }
-    const q = ids && ids.length ? "?ids=" + encodeURIComponent(ids.join(",")) : "";
+    const q0 = ids && ids.length ? "?ids=" + encodeURIComponent(ids.join(",")) : "";
+    const q = q0 ? q0 + "&lazy=1" : "?lazy=1";
     const dates = (range && range.length) ? range.slice() : (WEEKSHOWS ? TimeSlot.weekDates() : knownDates());
     SELDATES = dates.slice();
     if (typeof renderDates === "function") renderDates();
@@ -124,11 +125,14 @@
       const p = fetchDayShows(d, q).then(x => {
         if (my !== LOADING) return;
         const cinemas = x && x.cinemas;
+        const computed = !x || x.computed !== false;
         if (cinemas) {
           const r = mergeDay(by, cinemas);
           failed += r.failed;
-          if (r.shows) emptyStreak = 0; else emptyStreak++;
-        } else {
+          if (r.shows) emptyStreak = 0;
+          else if (computed) emptyStreak++;
+          // jour pas encore calculé : ne compte pas comme vide
+        } else if (computed) {
           emptyStreak++;
         }
         if (emptyStreak >= 3) stopRest = true;
@@ -136,16 +140,14 @@
         publishSoon();
       }).catch(() => {
         if (my !== LOADING) return;
-        emptyStreak++;
-        if (emptyStreak >= 3) stopRest = true;
+        // erreur / timeout : pas encore calculé, on n'arrête pas la plage
         markDone(d);
         showAllProgress(done, dates.length, true);
       });
-      // Un jour très lent (Allociné à froid ~2 min) ne doit pas bloquer indéfiniment la suite.
+      // Un jour très lent (Allociné à froid ~2 min) ne doit pas bloquer indéfiniment la suite,
+      // ni être compté comme vide s'il n'est simplement pas encore calculé.
       return Promise.race([p, new Promise(res => setTimeout(() => {
         if (!finished[d]) {
-          emptyStreak++;
-          if (emptyStreak >= 3) stopRest = true;
           markDone(d);
           showAllProgress(done, dates.length, true);
         }
@@ -438,6 +440,29 @@
     try { timeOk = wrapped; } catch (e) {}
     window.timeOk = wrapped;
   }
+
+
+  function pullAlloLast() {
+    return fetch("/status.json", {cache: "no-store"}).then(r => r.json()).then(x => {
+      const last = x && x.allo && x.allo.last;
+      if (last && /^\d{4}-\d{2}-\d{2}$/.test(last)) {
+        const prev = window.ALLO_LAST || "";
+        window.ALLO_LAST = !prev || last > prev ? last : prev;
+        if (ALLSHOWS) {
+          const next = knownDates();
+          if (next.join() !== (typeof SELDATES !== "undefined" ? SELDATES.join() : "")) {
+            SELDATES = next;
+            if (typeof renderDates === "function") renderDates();
+            loadAllShows(next);
+          }
+        }
+      }
+      return window.ALLO_LAST;
+    }).catch(() => window.ALLO_LAST);
+  }
+  window.pullAlloLast = pullAlloLast;
+  pullAlloLast();
+  setInterval(() => { if (!document.hidden) pullAlloLast(); }, 60 * 1000);
 
   function initAllShows() {
     hookRenderDates();

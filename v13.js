@@ -45,8 +45,9 @@ async function loadCatalog(force) {
     try { const x = await fetchDay(d); ok++; n = ingestDay(by, x, now); if (n) got++;
       if (n) dates.push(d); CAT.dates = dates.slice(); CAT.last = dates[dates.length - 1] || "";
       if (ok === 1 || i === MIN - 1 || (i >= MIN && n)) { publish(by); if (document.querySelector("#v-match.on")) renderMatch(); }
-    } catch (e) {}
-    empty = n ? 0 : empty + 1;
+      if (x && x.computed === false) { /* pas encore calculé : n'arrête pas la plage */ }
+      else empty = n ? 0 : empty + 1;
+    } catch (e) { /* erreur : jour non calculé, pas « vide » */ }
     if (i >= MIN - 1 && empty >= 3) break;
   }
   CAT.loading = false; CAT.days = ok; window.dispatchEvent(new Event("cinecat"));

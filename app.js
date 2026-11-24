@@ -12,9 +12,9 @@ window.MEM_DAY_CACHE = MEM_DAY_CACHE;
 window.fetchDayShows = function (d, q, force) {
   const k = d + (q || "");
   const hit = MEM_DAY_CACHE.get(k);
-  if (!force && hit && hit.data && Date.now() - hit.at < DAY_TTL) return Promise.resolve(hit.data);
+  if (!force && hit && hit.data && hit.data.computed !== false && Date.now() - hit.at < DAY_TTL) return Promise.resolve(hit.data);
   if (!force && hit && hit.p) return hit.p;
-  const p = fetch("/allocine-all/" + d + (q || "")).then(j).then(x => { MEM_DAY_CACHE.set(k, {at: Date.now(), data: x}); return x; })
+  const p = fetch("/allocine-all/" + d + (q || "")).then(j).then(x => { MEM_DAY_CACHE.set(k, {at: Date.now(), data: x, pending: x && x.computed === false}); return x; })
     .catch(e => { const cur = MEM_DAY_CACHE.get(k); if (cur && cur.p === p) MEM_DAY_CACHE.delete(k); throw e; });
   MEM_DAY_CACHE.set(k, {at: Date.now(), data: hit && hit.data, p});
   return p;

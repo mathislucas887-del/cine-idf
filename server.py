@@ -16,7 +16,7 @@ TEXT_EXT = {".html", ".js", ".css", ".json", ".webmanifest", ".svg", ".xml", ".t
 CC_ALLO = "public, max-age=120, stale-while-revalidate=300"
 CC_API_SHORT = "public, max-age=60, stale-while-revalidate=180"
 CC_REVALIDATE = "no-cache"
-BLOCK_PREFIXES = (".git/", "tests/", "android/", "mobile/", "old/", ".github/", "__pycache__/", "screenshots/")
+BLOCK_PREFIXES = (".git/", "tests/", "android/", "mobile/", "old/", ".github/", "__pycache__/", "screenshots/", "cache/")
 BLOCK_FILES = {"users.json", "server.py", "fix.py", "build_data.py", "deploy_github.sh", "dockerfile", "procfile", "render.yaml", "cine-idf.apk.idsig", "readme.md", ".gitignore"}
 
 def etag_for(body):
@@ -294,8 +294,32 @@ class H(http.server.SimpleHTTPRequestHandler):
         q = urllib.parse.parse_qs(urllib.parse.urlparse(s.path).query)
         ids = set((q.get("ids") or [""])[0].split(",")) - {""}
         sel = [c for c in ALLO_CINES if c["id"] in ids][:80] if ids else [c for c in ALLO_CINES if c.get("type") in ("pathe", "partner")]
-        with ThreadPoolExecutor(4) as ex: res = dict(ex.map(one, sel))
-        s.send_json(200, json.dumps({"date": d, "cinemas": res}, ensure_ascii=False).encode(), cache_control=CC_ALLO)
+        import datetime as _dt
+        lazy = (q.get("lazy") or ["0"])[0] in ("1", "true", "yes")
+        today = _dt.date.today().isoformat()
+        tomorrow = (_dt.date.today() + _dt.timedelta(days=1)).isoformat()
+        urgent = d <= tomorrow
+        if lazy and not urgent and not day_is_computed(d, sel):
+            res = {}
+            for c in sel:
+                key = "allo:" + c["allocineId"] + d
+                with LOCK: hit = CACHE.get(key)
+                if not hit:
+                    hit = allo_disk_get(key)
+                    if hit:
+                        with LOCK:
+                            CACHE.setdefault(key, hit)
+                            hit = CACHE.get(key)
+                if hit:
+                    try: res[c["id"]] = slim_public_films(tmdb_annotate(json.loads(hit[1])["films"]))
+                    except Exception: res[c["id"]] = None
+                else:
+                    res[c["id"]] = None
+            computed = False
+        else:
+            with ThreadPoolExecutor(4) as ex: res = dict(ex.map(one, sel))
+            computed = day_is_computed(d, sel) or all(v is not None for v in res.values())
+        s.send_json(200, json.dumps({"date": d, "cinemas": res, "computed": computed}, ensure_ascii=False).encode(), cache_control=CC_ALLO)
 
     def transit(s):
         return transit_get(s)
@@ -304,6 +328,12 @@ def allo_fetch(cid, date):
         parts = [None, cid, date]
         key = "allo:" + cid + date; now = time.time()
         with LOCK: hit = CACHE.get(key)
+        if not hit:
+            hit = allo_disk_get(key)
+            if hit:
+                with LOCK:
+                    if key not in CACHE: CACHE[key] = hit
+                    hit = CACHE[key]
         if hit and now - hit[0] < TTL: return hit[1]
         if hit and now - hit[0] < 8 * 86400:  # stale-while-revalidate (inclut le dernier instantané sauvegardé)
             if key not in REFRESHING:
@@ -351,7 +381,7 @@ def _allo_get(url):
             raise
 def status():
     return {"ok": True, "state": "réveillé", "uptime_s": int(time.time() - START), "cache": len(CACHE), "allocine_last_ok": STAT["ok_at"], "allocine_last_error": STAT["err_at"], "allocine_error": STAT["err"],
-            "allocine_ok": STAT["n_ok"], "allocine_errors": STAT["n_err"], "throttled": time.time() < STAT["backoff_until"], "agenda_at": AGENDA["at"], "backoff_s": STAT["backoff_s"], "snapshot": {k: STAT[k] for k in ("snap_loaded", "snap_push", "snap_err", "snap_bytes") if k in STAT}, "reports": len(REPORTS), "now": int(time.time()), "storage": {k: DURABLE.get(k) for k in ("backend", "last_push", "last_pull", "error")}, "mail": mail_provider() or "aucun", "tmdb": {**TSTAT, "cached": len(TMDB), "queue": len(TMDBQ)}}
+            "allocine_ok": STAT["n_ok"], "allocine_errors": STAT["n_err"], "throttled": time.time() < STAT["backoff_until"], "agenda_at": AGENDA["at"], "backoff_s": STAT["backoff_s"], "snapshot": {k: STAT[k] for k in ("snap_loaded", "snap_push", "snap_err", "snap_bytes") if k in STAT}, "reports": len(REPORTS), "now": int(time.time()), "storage": {k: DURABLE.get(k) for k in ("backend", "last_push", "last_pull", "error")}, "mail": mail_provider() or "aucun", "tmdb": {**TSTAT, "cached": len(TMDB), "queue": len(TMDBQ)}, "allo": allo_status()}
 def build_agenda():
     import datetime
     BG.on = True
@@ -413,11 +443,208 @@ def allo_live(cid, date, key):
                                   "synopsis": re.sub(r"<[^>]+>", "", m.get("synopsis") or "")[:400]})
             body = json.dumps({"source": "allocine", "films": films}, ensure_ascii=False).encode()
             with LOCK: CACHE[key] = (now, body)
+            try: allo_disk_save(key, now, body)
+            except Exception: pass
             if films: _snap_dirty.set()
             if films: tmdb_enqueue(films)
             return body
 
 ALLO_CINES = [c for c in json.load(open(os.path.join(ROOT, "data", "cinemas.json"), encoding="utf-8")) if c.get("allocineId")]
+
+# ---------- v32 : cache disque Allociné + préchauffage (survit à un redémarrage alwaysdata) ----------
+# Un jour n’est « vide » que s’il a été calculé pour tous les cinémas et qu’aucune séance n’y figure.
+# Un jour pas encore calculé (absence de cache, erreur, timeout) n’est pas compté comme vide.
+ALLO_CACHE_DIR = os.environ.get("ALLO_CACHE", os.path.join(ROOT, "cache", "allocine"))
+ALLO_WARM = {"on": False, "last": "", "started": 0, "pass_at": 0, "day": "", "done_days": 0, "total_days": 0, "empty_streak": 0, "eta_s": 0}
+ALLO_WARM_MAX = 42
+ALLO_WARM_REFRESH = 3 * 3600
+_ALLO_DISK_KEY = re.compile(r"^allo:[A-Za-z0-9]{5}\d{4}-\d{2}-\d{2}$")
+
+def allo_cache_dir():
+    return os.environ.get("ALLO_CACHE", ALLO_CACHE_DIR)
+
+def _allo_disk_path(key):
+    if not _ALLO_DISK_KEY.match(key or ""): return None
+    return os.path.join(allo_cache_dir(), key.replace(":", "_") + ".json")
+
+def allo_disk_save(key, ts, body):
+    path = _allo_disk_path(key)
+    if not path: return
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    payload = json.loads(body) if isinstance(body, (bytes, bytearray)) else json.loads(body)
+    data = json.dumps({"at": ts, "payload": payload}, ensure_ascii=False, separators=(",", ":")).encode()
+    tmp = path + ".tmp"
+    with open(tmp, "wb") as f: f.write(data)
+    os.replace(tmp, path)
+
+def allo_disk_get(key):
+    path = _allo_disk_path(key)
+    if not path or not os.path.isfile(path): return None
+    try:
+        o = json.load(open(path, encoding="utf-8"))
+        ts, payload = o.get("at"), o.get("payload")
+        if not ts or not isinstance(payload, dict): return None
+        return (float(ts), json.dumps(payload, ensure_ascii=False).encode())
+    except Exception:
+        return None
+
+def allo_disk_boot():
+    """Recharge le cache disque en mémoire au démarrage. N’invente aucune séance."""
+    root = allo_cache_dir()
+    n = 0
+    allo_meta_load()
+    if not os.path.isdir(root):
+        return 0
+    today = __import__("datetime").date.today().isoformat()
+    for name in os.listdir(root):
+        if not name.startswith("allo_") or not name.endswith(".json"): continue
+        key = name[:-5].replace("_", ":", 1)
+        if not _ALLO_DISK_KEY.match(key): continue
+        if key[-10:] < today: continue
+        hit = allo_disk_get(key)
+        if not hit: continue
+        with LOCK:
+            if key not in CACHE: CACHE[key] = hit; n += 1
+    print("Cache disque Allociné rechargé :", n, "entrées", flush=True)
+    return n
+
+def _allo_meta_path():
+    return os.path.join(allo_cache_dir(), "meta.json")
+
+def allo_meta_load():
+    try:
+        o = json.load(open(_allo_meta_path(), encoding="utf-8"))
+        last = o.get("last") or ""
+        if last and re.fullmatch(r"\d{4}-\d{2}-\d{2}", last):
+            if not ALLO_WARM["last"] or last > ALLO_WARM["last"]:
+                ALLO_WARM["last"] = last
+    except Exception:
+        pass
+
+def allo_meta_save():
+    try:
+        os.makedirs(allo_cache_dir(), exist_ok=True)
+        path = _allo_meta_path()
+        data = json.dumps({"last": ALLO_WARM.get("last") or "", "pass_at": ALLO_WARM.get("pass_at") or 0, "at": int(time.time())}, ensure_ascii=False)
+        tmp = path + ".tmp"
+        open(tmp, "w", encoding="utf-8").write(data)
+        os.replace(tmp, path)
+    except Exception:
+        pass
+
+def warm_cines():
+    return [c for c in ALLO_CINES if c.get("type") in ("pathe", "partner") and c.get("allocineId")]
+
+def day_is_computed(dd, cines=None):
+    """Vrai seulement si chaque cinéma a une entrée de cache (éventuellement sans films)."""
+    cines = cines if cines is not None else warm_cines()
+    if not cines: return False
+    with LOCK:
+        for c in cines:
+            if "allo:" + c["allocineId"] + dd not in CACHE:
+                return False
+    return True
+
+def day_has_shows(dd, cines=None):
+    cines = cines if cines is not None else warm_cines()
+    with LOCK:
+        for c in cines:
+            hit = CACHE.get("allo:" + c["allocineId"] + dd)
+            if hit and b'"films": []' not in hit[1] and b'"films":[]' not in hit[1]:
+                try:
+                    if json.loads(hit[1]).get("films"): return True
+                except Exception:
+                    continue
+    return False
+
+def day_confirmed_empty(dd, cines=None):
+    """Un jour non calculé n’est jamais considéré comme vide."""
+    cines = cines if cines is not None else warm_cines()
+    return day_is_computed(dd, cines) and not day_has_shows(dd, cines)
+
+def allo_status():
+    return {"last": ALLO_WARM.get("last") or "", "warm": {k: ALLO_WARM.get(k) for k in ("on", "day", "done_days", "total_days", "pass_at", "empty_streak", "eta_s")}}
+
+def warm_horizon(today=None, last=None, cap=None):
+    """Nombre de jours J..J+N à préchauffer : au moins 28, jusqu’au dernier jour publié connu, plafonné."""
+    import datetime
+    cap = ALLO_WARM_MAX if cap is None else cap
+    today = today or datetime.date.today().isoformat()
+    last = last if last is not None else (ALLO_WARM.get("last") or "")
+    n = 28
+    if last and last >= today:
+        try:
+            t = datetime.date.fromisoformat(today)
+            L = datetime.date.fromisoformat(last)
+            n = max(n, (L - t).days + 1)
+        except Exception:
+            pass
+    return max(1, min(cap, n))
+
+def _warm_one(c, dd):
+    try:
+        allo_fetch(c["allocineId"], dd)
+        return True
+    except Exception:
+        return False
+
+def warm_pass(cines=None, today=None, fetch=None, now_ts=None, sleep=None):
+    """Un passage de préchauffage. `fetch` est injectable pour les tests (pas d’appel réseau)."""
+    import datetime
+    cines = cines if cines is not None else warm_cines()
+    today = today or datetime.date.today().isoformat()
+    fetch = fetch or _warm_one
+    now_ts = time.time() if now_ts is None else now_ts
+    start = datetime.date.fromisoformat(today)
+    empty = 0
+    last_show = ALLO_WARM.get("last") or ""
+    n = warm_horizon(today, last_show)
+    ALLO_WARM["on"] = True
+    ALLO_WARM["total_days"] = n
+    ALLO_WARM["done_days"] = 0
+    ALLO_WARM["empty_streak"] = 0
+    computed_n = 0
+    t0 = time.time()
+    k = 0
+    walked = 0
+    while k < n and k < ALLO_WARM_MAX:
+        dd = (start + datetime.timedelta(days=k)).isoformat()
+        ALLO_WARM["day"] = dd
+        for c in cines:
+            if k >= 2:
+                with LOCK: hit = CACHE.get("allo:" + c["allocineId"] + dd)
+                if hit and now_ts - hit[0] < ALLO_WARM_REFRESH:
+                    continue
+            if sleep:
+                while time.time() < STAT["backoff_until"]: sleep(15)
+            fetch(c, dd)
+        ALLO_WARM["done_days"] = k + 1
+        walked = k + 1
+        if not day_is_computed(dd, cines):
+            n = min(ALLO_WARM_MAX, max(n, k + 4))
+            ALLO_WARM["total_days"] = n
+        elif day_has_shows(dd, cines):
+            empty = 0
+            if dd > last_show: last_show = dd
+            n = max(n, warm_horizon(today, last_show))
+            ALLO_WARM["total_days"] = n
+        else:
+            empty += 1
+        ALLO_WARM["empty_streak"] = empty
+        if day_is_computed(dd, cines): computed_n += 1
+        elapsed = max(0.001, time.time() - t0)
+        remain = max(0, n - (k + 1))
+        ALLO_WARM["eta_s"] = int(remain * (elapsed / (k + 1)))
+        if k >= 6 and empty >= 3:
+            break
+        k += 1
+    if last_show:
+        ALLO_WARM["last"] = last_show
+        allo_meta_save()
+    ALLO_WARM["pass_at"] = int(time.time())
+    ALLO_WARM["day"] = ""
+    return {"last": last_show, "days": walked, "empty_streak": empty, "computed": computed_n}
+
 
 # ---------- Comptes & favoris (stockage JSON) ----------
 import secrets, hmac
@@ -1164,31 +1391,16 @@ if __name__ == "__main__":
     print(f"           sur votre téléphone (même Wi-Fi) : http://{ip}:{PORT}", flush=True)
     print("Ctrl+C pour arrêter", flush=True)
     def warm():
-        import datetime
+        # v32 : un seul worker, même intervalle ALLO_GAP, cache disque, un jour non calculé n’est pas « vide ».
         BG.on = True
-        from concurrent.futures import ThreadPoolExecutor
-        def one(c, dd):
-            try: allo_fetch(c["allocineId"], dd)
-            except Exception: pass
-        # v19 : aujourd'hui + demain rafraîchis à chaque tour ; puis les jours suivants (au moins jusqu'au mardi d'après, 7 jours)
-        # et au-delà tant qu'Allociné annonce de vraies séances (max 28 jours, arrêt après 3 jours vides), rafraîchis toutes les 3 h.
-        # Mêmes requêtes qu'avant : file unique espacée de 1,5 s + backoff 429 (allo_get).
-        def has_shows(c, dd):
-            with LOCK: hit = CACHE.get("allo:" + c["allocineId"] + dd)
-            return bool(hit) and b'"films": []' not in hit[1]
+        ALLO_WARM["started"] = int(time.time())
         while True:
-            cines = [c for c in ALLO_CINES if c.get("type") in ("pathe", "partner")]; empty = 0
-            for k in range(28):
-                dd = (datetime.date.today() + datetime.timedelta(days=k)).isoformat()
-                for c in cines:
-                    if k >= 2:
-                        with LOCK: hit = CACHE.get("allo:" + c["allocineId"] + dd)
-                        if hit and time.time() - hit[0] < 3 * 3600: continue
-                    while time.time() < STAT["backoff_until"]: time.sleep(15)
-                    one(c, dd)
-                empty = 0 if any(has_shows(c, dd) for c in cines) else empty + 1
-                if k >= 6 and empty >= 3: break
+            try:
+                warm_pass(sleep=time.sleep)
+            except Exception as e:
+                print("warm", e, flush=True)
             time.sleep(900)
+    allo_disk_boot()
     threading.Thread(target=warm, daemon=True).start()
     threading.Thread(target=build_agenda, daemon=True).start()
     def keepalive():  # évite la mise en veille Render (plan gratuit : 750 h/mois suffisent pour 1 service)

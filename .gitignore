@@ -8,3 +8,6 @@ mobile/node_modules/
 android/out/
 *.keystore
 yt_cache.json*
+
+# Cache Allociné préchauffé (persiste sur alwaysdata, pas dans git)
+cache/
