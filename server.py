@@ -1068,6 +1068,7 @@ GENERIC_FORGOT = "Si un compte existe pour cette adresse, un e-mail avec un lien
 # ---------- v34/v35 : import de billets Pathé (bot / e-mail, jeton ou hash commité) ----------
 TICKETS_IMPORT_TOKEN = os.environ.get("TICKETS_IMPORT_TOKEN") or ""
 TICKETS_IMPORT_EMAIL = (os.environ.get("TICKETS_IMPORT_EMAIL") or "").strip().lower()
+TICKETS_IMPORT_DEFAULT_EMAIL = "mlucas1.news@gmail.com"
 TICKETS_IMPORT_CFG = os.path.join(ROOT, "config", "tickets_import.json")
 TICKET_SRC_EMAIL = "e-mail Pathé"
 
@@ -1102,7 +1103,7 @@ def import_cfg_email():
     if env:
         return env
     em = str((load_tickets_import_cfg() or {}).get("email") or "").strip().lower()
-    return em
+    return em or TICKETS_IMPORT_DEFAULT_EMAIL
 
 def import_token_ok(got):
     """Accepte le jeton d’environnement ou celui dont le SHA-256 est commité. Comparaisons en temps constant."""

@@ -97,7 +97,9 @@ def test_import_unknown_account_is_404(monkeypatch):
     try:
         st, body = _post(port, "/api/import-tickets", {"tickets": [TICKET]}, AUTH)
         assert st == 404, (st, body)
-        assert "Aucun compte" in body["error"]
+        assert body.get("ok") is not True
+        assert "Aucun compte" in (body.get("error") or "")
+        assert "email" in body  # adresse masquée, pas un échec silencieux
     finally:
         httpd.shutdown()
 
@@ -162,7 +164,8 @@ def test_committed_import_cfg_has_hash_and_email():
     h = str(cfg.get("token_sha256") or "")
     assert S.import_cfg_hash() and len(S.import_cfg_hash()) == 32
     assert len(h) == 64 and h == h.lower()
-    assert cfg.get("email") == "mathislucas887@gmail.com"
+    assert cfg.get("email") == "mlucas1.news@gmail.com"
+    assert S.TICKETS_IMPORT_DEFAULT_EMAIL == "mlucas1.news@gmail.com"
 
 def test_map_cinema_wepler_batignolles_palace():
     w = S.map_cinema("Pathé Wepler - Côté place")
@@ -185,3 +188,10 @@ def test_normalize_accepts_iso_time_and_n_prefix():
     assert n["time"] == "2026-12-16T19:30:00"
     assert n["ref"] == "WXPPC4W" and n["cid"] == "cinema-pathe-palace"
     assert n["places"] == "2"
+
+
+def test_import_default_email_is_news_account(monkeypatch):
+    monkeypatch.setenv("TICKETS_IMPORT_EMAIL", "")
+    monkeypatch.setattr(S, "TICKETS_IMPORT_EMAIL", "")
+    monkeypatch.setattr(S, "TICKETS_IMPORT_CFG", "/tmp/cine-idf-no-import-cfg.json")
+    assert S.import_cfg_email() == "mlucas1.news@gmail.com"
