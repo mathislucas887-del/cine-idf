@@ -141,7 +141,11 @@ function go(v) {
   $$("nav button").forEach(x => { const on = x.dataset.v === v; x.classList.toggle("on", on); on ? x.setAttribute("aria-current", "page") : x.removeAttribute("aria-current"); });
   $$(".view").forEach(s => s.classList.toggle("on", s.id === "v-" + v));
   if (v === "map") setTimeout(() => map.invalidateSize(), 60);
-  if (v === "billets") { renderTickets(); renderLists(); }
+  if (v === "billets") {
+    const show = () => { renderTickets(); renderLists(); };
+    if (TOKEN) post("/api/me").then(x => { applyProfile(x, true); show(); }).catch(() => show());
+    else show();
+  }
   scrollTo(0, 0);
 }
 $$("nav button").forEach(b => b.onclick = () => go(b.dataset.v));
@@ -370,8 +374,9 @@ window.ics = k => { const {f, c, t} = TB[k]; const s = new Date(t.time), e = new
 function toast(m) { const d = document.createElement("div"); d.textContent = m; d.setAttribute("role", "status"); d.style.cssText = "position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:linear-gradient(135deg,#f1d784,#c9a227);color:#141414;padding:10px 16px;border-radius:20px;font-weight:700;z-index:3000"; document.body.append(d); setTimeout(() => d.remove(), 2200); }
 function renderTickets() {
   const L = TICKETS.slice().sort((a, b) => a.time.localeCompare(b.time)), now = new Date().toISOString().slice(0, 16);
-  $("#tickets").innerHTML = L.map(t => `<a class="ticket" href="${esc(t.url || "#")}" target="_blank" rel="noopener" style="${t.time.slice(0,16) < now ? "opacity:.5" : ""}">${t.poster ? `<img src="${esc(t.poster)}" alt="Affiche de ${esc(t.title)}" loading="lazy">` : `<img alt="">`}<div><div class="when">${new Date(t.time).toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"})} · ${t.time.slice(11,16)}</div><h3>${esc(t.title)}</h3><p>${esc(t.cinema)} · ${esc(t.version)}</p><p>Toucher pour ouvrir la réservation / ma place →</p></div><button class="rm" aria-label="Retirer ce billet" onclick="event.preventDefault();event.stopPropagation();rmTicket('${esc(t.id)}')">✕</button></a>`).join("")
-    || `<div class="empty">Aucun billet pour l’instant. Dans « Séances », touchez un horaire puis « Ajouter à mes billets ».</div>`;
+  const det = t => [t.room && "Salle " + t.room, t.seat && "💺 " + t.seat, t.places && (t.places + " place" + (t.places === "1" ? "" : "s")), t.ref && "réf. " + t.ref].filter(Boolean).join(" · ");
+  $("#tickets").innerHTML = L.map(t => `<a class="ticket" href="${esc(t.url || "#")}" target="_blank" rel="noopener" style="${t.time.slice(0,16) < now ? "opacity:.5" : ""}">${t.poster ? `<img src="${esc(t.poster)}" alt="Affiche de ${esc(t.title)}" loading="lazy">` : `<img alt="">`}<div><div class="when">${new Date(t.time).toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"})} · ${t.time.slice(11,16)}</div><h3>${esc(t.title)}</h3><p>${esc(t.cinema)} · ${esc(t.version)}</p>${det(t) ? `<p>${esc(det(t))}</p>` : ""}<p>Toucher pour ouvrir la réservation / ma place →</p><p class="sub">Le QR d’entrée est dans l’e-mail ou l’app Pathé</p></div><button class="rm" aria-label="Retirer ce billet" onclick="event.preventDefault();event.stopPropagation();rmTicket('${esc(t.id)}')">✕</button></a>`).join("")
+    || `<div class="empty">Aucun billet pour l’instant. Les confirmations Pathé reçues par e-mail s’ajoutent automatiquement. Vous pouvez aussi, dans « Séances », toucher un horaire puis « Ajouter à mes billets ».</div>`;
 }
 window.rmTicket = id => { TICKETS = TICKETS.filter(t => t.id !== id); sync(); renderTickets(); };
 

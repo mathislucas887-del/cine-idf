@@ -454,7 +454,8 @@ def allo_live(cid, date, key):
             if films: tmdb_enqueue(films)
             return body
 
-ALLO_CINES = [c for c in json.load(open(os.path.join(ROOT, "data", "cinemas.json"), encoding="utf-8")) if c.get("allocineId")]
+ALL_CINES = json.load(open(os.path.join(ROOT, "data", "cinemas.json"), encoding="utf-8"))
+ALLO_CINES = [c for c in ALL_CINES if c.get("allocineId")]
 
 # ---------- v32 : cache disque Allociné + préchauffage (survit à un redémarrage alwaysdata) ----------
 # Un jour n’est « vide » que s’il a été calculé pour tous les cinémas et qu’aucune séance n’y figure.
@@ -974,7 +975,7 @@ def pw_hash(pw, salt): return hashlib.pbkdf2_hmac("sha256", pw.encode(), bytes.f
 PROFILE_KEYS = ("favs", "tickets", "lb", "lists", "alerts", "extra", "game")
 def clean_profile(u, body):
     if "favs" in body: u["favs"] = [str(x)[:80] for x in body.get("favs") or []][:300]
-    if "tickets" in body: u["tickets"] = [{k: str(t.get(k, ""))[:600] for k in ("id", "title", "poster", "cinema", "cid", "time", "url", "version", "seat", "room", "fid", "src", "ref", "ev")} for t in (body.get("tickets") or [])[:200] if isinstance(t, dict)]
+    if "tickets" in body: u["tickets"] = [{k: str(t.get(k, ""))[:600] for k in ("id", "title", "poster", "cinema", "cid", "time", "url", "version", "seat", "room", "fid", "src", "ref", "ev", "places")} for t in (body.get("tickets") or [])[:200] if isinstance(t, dict)]
     if "lb" in body: u["lb"] = re.sub(r"[^A-Za-z0-9_-]", "", str(body.get("lb") or ""))[:40]
     if "lists" in body and isinstance(body["lists"], dict):
         u["lists"] = {k: [{f: str(x.get(f, ""))[:400] for f in ("id", "title", "poster", "year", "at")} for x in (body["lists"].get(k) or [])[:500] if isinstance(x, dict)] for k in ("towatch", "seen", "rewatch")}
@@ -1063,6 +1064,167 @@ def find_reset(d, tok):
     return None, None
 GENERIC_FORGOT = "Si un compte existe pour cette adresse, un e-mail avec un lien de réinitialisation vient d’être envoyé. Pensez à regarder dans les indésirables. Le lien est valable 30 minutes."
 
+
+# ---------- v34 : import de billets Pathé (bot / e-mail, jeton partagé) ----------
+TICKETS_IMPORT_TOKEN = os.environ.get("TICKETS_IMPORT_TOKEN") or ""
+TICKETS_IMPORT_EMAIL = (os.environ.get("TICKETS_IMPORT_EMAIL") or "").strip().lower()
+TICKET_SRC_EMAIL = "e-mail Pathé"
+
+def _fold(s):
+    import unicodedata
+    s = unicodedata.normalize("NFD", str(s or ""))
+    s = "".join(c for c in s if unicodedata.category(c) != "Mn")
+    return re.sub(r"[^a-z0-9]+", " ", s.lower()).strip()
+
+def import_cfg_token():
+    return os.environ.get("TICKETS_IMPORT_TOKEN") or TICKETS_IMPORT_TOKEN or ""
+
+def import_cfg_email():
+    return ((os.environ.get("TICKETS_IMPORT_EMAIL") or TICKETS_IMPORT_EMAIL) or "").strip().lower()
+
+def import_token_ok(got):
+    """Comparaison en temps constant (via SHA-256) pour ne pas fuiter la longueur du jeton."""
+    expected = import_cfg_token()
+    if not expected or got is None:
+        return False
+    if isinstance(got, bytes):
+        got = got.decode("utf-8", "ignore")
+    got = str(got).strip()
+    return hmac.compare_digest(hashlib.sha256(got.encode()).digest(), hashlib.sha256(expected.encode()).digest())
+
+def map_cinema(name, catalog=None):
+    """Associe un libellé Pathé à un cinéma du catalogue (id), sans rien inventer."""
+    catalog = catalog if catalog is not None else ALL_CINES
+    nt = _fold(name)
+    if not nt:
+        return None
+    best, score = None, 0
+    for c in catalog:
+        raw = c.get("name") or ""
+        n = _fold(raw)
+        short = re.sub(r"^(cinema|pathe|gaumont) ", "", n).strip()
+        for cand in (n, short):
+            if not cand or len(cand) < 3:
+                continue
+            if cand == nt or cand in nt or nt in cand:
+                if len(cand) > score:
+                    score, best = len(cand), c
+    return best
+
+def _parse_import_time(t):
+    raw = str(t.get("time") or "").strip()
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?", raw):
+        return raw if raw.count(":") == 2 else raw + ":00"
+    date = str(t.get("date") or "").strip()
+    heure = str(t.get("heure") or t.get("hour") or "").strip()
+    y = mo = d = None
+    m = re.fullmatch(r"(\d{4})-(\d{2})-(\d{2})", date)
+    if m:
+        y, mo, d = m.group(1), m.group(2), m.group(3)
+    else:
+        m = re.fullmatch(r"(\d{1,2})[/.](\d{1,2})[/.](\d{2,4})", date)
+        if m:
+            d, mo, yy = m.group(1), m.group(2), m.group(3)
+            y = ("20" + yy) if len(yy) == 2 else yy
+    hm = re.fullmatch(r"([01]?\d|2[0-3])\s*[hH:]\s*([0-5]\d)", heure or raw)
+    if not (y and mo and d and hm):
+        return ""
+    return f"{y}-{int(mo):02d}-{int(d):02d}T{int(hm.group(1)):02d}:{hm.group(2)}:00"
+
+def normalize_import_ticket(t):
+    if not isinstance(t, dict):
+        return None
+    title = str(t.get("title") or t.get("film") or "").strip()[:200]
+    cinema_name = str(t.get("cinema") or "").strip()[:200]
+    cid = str(t.get("cid") or "").strip()[:80]
+    c = next((x for x in ALL_CINES if x.get("id") == cid), None) if cid else None
+    if not c:
+        c = map_cinema(cinema_name)
+    if c:
+        cid = c["id"]
+        if not cinema_name:
+            cinema_name = c.get("name") or cinema_name
+    when = _parse_import_time(t)
+    ref = re.sub(r"^(n°|no|nº)\s*", "", str(t.get("ref") or t.get("reference") or "").strip(), flags=re.I).upper()[:20]
+    seat = str(t.get("seat") or t.get("sieges") or t.get("sièges") or t.get("places_noms") or "").strip()[:80]
+    room = str(t.get("room") or t.get("salle") or "").strip()[:20]
+    places = str(t.get("places") or t.get("nb") or t.get("n_places") or "").strip()[:10]
+    if not places and seat:
+        nseat = [x for x in re.split(r"\s*[,;/]| et \s*", seat) if x.strip()]
+        if nseat:
+            places = str(len(nseat))
+    version = str(t.get("version") or "").strip()[:20]
+    url = str(t.get("url") or "").strip()[:400] or "https://www.pathe.fr/mon-compte"
+    poster = str(t.get("poster") or "").strip()[:400]
+    fid = str(t.get("fid") or "").strip()[:40]
+    if not title or not when:
+        return None
+    tid = "pathe|" + (ref or (title + cid + when))
+    return {"id": tid, "title": title, "poster": poster, "cinema": cinema_name or "Pathé", "cid": cid,
+            "time": when, "url": url, "version": version, "seat": seat, "room": room, "fid": fid,
+            "src": TICKET_SRC_EMAIL, "ref": ref, "places": places}
+
+def import_tickets_api(h, body, out):
+    got = (h.headers.get("Authorization") or "").replace("Bearer ", "", 1)
+    if not got:
+        got = h.headers.get("X-Tickets-Import-Token") or ""
+    if not import_cfg_token():
+        return out(503, {"error": "Import des billets non configuré (TICKETS_IMPORT_TOKEN)."})
+    if not import_token_ok(got):
+        return out(401, {"error": "Jeton d’import invalide."})
+    email = import_cfg_email()
+    raw_em = str(body.get("email") or "").strip().lower()
+    if raw_em:
+        if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", raw_em) or len(raw_em) > 120:
+            return out(400, {"error": "Adresse e-mail invalide."})
+        if email and raw_em != email:
+            return out(403, {"error": "Ce compte n’est pas le compte d’import configuré."})
+        if not email:
+            email = raw_em
+    if not email:
+        return out(400, {"error": "TICKETS_IMPORT_EMAIL manquant."})
+    raw = body.get("tickets")
+    if not isinstance(raw, list) or not raw:
+        return out(400, {"error": "Aucun billet à importer."})
+    prepared, bad = [], 0
+    for t in raw[:50]:
+        n = normalize_import_ticket(t)
+        if n:
+            prepared.append(n)
+        else:
+            bad += 1
+    if not prepared:
+        return out(400, {"error": "Aucun billet exploitable (film et date/heure requis).", "skipped_invalid": bad})
+    with DBL:
+        d = db_load()
+        u = d["users"].get(email)
+        if not u:
+            return out(404, {"error": "Aucun compte Pathé & co pour cette adresse.", "email": mask_email(email)})
+        cur = list(u.get("tickets") or [])
+        seen_ref, seen_id = set(), set()
+        for t in cur:
+            if not isinstance(t, dict):
+                continue
+            if t.get("ref"):
+                seen_ref.add(str(t["ref"]).upper())
+            if t.get("id"):
+                seen_id.add(str(t["id"]))
+        added, skipped = [], 0
+        for t in prepared:
+            if (t["ref"] and t["ref"] in seen_ref) or t["id"] in seen_id:
+                skipped += 1
+                continue
+            cur.append(t)
+            if t["ref"]:
+                seen_ref.add(t["ref"])
+            seen_id.add(t["id"])
+            added.append(t)
+        clean_profile(u, {"tickets": cur})
+        db_save(d)
+    print("Import billets :", len(added), "ajouté(s),", skipped, "déjà présent(s) pour", mask_email(email), flush=True)
+    public = lambda t: {k: t.get(k, "") for k in ("id", "title", "cinema", "cid", "time", "version", "seat", "room", "ref", "places", "src")}
+    return out(200, {"ok": True, "email": mask_email(email), "added": len(added), "skipped": skipped, "invalid": bad, "tickets": [public(t) for t in added]})
+
 def api_post(h, path):
     n = int(h.headers.get("Content-Length") or 0)
     if n > 300000: return h.send_json(413, b'{"error":"trop gros"}')
@@ -1073,6 +1235,8 @@ def api_post(h, path):
         r = {k: str(body.get(k, ""))[:300] for k in ("film", "cinema", "time", "reason", "url")}; r["at"] = int(time.time())
         REPORTS.append(r); del REPORTS[:-200]; print("SIGNALEMENT", json.dumps(r, ensure_ascii=False), flush=True)
         return out(200, {"ok": True})
+    if path == "/api/import-tickets":
+        return import_tickets_api(h, body, out)
     tok_in = (h.headers.get("Authorization") or "").replace("Bearer ", "")
     if path == "/api/forgot":
         email = str(body.get("email", "")).strip().lower()
