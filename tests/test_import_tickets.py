@@ -1,4 +1,4 @@
-"""Tests v34 : POST /api/import-tickets (jeton partagé, dédup par réf, mapping cinéma)."""
+"""Tests v34/v35 : POST /api/import-tickets (jeton env ou hash SHA-256 commité, dédup, mapping cinéma)."""
 import json, os, sys, tempfile, threading, socketserver, secrets
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 for k in ("GIST_TOKEN", "GIST_ID"):
@@ -113,13 +113,56 @@ def test_import_refuses_other_email_than_configured(monkeypatch):
 def test_import_unconfigured_token_is_503(monkeypatch):
     _cfg(monkeypatch)
     monkeypatch.setenv("TICKETS_IMPORT_TOKEN", "")
+    monkeypatch.setenv("TICKETS_IMPORT_EMAIL", "")
     monkeypatch.setattr(S, "TICKETS_IMPORT_TOKEN", "")
+    monkeypatch.setattr(S, "TICKETS_IMPORT_EMAIL", "")
+    monkeypatch.setattr(S, "TICKETS_IMPORT_CFG", "/tmp/cine-idf-no-import-cfg.json")
     httpd, port = _httpd()
     try:
         st, body = _post(port, "/api/import-tickets", {"tickets": [TICKET]}, AUTH)
         assert st == 503, (st, body)
     finally:
         httpd.shutdown()
+
+def test_import_accepts_committed_sha256_without_env_token(monkeypatch, tmp_path):
+    """Sans variable d’env, le SHA-256 commité suffit ; l’e-mail cible vient du fichier."""
+    import hashlib, json
+    token = "test-hash-only-token-v35"
+    cfg = tmp_path / "tickets_import.json"
+    cfg.write_text(json.dumps({"token_sha256": hashlib.sha256(token.encode()).hexdigest(), "email": EMAIL}), encoding="utf-8")
+    path = _cfg(monkeypatch)
+    monkeypatch.setenv("TICKETS_IMPORT_TOKEN", "")
+    monkeypatch.setenv("TICKETS_IMPORT_EMAIL", "")
+    monkeypatch.setattr(S, "TICKETS_IMPORT_TOKEN", "")
+    monkeypatch.setattr(S, "TICKETS_IMPORT_EMAIL", "")
+    monkeypatch.setattr(S, "TICKETS_IMPORT_CFG", str(cfg))
+    httpd, port = _httpd()
+    try:
+        st, body = _post(port, "/api/import-tickets", {"tickets": [TICKET]}, {"Authorization": "Bearer " + token})
+        assert st == 200, body
+        assert body["added"] == 1 and body["tickets"][0]["ref"] == "WTZ3BT3"
+        st, body = _post(port, "/api/import-tickets", {"tickets": [TICKET]}, {"Authorization": "Bearer wrong"})
+        assert st == 401, body
+    finally:
+        httpd.shutdown()
+
+def test_import_env_email_overrides_file_email(monkeypatch, tmp_path):
+    import hashlib, json
+    cfg = tmp_path / "tickets_import.json"
+    cfg.write_text(json.dumps({"token_sha256": hashlib.sha256(TOKEN.encode()).hexdigest(), "email": "file@example.com"}), encoding="utf-8")
+    _cfg(monkeypatch)  # env email = mathis@example.com, env token set
+    monkeypatch.setattr(S, "TICKETS_IMPORT_CFG", str(cfg))
+    assert S.import_cfg_email() == EMAIL
+    monkeypatch.setenv("TICKETS_IMPORT_EMAIL", "")
+    monkeypatch.setattr(S, "TICKETS_IMPORT_EMAIL", "")
+    assert S.import_cfg_email() == "file@example.com"
+
+def test_committed_import_cfg_has_hash_and_email():
+    cfg = S.load_tickets_import_cfg()
+    h = str(cfg.get("token_sha256") or "")
+    assert S.import_cfg_hash() and len(S.import_cfg_hash()) == 32
+    assert len(h) == 64 and h == h.lower()
+    assert cfg.get("email") == "mathislucas887@gmail.com"
 
 def test_map_cinema_wepler_batignolles_palace():
     w = S.map_cinema("Pathé Wepler - Côté place")

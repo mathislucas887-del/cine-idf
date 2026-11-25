@@ -17,7 +17,7 @@ CC_ALLO = "public, max-age=120, stale-while-revalidate=300"
 CC_API_SHORT = "public, max-age=60, stale-while-revalidate=180"
 CC_REVALIDATE = "no-cache"
 BLOCK_PREFIXES = (".git/", "tests/", "android/", "mobile/", "old/", ".github/", "__pycache__/", "screenshots/", "cache/")
-BLOCK_FILES = {"users.json", "server.py", "fix.py", "build_data.py", "deploy_github.sh", "dockerfile", "procfile", "render.yaml", "cine-idf.apk.idsig", "readme.md", ".gitignore"}
+BLOCK_FILES = {"users.json", "server.py", "fix.py", "build_data.py", "deploy_github.sh", "dockerfile", "procfile", "render.yaml", "cine-idf.apk.idsig", "readme.md", ".gitignore", "tickets_import.json"}
 
 def etag_for(body):
     return '"' + hashlib.sha256(body).hexdigest()[:16] + '"'
@@ -1065,9 +1065,10 @@ def find_reset(d, tok):
 GENERIC_FORGOT = "Si un compte existe pour cette adresse, un e-mail avec un lien de réinitialisation vient d’être envoyé. Pensez à regarder dans les indésirables. Le lien est valable 30 minutes."
 
 
-# ---------- v34 : import de billets Pathé (bot / e-mail, jeton partagé) ----------
+# ---------- v34/v35 : import de billets Pathé (bot / e-mail, jeton ou hash commité) ----------
 TICKETS_IMPORT_TOKEN = os.environ.get("TICKETS_IMPORT_TOKEN") or ""
 TICKETS_IMPORT_EMAIL = (os.environ.get("TICKETS_IMPORT_EMAIL") or "").strip().lower()
+TICKETS_IMPORT_CFG = os.path.join(ROOT, "config", "tickets_import.json")
 TICKET_SRC_EMAIL = "e-mail Pathé"
 
 def _fold(s):
@@ -1076,21 +1077,53 @@ def _fold(s):
     s = "".join(c for c in s if unicodedata.category(c) != "Mn")
     return re.sub(r"[^a-z0-9]+", " ", s.lower()).strip()
 
+def load_tickets_import_cfg():
+    try:
+        o = json.load(open(TICKETS_IMPORT_CFG, encoding="utf-8"))
+        return o if isinstance(o, dict) else {}
+    except Exception:
+        return {}
+
 def import_cfg_token():
     return os.environ.get("TICKETS_IMPORT_TOKEN") or TICKETS_IMPORT_TOKEN or ""
 
+def import_cfg_hash():
+    """SHA-256 (32 octets) du jeton, lu dans config/tickets_import.json."""
+    h = str((load_tickets_import_cfg() or {}).get("token_sha256") or "").strip().lower()
+    if not re.fullmatch(r"[0-9a-f]{64}", h):
+        return b""
+    return bytes.fromhex(h)
+
+def import_cfg_configured():
+    return bool(import_cfg_token() or import_cfg_hash())
+
 def import_cfg_email():
-    return ((os.environ.get("TICKETS_IMPORT_EMAIL") or TICKETS_IMPORT_EMAIL) or "").strip().lower()
+    env = (os.environ.get("TICKETS_IMPORT_EMAIL") or TICKETS_IMPORT_EMAIL or "").strip().lower()
+    if env:
+        return env
+    em = str((load_tickets_import_cfg() or {}).get("email") or "").strip().lower()
+    return em
 
 def import_token_ok(got):
-    """Comparaison en temps constant (via SHA-256) pour ne pas fuiter la longueur du jeton."""
-    expected = import_cfg_token()
-    if not expected or got is None:
-        return False
+    """Accepte le jeton d’environnement ou celui dont le SHA-256 est commité. Comparaisons en temps constant."""
     if isinstance(got, bytes):
         got = got.decode("utf-8", "ignore")
-    got = str(got).strip()
-    return hmac.compare_digest(hashlib.sha256(got.encode()).digest(), hashlib.sha256(expected.encode()).digest())
+    got = "" if got is None else str(got).strip()
+    got_h = hashlib.sha256(got.encode()).digest()
+    env = import_cfg_token()
+    file_h = import_cfg_hash()
+    # Les deux comparaisons sont toujours exécutées si les deux sont configurés (pas de court-circuit).
+    matches = []
+    if env:
+        matches.append(hmac.compare_digest(got_h, hashlib.sha256(env.encode()).digest()))
+    if file_h:
+        matches.append(hmac.compare_digest(got_h, file_h))
+    if not matches or not got:
+        return False
+    ok = False
+    for m in matches:
+        ok = ok | bool(m)
+    return ok
 
 def map_cinema(name, catalog=None):
     """Associe un libellé Pathé à un cinéma du catalogue (id), sans rien inventer."""
@@ -1168,8 +1201,8 @@ def import_tickets_api(h, body, out):
     got = (h.headers.get("Authorization") or "").replace("Bearer ", "", 1)
     if not got:
         got = h.headers.get("X-Tickets-Import-Token") or ""
-    if not import_cfg_token():
-        return out(503, {"error": "Import des billets non configuré (TICKETS_IMPORT_TOKEN)."})
+    if not import_cfg_configured():
+        return out(503, {"error": "Import des billets non configuré."})
     if not import_token_ok(got):
         return out(401, {"error": "Jeton d’import invalide."})
     email = import_cfg_email()
@@ -1182,7 +1215,7 @@ def import_tickets_api(h, body, out):
         if not email:
             email = raw_em
     if not email:
-        return out(400, {"error": "TICKETS_IMPORT_EMAIL manquant."})
+        return out(400, {"error": "E-mail cible d’import manquant."})
     raw = body.get("tickets")
     if not isinstance(raw, list) or not raw:
         return out(400, {"error": "Aucun billet à importer."})
