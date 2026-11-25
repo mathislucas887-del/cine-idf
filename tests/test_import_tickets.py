@@ -195,3 +195,40 @@ def test_import_default_email_is_news_account(monkeypatch):
     monkeypatch.setattr(S, "TICKETS_IMPORT_EMAIL", "")
     monkeypatch.setattr(S, "TICKETS_IMPORT_CFG", "/tmp/cine-idf-no-import-cfg.json")
     assert S.import_cfg_email() == "mlucas1.news@gmail.com"
+
+
+def test_lookup_ticket_poster_from_cache():
+    import time
+    url = "https://fr.web.img6.acsta.net/img/1b/6d/1b6dc1a4bbc7a3ae72b48a29cff63b90.jpg"
+    key = "allo:C01792026-11-25"
+    body = json.dumps({"source": "allocine", "films": [{"id": 1000014559, "title": "Paper Tiger", "poster": url}]}, ensure_ascii=False).encode()
+    S.CACHE[key] = (time.time(), body)
+    try:
+        assert S.real_poster_url("javascript:alert(1)") == ""
+        assert S.real_poster_url("http://example.com/x.jpg") == ""  # https seulement
+        assert S.real_poster_url(url) == url
+        hit = S.lookup_ticket_film("Paper Tiger", "cinema-pathe-wepler", "2026-11-25T17:25:00")
+        assert hit and hit["poster"] == url and hit["fid"] == "1000014559"
+        # même titre, autre typographie
+        assert S.lookup_ticket_film("paper  tiger", "cinema-pathe-wepler", "2026-11-25T17:25:00")["poster"] == url
+        assert S.lookup_ticket_film("Film Inconnu XYZ987", "cinema-pathe-wepler", "2026-11-25T17:25:00") is None
+        n = S.normalize_import_ticket({
+            "title": "Paper Tiger", "cinema": "Pathé Wepler - Côté place", "cid": "cinema-pathe-wepler",
+            "time": "2026-11-25T17:25:00", "ref": "WTZ3BT3",
+        })
+        assert n["poster"] == url and n["fid"] == "1000014559"
+    finally:
+        S.CACHE.pop(key, None)
+
+def test_lookup_prefers_same_cinema_and_date():
+    import time
+    a = "https://fr.web.img6.acsta.net/img/aa/aa/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.jpg"
+    b = "https://fr.web.img6.acsta.net/img/21/65/21653a8be4a3eac32ec40cd03bab99b8.jpg"
+    S.CACHE["allo:C00702026-11-25"] = (time.time(), json.dumps({"films": [{"id": 1, "title": "Casino Royale", "poster": a}]}).encode())
+    S.CACHE["allo:P75172026-12-10"] = (time.time(), json.dumps({"films": [{"id": 58525, "title": "Casino Royale", "poster": b}]}).encode())
+    try:
+        hit = S.lookup_ticket_film("Casino Royale", "les-7-batignolles", "2026-12-10T19:00:00")
+        assert hit["poster"] == b and hit["fid"] == "58525"
+    finally:
+        S.CACHE.pop("allo:C00702026-11-25", None)
+        S.CACHE.pop("allo:P75172026-12-10", None)

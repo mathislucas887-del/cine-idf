@@ -160,7 +160,7 @@ def test_http_allocine_all_gzip_etag_and_slim(monkeypatch=None):
 def test_frontend_and_sw_markers():
     root = pathlib.Path(__file__).resolve().parents[1]
     sw = (root / "sw.js").read_text()
-    assert 'cine-idf-v35' in sw and "If-None-Match" in sw and "addAll" in sw
+    assert 'cine-idf-v36' in sw and "If-None-Match" in sw and "addAll" in sw
     assert "/slot.js" in sw and "/v26.js" in sw
     assert "/sw.js" in sw  # excluded from intercept
     app = (root / "app.js").read_text()

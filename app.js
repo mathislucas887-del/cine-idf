@@ -372,11 +372,91 @@ window.ics = k => { const {f, c, t} = TB[k]; const s = new Date(t.time), e = new
   const txt = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Cine IDF//FR","BEGIN:VEVENT","UID:" + Date.now() + "@cine-idf","DTSTAMP:" + z(new Date()),"DTSTART:" + z(s),"DTEND:" + z(e),"SUMMARY:" + f.title + " (" + (t.version||"").toUpperCase() + ")","LOCATION:" + c.name + ", " + (c.fullAddress || c.address || ""),"URL:" + (t.url || ""),"END:VEVENT","END:VCALENDAR"].join("\r\n");
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([txt], {type: "text/calendar"})); a.download = "seance.ics"; a.click(); };
 function toast(m) { const d = document.createElement("div"); d.textContent = m; d.setAttribute("role", "status"); d.style.cssText = "position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:linear-gradient(135deg,#f1d784,#c9a227);color:#141414;padding:10px 16px;border-radius:20px;font-weight:700;z-index:3000"; document.body.append(d); setTimeout(() => d.remove(), 2200); }
+function ticketPosterOK(u) { return typeof u === "string" && /^https:\/\/[A-Za-z0-9.-]+\//.test(u); }
+function ticketInitials(title) {
+  const stop = /^(le|la|les|l|the|a|an|un|une|de|du|des|et|and|:)$/;
+  const w = norm(title).split(" ").filter(x => x && !stop.test(x));
+  if (w.length >= 2) return (w[0][0] + w[1][0]).toUpperCase();
+  const s = (w[0] || title || "?").replace(/[^a-z0-9]/gi, "");
+  return (s.slice(0, 2) || "?").toUpperCase();
+}
+function findTicketFilm(t) {
+  if (!t) return null;
+  const want = lbKey(t.title || "");
+  const day = (t.time || "").slice(0, 10), cid = t.cid || "";
+  let best = null, score = -1;
+  const consider = (f, fc, fd) => {
+    if (!f) return;
+    const poster = ticketPosterOK(f.poster) ? f.poster : "";
+    const keys = [lbKey(f.title || ""), lbKey(f.originalTitle || "")].filter(Boolean);
+    const idOk = t.fid && String(f.id) === String(t.fid);
+    if (!idOk && !(want && keys.includes(want))) return;
+    if (!poster && !idOk) return;
+    let sc = poster ? 1 : 0;
+    if (idOk) sc += 4;
+    if (day && fd === day) sc += 3;
+    if (cid && fc === cid) sc += 2;
+    if (sc > score) { score = sc; best = f; }
+  };
+  (window.FILMS || []).forEach(f => {
+    consider(f);
+    (f.by || []).forEach(b => (b.times || []).forEach(tm => consider(f, (b.c && b.c.id) || "", (tm.time || "").slice(0, 10))));
+  });
+  if (window.MATCHCAT && MATCHCAT.all) Object.values(MATCHCAT.all).forEach(f => {
+    Object.entries(f.by || {}).forEach(([fc, times]) => (times || []).forEach(tm => consider(f, fc, (tm.time || "").slice(0, 10))));
+    consider(f);
+  });
+  if (window.MEM_DAY_CACHE) MEM_DAY_CACHE.forEach((v, k) => {
+    const fd = String(k).slice(0, 10);
+    const cinemas = (v && v.data && v.data.cinemas) || {};
+    Object.entries(cinemas).forEach(([fc, films]) => (films || []).forEach(f => consider(f, fc, fd)));
+  });
+  return best;
+}
+function ticketPosterOf(t) {
+  if (ticketPosterOK(t && t.poster)) return t.poster;
+  const f = findTicketFilm(t);
+  return (f && ticketPosterOK(f.poster)) ? f.poster : "";
+}
+function ticketThumb(t) {
+  const src = ticketPosterOf(t);
+  if (src) return `<img src="${esc(src)}" alt="Affiche de ${esc(t.title)}" loading="lazy" decoding="async">`;
+  return `<div class="tph" aria-hidden="true">${esc(ticketInitials(t.title))}</div>`;
+}
+let _tpFetch = 0;
+function ensureTicketPosters() {
+  if (!window.fetchDayShows) return;
+  const need = [...new Set(TICKETS.filter(t => !ticketPosterOf(t) && t.time).map(t => (t.time || "").slice(0, 10)).filter(Boolean))];
+  if (!need.length) return;
+  const n = ++_tpFetch;
+  Promise.all(need.map(d => {
+    const ids = [...new Set(TICKETS.filter(t => (t.time || "").slice(0, 10) === d && t.cid).map(t => t.cid))];
+    const q = ids.length ? "?ids=" + encodeURIComponent(ids.join(",")) : "";
+    return fetchDayShows(d, q).catch(() => null);
+  })).then(() => {
+    if (n !== _tpFetch) return;
+    let changed = false;
+    TICKETS.forEach(t => {
+      if (ticketPosterOK(t.poster)) return;
+      const f = findTicketFilm(t);
+      if (f && ticketPosterOK(f.poster)) { t.poster = f.poster; if (f.id && !t.fid) t.fid = String(f.id); changed = true; }
+    });
+    if (changed) { sync(); renderTickets(); }
+  });
+}
 function renderTickets() {
+  let filled = false;
+  TICKETS.forEach(t => {
+    if (ticketPosterOK(t.poster)) return;
+    const f = findTicketFilm(t);
+    if (f && ticketPosterOK(f.poster)) { t.poster = f.poster; if (f.id && !t.fid) t.fid = String(f.id); filled = true; }
+  });
+  if (filled) sync();
   const L = TICKETS.slice().sort((a, b) => a.time.localeCompare(b.time)), now = new Date().toISOString().slice(0, 16);
   const det = t => [t.room && "Salle " + t.room, t.seat && "💺 " + t.seat, t.places && (t.places + " place" + (t.places === "1" ? "" : "s")), t.ref && "réf. " + t.ref].filter(Boolean).join(" · ");
-  $("#tickets").innerHTML = L.map(t => `<a class="ticket" href="${esc(t.url || "#")}" target="_blank" rel="noopener" style="${t.time.slice(0,16) < now ? "opacity:.5" : ""}">${t.poster ? `<img src="${esc(t.poster)}" alt="Affiche de ${esc(t.title)}" loading="lazy">` : `<img alt="">`}<div><div class="when">${new Date(t.time).toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"})} · ${t.time.slice(11,16)}</div><h3>${esc(t.title)}</h3><p>${esc(t.cinema)} · ${esc(t.version)}</p>${det(t) ? `<p>${esc(det(t))}</p>` : ""}<p>Toucher pour ouvrir la réservation / ma place →</p><p class="sub">Le QR d’entrée est dans l’e-mail ou l’app Pathé</p></div><button class="rm" aria-label="Retirer ce billet" onclick="event.preventDefault();event.stopPropagation();rmTicket('${esc(t.id)}')">✕</button></a>`).join("")
+  $("#tickets").innerHTML = L.map(t => `<a class="ticket" href="${esc(t.url || "#")}" target="_blank" rel="noopener" style="${t.time.slice(0,16) < now ? "opacity:.5" : ""}">${ticketThumb(t)}<div><div class="when">${new Date(t.time).toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"})} · ${t.time.slice(11,16)}</div><h3>${esc(t.title)}</h3><p>${esc(t.cinema)} · ${esc(t.version)}</p>${det(t) ? `<p>${esc(det(t))}</p>` : ""}<p>Toucher pour ouvrir la réservation / ma place →</p><p class="sub">Le QR d’entrée est dans l’e-mail ou l’app Pathé</p></div><button class="rm" aria-label="Retirer ce billet" onclick="event.preventDefault();event.stopPropagation();rmTicket('${esc(t.id)}')">✕</button></a>`).join("")
     || `<div class="empty">Aucun billet pour l’instant. Les confirmations Pathé reçues par e-mail s’ajoutent automatiquement. Vous pouvez aussi, dans « Séances », toucher un horaire puis « Ajouter à mes billets ».</div>`;
+  ensureTicketPosters();
 }
 window.rmTicket = id => { TICKETS = TICKETS.filter(t => t.id !== id); sync(); renderTickets(); };
 

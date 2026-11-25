@@ -1165,6 +1165,97 @@ def _parse_import_time(t):
         return ""
     return f"{y}-{int(mo):02d}-{int(d):02d}T{int(hm.group(1)):02d}:{hm.group(2)}:00"
 
+
+def ticket_title_key(s):
+    """Clé de correspondance d’un titre (accents, ponctuation, « partie » en fin de titre)."""
+    t = _fold(s)
+    t = re.sub(r"^(the|le|la|les|l|a|an|un|une) ", "", t)
+    t = re.sub(r"\s+(part|partie|chapitre|chapter)$", "", t)
+    t = re.sub(r"\s+", " ", t).strip()
+    return t
+
+def real_poster_url(url):
+    """N’accepte qu’une URL https déjà connue (Allociné / acsta). N’invente rien."""
+    url = str(url or "").strip()
+    if not re.match(r"^https://[A-Za-z0-9.-]+/", url):
+        return ""
+    if any(x in url.lower() for x in (" ", "javascript:", "data:")):
+        return ""
+    return url[:400]
+
+def _cine_allo_id(cid):
+    c = next((x for x in ALL_CINES if x.get("id") == cid), None) if cid else None
+    return (c or {}).get("allocineId") or ""
+
+def _iter_cached_films():
+    """Parcourt le cache Allociné en mémoire, puis le disque, sans appeler Allociné."""
+    seen = set()
+    with LOCK:
+        items = list(CACHE.items())
+    for k, hit in items:
+        if not k.startswith("allo:") or len(k) < 15:
+            continue
+        date, allo = k[-10:], k[5:-10]
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date):
+            continue
+        seen.add(k)
+        try:
+            films = json.loads(hit[1]).get("films") or []
+        except Exception:
+            continue
+        for f in films:
+            if isinstance(f, dict):
+                yield allo, date, f
+    try:
+        root = allo_cache_dir()
+        if not os.path.isdir(root):
+            return
+        for name in os.listdir(root):
+            if not name.startswith("allo_") or not name.endswith(".json"):
+                continue
+            key = name[:-5].replace("_", ":", 1)
+            if key in seen or not re.search(r"\d{4}-\d{2}-\d{2}$", key):
+                continue
+            hit = allo_disk_get(key)
+            if not hit:
+                continue
+            date, allo = key[-10:], key[5:-10]
+            try:
+                films = json.loads(hit[1]).get("films") or []
+            except Exception:
+                continue
+            for f in films:
+                if isinstance(f, dict):
+                    yield allo, date, f
+    except Exception:
+        return
+
+def lookup_ticket_film(title, cid="", when=""):
+    """Trouve l’affiche Allociné d’un billet par titre normalisé, en privilégiant le cinéma et la date."""
+    want = ticket_title_key(title)
+    if not want:
+        return None
+    day = (when or "")[:10]
+    allo = _cine_allo_id(cid)
+    best, score = None, -1
+    for allo_id, date, f in _iter_cached_films():
+        keys = {ticket_title_key(f.get("title") or ""), ticket_title_key(f.get("originalTitle") or "")}
+        keys.discard("")
+        if want not in keys:
+            continue
+        poster = real_poster_url(f.get("poster"))
+        if not poster:
+            continue
+        sc = 1
+        if day and date == day:
+            sc += 3
+        if allo and allo_id == allo:
+            sc += 2
+        if sc > score:
+            score = sc
+            best = {"poster": poster, "fid": str(f.get("id") or ""), "title": f.get("title") or title}
+    return best
+
 def normalize_import_ticket(t):
     if not isinstance(t, dict):
         return None
@@ -1189,10 +1280,17 @@ def normalize_import_ticket(t):
             places = str(len(nseat))
     version = str(t.get("version") or "").strip()[:20]
     url = str(t.get("url") or "").strip()[:400] or "https://www.pathe.fr/mon-compte"
-    poster = str(t.get("poster") or "").strip()[:400]
+    poster = real_poster_url(t.get("poster"))
     fid = str(t.get("fid") or "").strip()[:40]
     if not title or not when:
         return None
+    if not poster or not fid:
+        hit = lookup_ticket_film(title, cid, when)
+        if hit:
+            if not poster:
+                poster = hit.get("poster") or ""
+            if not fid:
+                fid = str(hit.get("fid") or "")[:40]
     tid = "pathe|" + (ref or (title + cid + when))
     return {"id": tid, "title": title, "poster": poster, "cinema": cinema_name or "Pathé", "cid": cid,
             "time": when, "url": url, "version": version, "seat": seat, "room": room, "fid": fid,
